@@ -1,17 +1,20 @@
 #include <SFML/Graphics.hpp>
+
+#include <windows.h>
+
+#include <tlhelp32.h>
+
 #include <chrono>
 #include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <nlohmann/json.hpp>
-#include <string>
-#include <vector>
-
 #include <romhack_b3313_cartography/Button.h>
 #include <romhack_b3313_cartography/DropdownMenu.h>
 #include <romhack_b3313_cartography/Node.h>
-
+#include <string>
+#include <vector>
 using json = nlohmann::json;
 
 void saveNodes(const std::vector<Node> &nodes, const std::string &filename) {
@@ -51,6 +54,59 @@ bool isMouseOverNode(const std::vector<Node> &nodes, sf::Vector2i mousePos, int 
     }
     return false;
 }
+bool isEmulatorDetected() {
+    std::vector<std::string> emulators = {"project64", "wine-preloader", "mupen64", "retroarch"};
+    HANDLE hProcessSnap;
+    PROCESSENTRY32 pe32;
+    hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hProcessSnap == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+    pe32.dwSize = sizeof(PROCESSENTRY32);
+    if (!Process32First(hProcessSnap, &pe32)) {
+        CloseHandle(hProcessSnap);
+        return false;
+    }
+    do {
+        std::string processName = pe32.szExeFile;
+        for (const auto &emulator : emulators) {
+            if (processName.find(emulator) != std::string::npos) {
+                CloseHandle(hProcessSnap);
+                return true;
+            }
+        }
+    } while (Process32Next(hProcessSnap, &pe32));
+    CloseHandle(hProcessSnap);
+    return false;
+}
+
+bool isRomHackLoaded() {
+    if (!isEmulatorDetected()) {
+        return false;
+    }
+
+    HANDLE hProcessSnap;
+    PROCESSENTRY32 pe32;
+    hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hProcessSnap == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+    pe32.dwSize = sizeof(PROCESSENTRY32);
+    if (!Process32First(hProcessSnap, &pe32)) {
+        CloseHandle(hProcessSnap);
+        return false;
+    }
+    do {
+        std::string processName = pe32.szExeFile;
+        if (processName.find("-") != std::string::npos) {
+            CloseHandle(hProcessSnap);
+            return true;
+        }
+    } while (Process32Next(hProcessSnap, &pe32));
+    CloseHandle(hProcessSnap);
+    return false;
+}
+
 int main() {
     sf::RenderWindow window(sf::VideoMode(1280, 720), "Mind Map Example");
 
@@ -79,6 +135,18 @@ int main() {
     bool dragging = false;
     int startNodeIndex = -1;
     std::vector<std::pair<int, int>> connections;
+
+    sf::Text emulatorText;
+    emulatorText.setFont(font);
+    emulatorText.setString("Is emulator running?");
+    emulatorText.setCharacterSize(24);
+    emulatorText.setPosition(10, 10);
+
+    sf::Text b3313Text;
+    b3313Text.setFont(font);
+    b3313Text.setString("Is b3313 V1.0.2 ROM IS LOADED?");
+    b3313Text.setCharacterSize(24);
+    b3313Text.setPosition(10, 40);
 
     while (window.isOpen()) {
         sf::Event event;
@@ -129,6 +197,17 @@ int main() {
 
         window.clear(sf::Color::White);
 
+        // Détection de l'émulateur et changement de couleur du texte
+        if (isEmulatorDetected()) {
+            emulatorText.setFillColor(sf::Color::Green);
+        } else {
+            emulatorText.setFillColor(sf::Color::Black);
+        }
+        if (isRomHackLoaded()) {
+            b3313Text.setFillColor(sf::Color::Green);
+        } else {
+            b3313Text.setFillColor(sf::Color::Black);
+        }
         // Draw connections
         for (const auto &conn : connections) {
             sf::Vertex line[] = {
@@ -162,6 +241,9 @@ int main() {
         saveButton.draw(window);
         dropdownMenu.draw(window);
 
+        // Draw emulator text
+        window.draw(emulatorText);
+        window.draw(b3313Text);
         window.display();
     }
 
