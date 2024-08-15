@@ -7,6 +7,10 @@ project(ROMHACK_B3313_CARTOGRAPHY VERSION 0.1.0 LANGUAGES CXX)
 set(SFML_DIR "${CMAKE_SOURCE_DIR}/resources/ThirdPartyLibs/SFML-2.6.1/lib/cmake/SFML")
 find_package(SFML 2.5 COMPONENTS system window graphics REQUIRED)
 
+
+set(ALL_INCLUDE_DIR
+    "${CMAKE_SOURCE_DIR}/resources/ThirdPartyLibs/nlohmann-json"
+)
 # Créer l'exécutable principal
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 add_executable(ROMHACK_B3313_CARTOGRAPHY ${SOURCES})
@@ -15,6 +19,9 @@ add_executable(ROMHACK_B3313_CARTOGRAPHY ${SOURCES})
 include_directories("${CMAKE_SOURCE_DIR}/resources/ThirdPartyLibs/SFML-2.6.1/include")
 link_directories("${CMAKE_SOURCE_DIR}/resources/ThirdPartyLibs/SFML-2.6.1/lib")
 
+target_include_directories(${PROJECT_NAME} PUBLIC
+${ALL_INCLUDE_DIR}
+)
 # Lier SFML aux cibles
 target_link_libraries(ROMHACK_B3313_CARTOGRAPHY sfml-system sfml-window sfml-graphics)
 
