@@ -1,0 +1,79 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-ROMHACK_B3313_CARTOGRAPHY-release",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": [
+                "-Command",
+                "if (!(Test-Path ${workspaceFolder}/build)) { mkdir ${workspaceFolder}/build };",
+                "cd ${workspaceFolder};",
+                "cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_STANDARD=17;",
+                "cmake --build build --config Release;",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "build-ROMHACK_B3313_CARTOGRAPHY-debug",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": [
+                "-Command",
+                "if (!(Test-Path ${workspaceFolder}/build-debug)) { mkdir ${workspaceFolder}/build-debug };",
+                "cd ${workspaceFolder};",
+                "cmake -S . -B build-debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_STANDARD=17;",
+                "cmake --build build-debug --config Debug;",
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "run-ROMHACK_B3313_CARTOGRAPHY-release",
+            "type": "process",
+            "command": "${workspaceFolder}/build/Release/ROMHACK_B3313_CARTOGRAPHY.exe",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "dependsOn": [
+                "build-ROMHACK_B3313_CARTOGRAPHY-release"
+            ]
+        },
+        {
+            "label": "run-ROMHACK_B3313_CARTOGRAPHY-debug",
+            "type": "process",
+            "command": "${workspaceFolder}/build-debug/Debug/ROMHACK_B3313_CARTOGRAPHY.exe",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "dependsOn": [
+                "build-ROMHACK_B3313_CARTOGRAPHY-debug"
+            ]
+        }
+    ]
+}
