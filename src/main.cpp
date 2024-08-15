@@ -101,6 +101,12 @@ int main() {
                         dragging = true;
                     }
                 }
+#ifdef DEBUG
+                if (event.mouseButton.button == sf::Mouse::Right) {
+                    sf::Vector2f worldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
+                    nodes.emplace_back(worldPos.x, worldPos.y, "New Node", font);
+                }
+#endif
             }
 
             if (event.type == sf::Event::MouseButtonReleased) {
@@ -119,14 +125,6 @@ int main() {
             if (event.type == sf::Event::MouseMoved && dragging) {
                 // Handle dragging logic if needed
             }
-#ifdef DEBUG
-            if (event.type == sf::Event::MouseButtonPressed) {
-                if (event.mouseButton.button == sf::Mouse::Right) {
-                    sf::Vector2f worldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
-                    nodes.emplace_back(worldPos.x, worldPos.y, "New Node", font);
-                }
-            }
-#endif
         }
 
         window.clear(sf::Color::White);
