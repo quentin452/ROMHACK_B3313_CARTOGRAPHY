@@ -2,6 +2,12 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <vector>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <iomanip>
+#include <chrono>
+#include <ctime>
 
 using json = nlohmann::json;
 
@@ -148,7 +154,7 @@ int main() {
                 // Handle dragging logic if needed
             }
 #ifdef DEBUG
-            if (/*event.type == sf::Event::MouseButtonPressed &&*/ event.mouseButton.button == sf::Mouse::Right) {
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Right) {
                 nodes.emplace_back(event.mouseButton.x, event.mouseButton.y, "New Node", font);
             }
 #endif
