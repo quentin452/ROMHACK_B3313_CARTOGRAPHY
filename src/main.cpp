@@ -93,7 +93,17 @@ std::vector<Node> loadNodes(const std::string &filename, sf::Font &font) {
     }
     return nodes;
 }
-
+bool isMouseOverNode(const std::vector<Node> &nodes, sf::Vector2i mousePos, int &nodeIndex) {
+    for (int i = 0; i < nodes.size(); ++i) {
+        sf::Vector2f nodePos = nodes[i].shape.getPosition();
+        sf::FloatRect nodeBounds(nodePos.x, nodePos.y, nodes[i].shape.getRadius() * 2, nodes[i].shape.getRadius() * 2);
+        if (nodeBounds.contains(static_cast<sf::Vector2f>(mousePos))) {
+            nodeIndex = i;
+            return true;
+        }
+    }
+    return false;
+}
 int main() {
     sf::RenderWindow window(sf::VideoMode(1280, 720), "Mind Map Example");
     sf::Font font;
@@ -115,37 +125,17 @@ int main() {
 
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
-                    // Check if the mouse is inside a node
-                    for (int i = 0; i < nodes.size(); ++i) {
-                        sf::Vector2f nodePos = nodes[i].shape.getPosition();
-                        sf::FloatRect nodeBounds(nodePos.x, nodePos.y, nodes[i].shape.getRadius() * 2, nodes[i].shape.getRadius() * 2);
-                        if (nodeBounds.contains(event.mouseButton.x, event.mouseButton.y)) {
-                            startNodeIndex = i;
-                            startPos = sf::Vector2i(event.mouseButton.x, event.mouseButton.y);
-                            dragging = true;
-                            break;
-                        }
+                    if (isMouseOverNode(nodes, sf::Vector2i(event.mouseButton.x, event.mouseButton.y), startNodeIndex)) {
+                        startPos = sf::Vector2i(event.mouseButton.x, event.mouseButton.y);
+                        dragging = true;
                     }
                 }
             }
 
             if (event.type == sf::Event::MouseButtonReleased) {
                 if (event.mouseButton.button == sf::Mouse::Left && dragging) {
-                    // Check if the mouse is released over another node
                     int endNodeIndex = -1;
-                    for (int i = 0; i < nodes.size(); ++i) {
-                        if (i == startNodeIndex)
-                            continue;
-
-                        sf::Vector2f nodePos = nodes[i].shape.getPosition();
-                        sf::FloatRect nodeBounds(nodePos.x, nodePos.y, nodes[i].shape.getRadius() * 2, nodes[i].shape.getRadius() * 2);
-                        if (nodeBounds.contains(event.mouseButton.x, event.mouseButton.y)) {
-                            endNodeIndex = i;
-                            break;
-                        }
-                    }
-
-                    if (endNodeIndex != -1) {
+                    if (isMouseOverNode(nodes, sf::Vector2i(event.mouseButton.x, event.mouseButton.y), endNodeIndex) && endNodeIndex != startNodeIndex) {
                         connections.push_back({startNodeIndex, endNodeIndex});
                         nodes[startNodeIndex].connections.push_back(endNodeIndex);
                         nodes[endNodeIndex].connections.push_back(startNodeIndex);
@@ -154,7 +144,6 @@ int main() {
                     dragging = false;
                 }
             }
-
             if (event.type == sf::Event::MouseMoved && dragging) {
                 // Handle dragging logic if needed
             }

@@ -138,6 +138,15 @@
     "xtr1common": "cpp",
     "xtree": "cpp",
     "xutility": "cpp",
-    "filesystem": "cpp"
+    "filesystem": "cpp",
+    "any": "cpp",
+    "array": "cpp",
+    "chrono": "cpp",
+    "codecvt": "cpp",
+    "forward_list": "cpp",
+    "numeric": "cpp",
+    "ranges": "cpp",
+    "span": "cpp",
+    "valarray": "cpp"
   }
 }
