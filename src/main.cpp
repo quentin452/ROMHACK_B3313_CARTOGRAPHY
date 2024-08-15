@@ -1,77 +1,18 @@
 #include <SFML/Graphics.hpp>
-#include <fstream>
-#include <nlohmann/json.hpp>
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <iomanip>
 #include <chrono>
 #include <ctime>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <nlohmann/json.hpp>
+#include <string>
+#include <vector>
+
+#include <romhack_b3313_cartography/Button.h>
+#include <romhack_b3313_cartography/DropdownMenu.h>
+#include <romhack_b3313_cartography/Node.h>
 
 using json = nlohmann::json;
-
-class Node {
-  public:
-    Node(float x, float y, const std::string &text, sf::Font &font) : font(font), modified(true) {
-        shape.setRadius(30);
-        shape.setFillColor(sf::Color::Cyan);
-        shape.setPosition(x - shape.getRadius(), y - shape.getRadius());
-
-        label.setFont(font);
-        label.setString(text);
-        label.setCharacterSize(12);
-        label.setFillColor(sf::Color::Black);
-        label.setPosition(x - shape.getRadius() / 2, y - shape.getRadius() / 2);
-
-        star.setRadius(5);
-        star.setFillColor(sf::Color::Red);
-        star.setPosition(x + shape.getRadius() - 10, y - shape.getRadius() - 10);
-    }
-
-    void draw(sf::RenderWindow &window) const {
-        window.draw(shape);
-        window.draw(label);
-        if (modified)
-            window.draw(star);
-    }
-
-    void setPosition(float x, float y) {
-        shape.setPosition(x - shape.getRadius(), y - shape.getRadius());
-        label.setPosition(x - shape.getRadius() / 2, y - shape.getRadius() / 2);
-        star.setPosition(x + shape.getRadius() - 10, y - shape.getRadius() - 10);
-        modified = true;
-    }
-
-    void setModified(bool status) {
-        modified = status;
-    }
-
-    bool isModified() const {
-        return modified;
-    }
-
-    json toJson() const {
-        return json{{"x", shape.getPosition().x + shape.getRadius()},
-                    {"y", shape.getPosition().y + shape.getRadius()},
-                    {"text", label.getString().toAnsiString()}};
-    }
-
-    static Node fromJson(const json &j, sf::Font &font) {
-        Node node(j["x"], j["y"], j["text"], font);
-        node.setModified(false); // Mark as not modified after loading
-        return node;
-    }
-
-    sf::CircleShape star;
-    sf::CircleShape shape;
-    std::vector<int> connections; // Indices of connected nodes
-
-  private:
-    sf::Text label;
-    sf::Font &font;
-    bool modified;
-};
 
 void saveNodes(const std::vector<Node> &nodes, const std::string &filename) {
     json j;
@@ -112,9 +53,26 @@ bool isMouseOverNode(const std::vector<Node> &nodes, sf::Vector2i mousePos, int 
 }
 int main() {
     sf::RenderWindow window(sf::VideoMode(1280, 720), "Mind Map Example");
-    sf::Font font;
-    if (!font.loadFromFile("Arial.ttf"))
+
+    // Charger textures
+    sf::Texture saveTexture;
+    if (!saveTexture.loadFromFile("resources/textures/save_icon.png"))
         return 1;
+
+    sf::Texture dropdownTexture;
+    if (!dropdownTexture.loadFromFile("resources/textures/dropdown_background.png"))
+        return 1;
+
+    // Créer les objets
+    Button saveButton(1150, 10, saveTexture); // Positionnez le bouton comme vous le souhaitez
+
+    std::vector<std::string> menuItems = {"b3313-v1.0.2.json", "another_file.json"};
+
+    sf::Font font;
+    if (!font.loadFromFile("resources/assets/Arial.ttf"))
+        return 1;
+
+    DropdownMenu dropdownMenu(1150, 50, dropdownTexture, menuItems, font); // Positionnez le menu comme vous le souhaitez
 
     std::vector<Node> nodes = loadNodes("b3313-v1.0.2.json", font);
     sf::Vector2i startPos;
@@ -131,7 +89,14 @@ int main() {
 
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
-                    if (isMouseOverNode(nodes, sf::Vector2i(event.mouseButton.x, event.mouseButton.y), startNodeIndex)) {
+                    if (saveButton.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
+                        saveNodes(nodes, "b3313-v1.0.2.json");
+                    } else if (dropdownMenu.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
+                        std::string selectedFile = dropdownMenu.getSelectedItem(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
+                        if (!selectedFile.empty()) {
+                            nodes = loadNodes(selectedFile, font);
+                        }
+                    } else if (isMouseOverNode(nodes, sf::Vector2i(event.mouseButton.x, event.mouseButton.y), startNodeIndex)) {
                         startPos = sf::Vector2i(event.mouseButton.x, event.mouseButton.y);
                         dragging = true;
                     }
@@ -150,6 +115,7 @@ int main() {
                     dragging = false;
                 }
             }
+
             if (event.type == sf::Event::MouseMoved && dragging) {
                 // Handle dragging logic if needed
             }
@@ -191,10 +157,12 @@ int main() {
             node.draw(window);
         }
 
+        // Draw button and menu
+        saveButton.draw(window);
+        dropdownMenu.draw(window);
+
         window.display();
     }
-
-    saveNodes(nodes, "b3313-v1.0.2.json");
 
     return 0;
 }
