@@ -1,7 +1,6 @@
 #include <SFML/Graphics.hpp>
-#include <iostream> // Pour les messages d'erreur
+#include <iostream>
 #include <vector>
-#include <filesystem>
 class Node {
   public:
     Node(float x, float y, const std::string &text, sf::Font &font) : font(font) {
@@ -34,7 +33,6 @@ void addNode(std::vector<Node> &nodes, float x, float y, const std::string &text
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(1280, 720), "Mind Map Example");
-    std::cout << "Current path is " << std::filesystem::current_path() << '\n';
     sf::Font font;
     if (!font.loadFromFile("Arial.ttf"))
         return 1;
