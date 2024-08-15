@@ -116,7 +116,7 @@ int main() {
     if (!font.loadFromFile("Arial.ttf"))
         return 1;
 
-    std::vector<Node> nodes = loadNodes("nodes.json", font);
+    std::vector<Node> nodes = loadNodes("b3313-v1.0.2.json", font);
     sf::Vector2i startPos;
     bool dragging = false;
     int startNodeIndex = -1;
@@ -194,7 +194,7 @@ int main() {
         window.display();
     }
 
-    saveNodes(nodes, "nodes.json");
+    saveNodes(nodes, "b3313-v1.0.2.json");
 
     return 0;
 }
