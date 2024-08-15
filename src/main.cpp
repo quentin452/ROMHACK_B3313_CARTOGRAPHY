@@ -120,8 +120,11 @@ int main() {
                 // Handle dragging logic if needed
             }
 #ifdef DEBUG
-            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Right) {
-                nodes.emplace_back(event.mouseButton.x, event.mouseButton.y, "New Node", font);
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Right) {
+                    sf::Vector2f worldPos = window.mapPixelToCoords(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
+                    nodes.emplace_back(worldPos.x, worldPos.y, "New Node", font);
+                }
             }
 #endif
         }
