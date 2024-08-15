@@ -18,6 +18,8 @@ link_directories("${CMAKE_SOURCE_DIR}/resources/ThirdPartyLibs/SFML-2.6.1/lib")
 # Lier SFML aux cibles
 target_link_libraries(ROMHACK_B3313_CARTOGRAPHY sfml-system sfml-window sfml-graphics)
 
+target_compile_definitions(ROMHACK_B3313_CARTOGRAPHY PRIVATE $<$<CONFIG:Debug>:DEBUG>)
+
 # Copier les DLL de SFML dans le répertoire de construction
 if(MSVC)
   add_custom_command(TARGET ROMHACK_B3313_CARTOGRAPHY POST_BUILD
