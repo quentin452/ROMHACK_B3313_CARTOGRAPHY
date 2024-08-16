@@ -265,11 +265,20 @@ int main(int argc, char *argv[]) {
     b3313Text.setPosition(10, 40);
     bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles
     StarDisplay starDisplay;      // Instance de la classe StarDisplay
+    sf::View scrollView(sf::FloatRect(0, 0, 1280, 720));
+    window.setView(scrollView);
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
+            if (showStarDisplay && event.type == sf::Event::MouseWheelScrolled) {
+                // Défilement avec la molette de la souris
+                float offset = event.mouseWheelScroll.delta * -10.0f; // Ajustez la vitesse de défilement
+                sf::Vector2f newCenter = scrollView.getCenter() + sf::Vector2f(0, offset);
+                scrollView.setCenter(newCenter);
+                window.setView(scrollView);
+            }
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
                     if (saveButton.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
@@ -325,6 +334,7 @@ int main(int argc, char *argv[]) {
                     if (hProcess != NULL) {
                         DWORD baseAddress = getBaseAddress(hProcess);
                         if (baseAddress != 0) {
+                            int yOffset = 0;
                             for (const auto &group : jsonData["groups"]) {
                                 std::string groupName = group["name"];
                                 std::vector<StarData> starList;
@@ -337,7 +347,7 @@ int main(int argc, char *argv[]) {
                                     starList.push_back({courseName, numStars, starIcon});
                                 }
                                 // Afficher les étoiles pour le groupe actuel
-                                starDisplay.afficherEtoilesGroupe(groupName, starList, window, font);
+                                starDisplay.afficherEtoilesGroupe(groupName, starList, window, font, yOffset);
                             }
                         } else {
                             CloseHandle(hProcess);

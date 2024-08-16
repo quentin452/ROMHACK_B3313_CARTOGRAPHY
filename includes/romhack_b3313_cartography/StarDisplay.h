@@ -15,5 +15,5 @@ struct StarData {
 };
 class StarDisplay {
   public:
-    void afficherEtoilesGroupe(const std::string &groupName, const std::vector<StarData> &stars, sf::RenderWindow &window, const sf::Font &font);
+    void afficherEtoilesGroupe(const std::string &groupName, const std::vector<StarData> &stars, sf::RenderWindow &window, const sf::Font &font, int &yOffset);
 };
