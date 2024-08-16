@@ -6,14 +6,14 @@
 #include <string>
 #include <vector>
 struct StarData {
-    std::string name;
+    std::string courseName;
     int numStars;
-    std::string icon;
+    std::string starIcon;
 
-    StarData(const std::string &name, int numStars, const std::string &icon)
-        : name(name), numStars(numStars), icon(icon) {}
+    StarData(const std::string &courseName, int numStars, const std::string &starIcon)
+        : courseName(courseName), numStars(numStars), starIcon(starIcon) {}
 };
 class StarDisplay {
   public:
-    void afficherEtoilesGroupe(const std::string &groupName, const std::vector<StarData> &stars,sf::RenderWindow &window,sf::Font &font);
+    void afficherEtoilesGroupe(const std::string &groupName, const std::vector<StarData> &stars, sf::RenderWindow &window, const sf::Font &font);
 };

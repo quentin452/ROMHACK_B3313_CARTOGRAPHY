@@ -13,6 +13,8 @@
 #include <iostream>
 #include <locale>
 #include <nlohmann/json.hpp>
+#include <romhack_b3313_cartography/Textures.h>
+
 #include <romhack_b3313_cartography/Button.h>
 #include <romhack_b3313_cartography/DropdownMenu.h>
 #include <romhack_b3313_cartography/Node.h>
@@ -36,15 +38,10 @@ void saveNodes(const std::vector<Node> &nodes, const std::string &filename) {
 
 std::vector<Node> loadNodes(const std::string &filename, sf::Font &font) {
     std::ifstream file(filename);
-
-    // Vérifier si le fichier a été ouvert avec succès
-    if (!file.is_open()) {
-        return {}; // Retourner un vecteur vide si le fichier n'existe pas
-    }
-
+    if (!file.is_open())
+        return {};
     json j;
     file >> j;
-
     std::vector<Node> nodes;
     for (const auto &item : j) {
         nodes.push_back(Node::fromJson(item, font));
@@ -63,7 +60,6 @@ bool isMouseOverNode(const std::vector<Node> &nodes, sf::Vector2i mousePos, int 
     return false;
 }
 std::wstring stringToWstring(const std::string &str) {
-    // Conversion de std::string en std::wstring
     std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
     return converter.from_bytes(str);
 }
@@ -73,9 +69,8 @@ bool isEmulatorDetected(std::wstring &detectedEmulator) {
     HANDLE hProcessSnap;
     PROCESSENTRY32 pe32;
     hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (hProcessSnap == INVALID_HANDLE_VALUE) {
+    if (hProcessSnap == INVALID_HANDLE_VALUE)
         return false;
-    }
     pe32.dwSize = sizeof(PROCESSENTRY32);
     if (!Process32First(hProcessSnap, &pe32)) {
         CloseHandle(hProcessSnap);
@@ -84,7 +79,6 @@ bool isEmulatorDetected(std::wstring &detectedEmulator) {
     do {
         std::string processNameStr = pe32.szExeFile;
         std::wstring processName = stringToWstring(processNameStr);
-
         for (const auto &emulator : emulators) {
             if (processName == emulator) {
                 detectedEmulator = processName;
@@ -97,22 +91,12 @@ bool isEmulatorDetected(std::wstring &detectedEmulator) {
     return false;
 }
 
-bool readMemory(HANDLE hProcess, DWORD address, void *buffer, SIZE_T size) {
+bool readMemory(HANDLE hProcess, DWORD_PTR address, void *buffer, SIZE_T size) { // UNUSED
     MEMORY_BASIC_INFORMATION mbi;
-    if (VirtualQueryEx(hProcess, (LPCVOID)address, &mbi, sizeof(mbi))) {
-        /* std::cout << "[DEBUG] VirtualQueryEx succeeded. Address: 0x" << std::hex << address
-                   << ", State: " << mbi.State << ", Protect: " << mbi.Protect
-                   << ", BaseAddress: 0x" << mbi.BaseAddress
-                   << ", RegionSize: " << mbi.RegionSize << std::endl;
-
-         // Affichage de la protection mémoire
-         std::cout << "[DEBUG] Memory Protection Flags: " << std::hex << mbi.Protect << std::endl;
-         std::cout << "[DEBUG] Memory State Flags: " << std::hex << mbi.State << std::endl;*/
-
-        if (address >= (DWORD_PTR)mbi.BaseAddress && address < (DWORD_PTR)mbi.BaseAddress + mbi.RegionSize) {
-            // if (mbi.State == MEM_COMMIT && (mbi.Protect & PAGE_READWRITE)) {
+    if (VirtualQueryEx(hProcess, reinterpret_cast<LPCVOID>(address), &mbi, sizeof(mbi))) {
+        if (address >= reinterpret_cast<DWORD_PTR>(mbi.BaseAddress) && address < reinterpret_cast<DWORD_PTR>(mbi.BaseAddress) + mbi.RegionSize) {
             SIZE_T bytesRead;
-            if (ReadProcessMemory(hProcess, (LPCVOID)address, buffer, size, &bytesRead)) {
+            if (ReadProcessMemory(hProcess, reinterpret_cast<LPCVOID>(address), buffer, size, &bytesRead)) {
                 if (bytesRead == size) {
                     return true;
                 } else {
@@ -125,10 +109,6 @@ bool readMemory(HANDLE hProcess, DWORD address, void *buffer, SIZE_T size) {
                           << std::hex << address << ". Code d'erreur: "
                           << GetLastError() << std::endl;
             }
-            //  } else {
-            //      std::cerr << "[ERREUR] Adresse mémoire non valide ou non accessible à l'adresse 0x"
-            //               << std::hex << address << ". Protection: " << std::hex << mbi.Protect << std::endl;
-            //  }
         } else {
             std::cerr << "[ERREUR] L'adresse est hors de la région mémoire valide : 0x"
                       << std::hex << address << ". BaseAddress: 0x" << std::hex << mbi.BaseAddress << ", RegionSize: " << mbi.RegionSize << std::endl;
@@ -148,9 +128,8 @@ bool isRomHackLoaded(const std::wstring &targetProcessName) {
     HANDLE hProcessSnap;
     PROCESSENTRY32 pe32;
     hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (hProcessSnap == INVALID_HANDLE_VALUE) {
+    if (hProcessSnap == INVALID_HANDLE_VALUE)
         return false;
-    }
     pe32.dwSize = sizeof(PROCESSENTRY32);
     if (!Process32First(hProcessSnap, &pe32)) {
         CloseHandle(hProcessSnap);
@@ -194,19 +173,17 @@ DWORD getProcessID(const std::wstring &targetProcessName) {
     return 0;
 }
 
-DWORD getBaseAddress(HANDLE hProcess) {
+DWORD_PTR getBaseAddress(HANDLE hProcess) {
     MODULEINFO modInfo;
     HMODULE hMods[1024];
     DWORD cbNeeded;
-
     // Obtenir la liste des modules du processus
     if (EnumProcessModules(hProcess, hMods, sizeof(hMods), &cbNeeded)) {
         for (size_t i = 0; i < (cbNeeded / sizeof(HMODULE)); i++) {
             // Récupérer les informations sur le module
             if (GetModuleInformation(hProcess, hMods[i], &modInfo, sizeof(modInfo))) {
-                // std::cout << "[DEBUG] Module: " << hMods[i] << " Base Address: " << std::hex << modInfo.lpBaseOfDll << std::endl;
-                //  Ici, tu devras probablement vérifier le nom du module pour valider qu'il correspond à Super Mario 64 ou l'émulateur
-                return (DWORD)modInfo.lpBaseOfDll;
+                // Retourner l'adresse de base en utilisant DWORD_PTR
+                return reinterpret_cast<DWORD_PTR>(modInfo.lpBaseOfDll);
             }
         }
     } else {
@@ -216,16 +193,12 @@ DWORD getBaseAddress(HANDLE hProcess) {
 }
 
 bool RunCurrentAsAdministrator() {
-    // Récupérer le chemin complet du programme en cours
     wchar_t path[MAX_PATH];
     if (!GetModuleFileNameW(NULL, path, MAX_PATH)) {
         std::wcerr << L"Erreur de récupération du chemin du module : " << GetLastError() << std::endl;
         return false;
     }
-
-    // Ajouter un argument pour indiquer que le programme a été relancé en mode administrateur
     std::wstring arguments = L"--admin";
-
     SHELLEXECUTEINFOW sei = {0};
     sei.cbSize = sizeof(sei);
     sei.fMask = SEE_MASK_FLAG_DDEWAIT | SEE_MASK_FLAG_NO_UI;
@@ -235,7 +208,6 @@ bool RunCurrentAsAdministrator() {
     sei.lpParameters = arguments.c_str(); // Passer l'argument
     sei.lpDirectory = NULL;
     sei.nShow = SW_SHOWNORMAL;
-
     if (ShellExecuteExW(&sei)) {
         return true; // Succès
     } else {
@@ -258,68 +230,54 @@ int main(int argc, char *argv[]) {
     }
     std::ifstream star_layout("resources/stars_layout/b3313-V1.0.2/layout.json");
     json jsonData;
-    star_layout >> jsonData;
+    if (!star_layout.is_open() || !(star_layout >> jsonData)) {
+        std::cerr << "Erreur lors du chargement du fichier JSON." << std::endl;
+        return 1;
+    }
     sf::RenderWindow window(sf::VideoMode(1280, 720), "Mind Map Example");
-
     // Charger textures
-    sf::Texture saveTexture;
-    if (!saveTexture.loadFromFile("resources/textures/save_icon.png"))
+    if (!textures.loadTextures()) {
+        std::cerr << "[ERREUR] Échec du chargement des textures." << std::endl;
         return 1;
-    sf::Texture starTexture;
-    if (!starTexture.loadFromFile("resources/textures/star.png"))
-        return 1;
-    sf::Texture dropdownTexture;
-    if (!dropdownTexture.loadFromFile("resources/textures/dropdown_background.png"))
-        return 1;
-
+    }
     // Créer les objets
-    Button saveButton(1150, 10, saveTexture);      // Positionnez le bouton comme vous le souhaitez
-    Button switchViewButton(550, 90, starTexture); // Positionnez le bouton comme vous le souhaitez
+    Button saveButton(1150, 10, textures.saveTexture);               // Positionnez le bouton comme vous le souhaitez
+    Button switchViewButton(550, 90, textures.starCollectedTexture); // Positionnez le bouton comme vous le souhaitez
     std::vector<std::string> menuItems = {"b3313-v1.0.2.json", "another_file.json"};
-
     sf::Font font;
     if (!font.loadFromFile("resources/assets/Arial.ttf"))
         return 1;
-
-    DropdownMenu dropdownMenu(1150, 50, dropdownTexture, menuItems, font); // Positionnez le menu comme vous le souhaitez
-
+    DropdownMenu dropdownMenu(1150, 50, textures.dropdownTexture, menuItems, font); // Positionnez le menu comme vous le souhaitez
     std::vector<Node> nodes = loadNodes("b3313-v1.0.2.json", font);
     sf::Vector2i startPos;
     bool dragging = false;
     int startNodeIndex = -1;
     std::vector<std::pair<int, int>> connections;
-
     sf::Text emulatorText;
     emulatorText.setFont(font);
     emulatorText.setString("Is emulator running?");
     emulatorText.setCharacterSize(24);
     emulatorText.setPosition(10, 10);
-
     sf::Text b3313Text;
     b3313Text.setFont(font);
     b3313Text.setString("Is b3313 V1.0.2 ROM IS LOADED?");
     b3313Text.setCharacterSize(24);
     b3313Text.setPosition(10, 40);
-
     bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles
     StarDisplay starDisplay;      // Instance de la classe StarDisplay
-
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) {
+            if (event.type == sf::Event::Closed)
                 window.close();
-            }
-
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
                     if (saveButton.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
                         saveNodes(nodes, "b3313-v1.0.2.json");
                     } else if (dropdownMenu.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
                         std::string selectedFile = dropdownMenu.getSelectedItem(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
-                        if (!selectedFile.empty()) {
+                        if (!selectedFile.empty())
                             nodes = loadNodes(selectedFile, font);
-                        }
                     } else if (switchViewButton.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
                         showStarDisplay = !showStarDisplay; // Basculer l'état d'affichage des étoiles
                     } else if (isMouseOverNode(nodes, sf::Vector2i(event.mouseButton.x, event.mouseButton.y), startNodeIndex)) {
@@ -334,7 +292,6 @@ int main(int argc, char *argv[]) {
                 }
 #endif
             }
-
             if (event.type == sf::Event::MouseButtonReleased) {
                 if (event.mouseButton.button == sf::Mouse::Left && dragging) {
                     int endNodeIndex = -1;
@@ -343,28 +300,23 @@ int main(int argc, char *argv[]) {
                         nodes[startNodeIndex].connections.push_back(endNodeIndex);
                         nodes[endNodeIndex].connections.push_back(startNodeIndex);
                     }
-
                     dragging = false;
                 }
             }
-
             if (event.type == sf::Event::MouseMoved && dragging) {
                 // Handle dragging logic if needed
             }
         }
-
         window.clear(sf::Color::White);
         std::wstring detectedEmulator;
-        if (isEmulatorDetected(detectedEmulator)) {
+        if (isEmulatorDetected(detectedEmulator))
             emulatorText.setFillColor(sf::Color::Green);
-        } else {
+        else
             emulatorText.setFillColor(sf::Color::Black);
-        }
-        if (isRomHackLoaded(detectedEmulator)) {
+        if (isRomHackLoaded(detectedEmulator))
             b3313Text.setFillColor(sf::Color::Green);
-        } else {
+        else
             b3313Text.setFillColor(sf::Color::Black);
-        }
         if (showStarDisplay) {
             if (isRomHackLoaded(detectedEmulator)) {
                 DWORD processID = getProcessID(detectedEmulator);
@@ -376,17 +328,14 @@ int main(int argc, char *argv[]) {
                             for (const auto &group : jsonData["groups"]) {
                                 std::string groupName = group["name"];
                                 std::vector<StarData> starList;
-
                                 // Parcourir les cours (mondes) du groupe
                                 for (const auto &course : group["courses"]) {
                                     std::string courseName = course["name"];
                                     int numStars = 5;           // Supposons qu'il y ait 5 étoiles par monde (peut être modifié)
                                     std::string starIcon = "☆"; // Utiliser des étoiles génériques pour le moment
-
                                     // Ajouter à la liste des étoiles pour ce monde
                                     starList.push_back({courseName, numStars, starIcon});
                                 }
-
                                 // Afficher les étoiles pour le groupe actuel
                                 starDisplay.afficherEtoilesGroupe(groupName, starList, window, font);
                             }
@@ -410,41 +359,32 @@ int main(int argc, char *argv[]) {
                     sf::Vertex(nodes[conn.first].shape.getPosition() + sf::Vector2f(30, 30), sf::Color::Black),
                     sf::Vertex(nodes[conn.second].shape.getPosition() + sf::Vector2f(30, 30), sf::Color::Black)};
                 window.draw(line, 2, sf::Lines);
-
                 // Draw arrow
                 sf::Vector2f dir = nodes[conn.second].shape.getPosition() - nodes[conn.first].shape.getPosition();
                 float length = std::sqrt(dir.x * dir.x + dir.y * dir.y);
                 dir /= length;
-
                 float arrowSize = 10.f;
                 sf::Vector2f arrowPoint1 = nodes[conn.second].shape.getPosition() - dir * (arrowSize + 10.f) + sf::Vector2f(-dir.y * arrowSize, dir.x * arrowSize);
                 sf::Vector2f arrowPoint2 = nodes[conn.second].shape.getPosition() - dir * (arrowSize + 10.f) + sf::Vector2f(dir.y * arrowSize, -dir.x * arrowSize);
-
                 sf::Vertex arrow[] = {
                     sf::Vertex(nodes[conn.second].shape.getPosition(), sf::Color::Black),
                     sf::Vertex(arrowPoint1, sf::Color::Black),
                     sf::Vertex(arrowPoint2, sf::Color::Black)};
-
                 window.draw(arrow, 3, sf::Triangles);
             }
-
             // Draw nodes
             for (const auto &node : nodes) {
                 node.draw(window);
             }
-
             // Draw button and menu
             saveButton.draw(window);
             dropdownMenu.draw(window);
             switchViewButton.draw(window); // Dessiner le bouton pour changer de vue
-
             // Draw emulator text
             window.draw(emulatorText);
             window.draw(b3313Text);
         }
-
         window.display();
     }
-
     return 0;
 }
