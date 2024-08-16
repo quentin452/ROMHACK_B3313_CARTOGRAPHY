@@ -16,6 +16,7 @@
 #include <romhack_b3313_cartography/DropdownMenu.h>
 #include <romhack_b3313_cartography/Node.h>
 #include <romhack_b3313_cartography/StarDisplay.h>
+
 #include <string>
 #include <vector>
 const DWORD STAR_OFFSET = 0x33B8; // Offset pour les étoiles (à adapter selon la version du jeu)
@@ -129,6 +130,8 @@ bool readMemory(HANDLE hProcess, DWORD address, void *buffer, SIZE_T size) {
 }
 
 bool isRomHackLoaded() {
+    if (!isEmulatorDetected())
+        return false;
     HANDLE hProcessSnap;
     PROCESSENTRY32 pe32;
     hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -156,10 +159,12 @@ DWORD getProcessID() {
     PROCESSENTRY32 pe32;
     hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hProcessSnap == INVALID_HANDLE_VALUE) {
+        std::cerr << "[ERREUR] Échec de la capture des processus. Code d'erreur: " << GetLastError() << std::endl;
         return 0;
     }
     pe32.dwSize = sizeof(PROCESSENTRY32);
     if (!Process32First(hProcessSnap, &pe32)) {
+        std::cerr << "[ERREUR] Échec de Process32First. Code d'erreur: " << GetLastError() << std::endl;
         CloseHandle(hProcessSnap);
         return 0;
     }
@@ -171,9 +176,11 @@ DWORD getProcessID() {
             return processID;
         }
     } while (Process32Next(hProcessSnap, &pe32));
+    std::cerr << "[ERREUR] Processus non trouvé." << std::endl;
     CloseHandle(hProcessSnap);
     return 0;
 }
+
 DWORD getBaseAddress(HANDLE hProcess) {
     MODULEINFO modInfo;
     HMODULE hMods[1024];
@@ -236,6 +243,9 @@ int main(int argc, char *argv[]) {
             return 1; // Échec
         }
     }
+    std::ifstream star_layout("resources/stars_layout/b3313-V1.0.2/layout.json");
+    json jsonData;
+    star_layout >> jsonData;
     sf::RenderWindow window(sf::VideoMode(1280, 720), "Mind Map Example");
 
     // Charger textures
@@ -331,24 +341,42 @@ int main(int argc, char *argv[]) {
         }
 
         window.clear(sf::Color::White);
-
+        if (isEmulatorDetected()) {
+            emulatorText.setFillColor(sf::Color::Green);
+        } else {
+            emulatorText.setFillColor(sf::Color::Black);
+        }
+        if (isRomHackLoaded()) {
+            b3313Text.setFillColor(sf::Color::Green);
+        } else {
+            b3313Text.setFillColor(sf::Color::Black);
+        }
         if (showStarDisplay) {
             // Lecture des étoiles et mise à jour
-            if (isEmulatorDetected() && isRomHackLoaded()) {
+            if (isRomHackLoaded()) {
                 DWORD processID = getProcessID();
                 if (processID != 0) {
                     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
                     if (hProcess != NULL) {
                         DWORD baseAddress = getBaseAddress(hProcess);
                         if (baseAddress != 0) {
-                            std::vector<bool> stars(460, false);
-                            for (int i = 0; i < 460; ++i) {
-                                BYTE star;
-                                if (readMemory(hProcess, baseAddress + STAR_OFFSET + i, &star, sizeof(star))) {
-                                    stars[i] = (star != 0);
+                            for (const auto &group : jsonData["groups"]) {
+                                std::string groupName = group["name"];
+                                std::vector<StarData> starList;
+
+                                // Parcourir les cours (mondes) du groupe
+                                for (const auto &course : group["courses"]) {
+                                    std::string courseName = course["name"];
+                                    int numStars = 5;           // Supposons qu'il y ait 5 étoiles par monde (peut être modifié)
+                                    std::string starIcon = "☆"; // Utiliser des étoiles génériques pour le moment
+
+                                    // Ajouter à la liste des étoiles pour ce monde
+                                    starList.push_back({courseName, numStars, starIcon});
                                 }
+
+                                // Afficher les étoiles pour le groupe actuel
+                                starDisplay.afficherEtoilesGroupe(groupName, starList, window, font);
                             }
-                            starDisplay.updateStars(stars);
                             CloseHandle(hProcess);
                         } else {
                             std::cerr << "[ERREUR] Adresse de base non trouvée." << std::endl;
@@ -360,7 +388,6 @@ int main(int argc, char *argv[]) {
                     std::cerr << "Processus non trouvé !" << std::endl;
                 }
             }
-            starDisplay.draw(window);
         } else {
             // Dessiner les connexions et les nœuds
             for (const auto &conn : connections) {
