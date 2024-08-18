@@ -19,6 +19,7 @@
 #include <romhack_b3313_cartography/uis/DropdownMenu.h>
 #include <romhack_b3313_cartography/uis/Node.h>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
+#include <romhack_b3313_cartography/uis/TabManager.hpp>
 #include <romhack_b3313_cartography/utils/utils.hpp>
 #include <string>
 #include <tlhelp32.h>
@@ -304,6 +305,8 @@ int main(int argc, char *argv[]) {
     StarDisplay starDisplay;      // Instance de la classe StarDisplay
     sf::View scrollView(sf::FloatRect(0, 0, 1280, 720));
     window.setView(scrollView);
+    std::vector<std::string> tabNames;
+    TabManager tabManager(tabNames, font);
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -318,6 +321,7 @@ int main(int argc, char *argv[]) {
             }
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
+                    tabManager.handleMouseClick(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
                     if (saveButton.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
                         saveNodes(nodes, "b3313-v1.0.2.json");
                     } else if (dropdownMenu.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
@@ -372,9 +376,12 @@ int main(int argc, char *argv[]) {
                         DWORD baseAddress = getBaseAddress(hProcess);
                         if (baseAddress != 0) {
                             int yOffset = 0;
-                            int numSlots = jsonData["format"]["num_slots"];                 // Récupérer le nombre de slots depuis le JSON
-                            std::vector<std::string> tabNames = generateTabNames(numSlots); // Générer les noms des onglets
-
+                            int numSlots = jsonData["format"]["num_slots"]; // Récupérer le nombre de slots depuis le JSON
+                            std::vector<std::string> tabNames;
+                            for (int i = 1; i <= numSlots; ++i) {
+                                tabNames.push_back("Mario " + std::to_string(i));
+                            }
+                            tabManager.initializeTabs(tabNames);
                             for (int i = 0; i < numSlots; ++i) {
                                 std::string tabName = tabNames[i];
                                 sf::Text tabText;
@@ -402,6 +409,7 @@ int main(int argc, char *argv[]) {
                                     starDisplay.afficherEtoilesGroupe(groupName, starList, window, font, yOffset);
                                 }
                             }
+                            tabManager.draw(window);
                         } else {
                             CloseHandle(hProcess);
                             std::cerr << "[ERREUR] Adresse de base non trouvée." << std::endl;
@@ -414,6 +422,7 @@ int main(int argc, char *argv[]) {
                 }
                 std::string saveLocation = GetParallelLauncherSaveLocation();
                 std::cout << "saveLocation: " << saveLocation << std::endl; // Log pour saveLocation
+
             } else {
                 std::cerr << "Aucun émulateur détecté !" << std::endl;
             }
