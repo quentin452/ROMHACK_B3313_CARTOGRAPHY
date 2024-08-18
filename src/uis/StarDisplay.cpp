@@ -1,6 +1,6 @@
-#include <romhack_b3313_cartography/Textures.h>
+#include <romhack_b3313_cartography/uis/Textures.h>
 
-#include <romhack_b3313_cartography/StarDisplay.h>
+#include <romhack_b3313_cartography/uis/StarDisplay.h>
 void StarDisplay::afficherEtoilesGroupe(const std::string &groupName, const std::vector<StarData> &stars, sf::RenderWindow &window, const sf::Font &font, int &yOffset) {
     sf::Text groupText;
     groupText.setFont(font);

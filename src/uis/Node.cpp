@@ -1,4 +1,4 @@
-#include <romhack_b3313_cartography/Node.h>
+#include <romhack_b3313_cartography/uis/Node.h>
 
 Node::Node(float x, float y, const std::string &text, sf::Font &font) : font(font), modified(true) {
     shape.setRadius(30);

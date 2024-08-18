@@ -1,4 +1,4 @@
-#include <romhack_b3313_cartography/Button.h>
+#include <romhack_b3313_cartography/uis/Button.h>
 
 Button::Button(float x, float y, const sf::Texture &texture) {
     sprite.setTexture(texture);

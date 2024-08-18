@@ -13,12 +13,13 @@
 #include <iostream>
 #include <locale>
 #include <nlohmann/json.hpp>
-#include <romhack_b3313_cartography/Textures.h>
+#include <romhack_b3313_cartography/uis/Textures.h>
 
-#include <romhack_b3313_cartography/Button.h>
-#include <romhack_b3313_cartography/DropdownMenu.h>
-#include <romhack_b3313_cartography/Node.h>
-#include <romhack_b3313_cartography/StarDisplay.h>
+#include <romhack_b3313_cartography/uis/Button.h>
+#include <romhack_b3313_cartography/uis/DropdownMenu.h>
+#include <romhack_b3313_cartography/uis/Node.h>
+#include <romhack_b3313_cartography/uis/StarDisplay.h>
+#include <romhack_b3313_cartography/utils/utils.hpp>
 #include <string>
 #include <tlhelp32.h>
 #include <vector>
@@ -26,6 +27,40 @@
 const DWORD STAR_OFFSET = 0x33B8; // Offset pour les étoiles (à adapter selon la version du jeu)
 
 using json = nlohmann::json;
+std::vector<std::string> generateTabNames(int numSlots) {
+    std::vector<std::string> tabNames;
+    for (int i = 0; i < numSlots; ++i) {
+        if (i < 26) {
+            tabNames.push_back("MARIO " + std::string(1, 'A' + i));
+        } else {
+            tabNames.push_back("MARIO " + std::to_string(i - 25));
+        }
+    }
+    return tabNames;
+}
+std::string GetParallelLauncherSaveLocation() {
+    char *userProfile = getenv("USERPROFILE");
+    if (userProfile == nullptr) {
+        std::cerr << "Erreur: Impossible de récupérer le chemin du répertoire utilisateur." << std::endl;
+        return "";
+    }
+    std::string saveLocation = std::string(userProfile) + "\\AppData\\Local\\parallel-launcher\\data\\retro-data\\saves\\sync";
+    if (!std::filesystem::exists(saveLocation)) {
+        std::cerr << "Erreur: Le répertoire spécifié n'existe pas." << std::endl;
+        return "";
+    }
+    try {
+        for (const auto &entry : std::filesystem::directory_iterator(saveLocation)) {
+            if (entry.path().extension() == ".srm") {
+                return entry.path().string();
+            }
+        }
+    } catch (const std::filesystem::filesystem_error &e) {
+        std::cerr << "Erreur d'accès au répertoire: " << e.what() << std::endl;
+    }
+    std::cerr << "Aucun fichier .srm trouvé dans le répertoire spécifié." << std::endl;
+    return "";
+}
 
 void saveNodes(const std::vector<Node> &nodes, const std::string &filename) {
     json j;
@@ -217,6 +252,8 @@ bool RunCurrentAsAdministrator() {
 }
 
 int main(int argc, char *argv[]) {
+    std::string retroarch_path = GetProcessPath("retroarch.exe");
+    std::cout << "RetroArch path: " << retroarch_path << std::endl;
     if (argc > 1 && std::string(argv[1]) == "--admin") {
         std::wcout << L"Programme exécuté en mode administrateur." << std::endl;
     } else {
@@ -335,19 +372,35 @@ int main(int argc, char *argv[]) {
                         DWORD baseAddress = getBaseAddress(hProcess);
                         if (baseAddress != 0) {
                             int yOffset = 0;
-                            for (const auto &group : jsonData["groups"]) {
-                                std::string groupName = group["name"];
-                                std::vector<StarData> starList;
-                                // Parcourir les cours (mondes) du groupe
-                                for (const auto &course : group["courses"]) {
-                                    std::string courseName = course["name"];
-                                    int numStars = 5;           // Supposons qu'il y ait 5 étoiles par monde (peut être modifié)
-                                    std::string starIcon = "☆"; // Utiliser des étoiles génériques pour le moment
-                                    // Ajouter à la liste des étoiles pour ce monde
-                                    starList.push_back({courseName, numStars, starIcon});
+                            int numSlots = jsonData["format"]["num_slots"];                 // Récupérer le nombre de slots depuis le JSON
+                            std::vector<std::string> tabNames = generateTabNames(numSlots); // Générer les noms des onglets
+
+                            for (int i = 0; i < numSlots; ++i) {
+                                std::string tabName = tabNames[i];
+                                sf::Text tabText;
+                                tabText.setFont(font);
+                                tabText.setString(tabName);
+                                tabText.setCharacterSize(24);
+                                tabText.setFillColor(sf::Color::Black);
+                                tabText.setPosition(100, 100 + yOffset); // Position du texte de l'onglet
+                                window.draw(tabText);
+
+                                yOffset += 30; // Espacement après le nom de l'onglet
+
+                                for (const auto &group : jsonData["groups"]) {
+                                    std::string groupName = group["name"];
+                                    std::vector<StarData> starList;
+                                    // Parcourir les cours (mondes) du groupe
+                                    for (const auto &course : group["courses"]) {
+                                        std::string courseName = course["name"];
+                                        int numStars = 5;           // Supposons qu'il y ait 5 étoiles par monde (peut être modifié)
+                                        std::string starIcon = "☆"; // Utiliser des étoiles génériques pour le moment
+                                        // Ajouter à la liste des étoiles pour ce monde
+                                        starList.push_back({courseName, numStars, starIcon});
+                                    }
+                                    // Afficher les étoiles pour le groupe actuel
+                                    starDisplay.afficherEtoilesGroupe(groupName, starList, window, font, yOffset);
                                 }
-                                // Afficher les étoiles pour le groupe actuel
-                                starDisplay.afficherEtoilesGroupe(groupName, starList, window, font, yOffset);
                             }
                         } else {
                             CloseHandle(hProcess);
@@ -359,6 +412,8 @@ int main(int argc, char *argv[]) {
                 } else {
                     std::cerr << "Processus non trouvé !" << std::endl;
                 }
+                std::string saveLocation = GetParallelLauncherSaveLocation();
+                std::cout << "saveLocation: " << saveLocation << std::endl; // Log pour saveLocation
             } else {
                 std::cerr << "Aucun émulateur détecté !" << std::endl;
             }

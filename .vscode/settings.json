@@ -147,6 +147,14 @@
     "numeric": "cpp",
     "ranges": "cpp",
     "span": "cpp",
-    "valarray": "cpp"
+    "valarray": "cpp",
+    "cwctype": "cpp",
+    "numbers": "cpp",
+    "queue": "cpp",
+    "regex": "cpp",
+    "stack": "cpp",
+    "typeindex": "cpp",
+    "unordered_set": "cpp",
+    "variant": "cpp"
   }
 }
