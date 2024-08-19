@@ -49,12 +49,12 @@ void StarDisplay::afficherEtoilesGroupe(const std::string &groupName, const std:
 
         // Afficher les étoiles à droite du texte avec espacement
         sf::Sprite starSprite;
-        if (star.numStars > 0) {
+        if (star.collected)
             starSprite.setTexture(textures.starCollectedTexture);
-        } else {
+        else
             starSprite.setTexture(textures.starMissingTexture);
-        }
-        float starSpacing = 20.0f; // Espacement entre les étoiles
+
+        float starSpacing = 20.0f;                                                                                              // Espacement entre les étoiles
         starSprite.setPosition(100 + maxTextWidth + 10 + starSpacing, 130 + yOffset + (maxTextHeight - starTextureHeight) / 2); // Centrer verticalement les étoiles par rapport au texte
         window.draw(starSprite);
 

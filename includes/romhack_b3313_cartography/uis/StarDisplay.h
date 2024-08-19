@@ -9,9 +9,10 @@ struct StarData {
     std::string courseName;
     int numStars;
     std::string starIcon;
+    bool collected = false;
 
-    StarData(const std::string &courseName, int numStars, const std::string &starIcon)
-        : courseName(courseName), numStars(numStars), starIcon(starIcon) {}
+    StarData(const std::string &courseName, int numStars, const std::string &starIcon,bool collected)
+        : courseName(courseName), numStars(numStars), starIcon(starIcon),collected(collected) {}
 };
 class StarDisplay {
   public:

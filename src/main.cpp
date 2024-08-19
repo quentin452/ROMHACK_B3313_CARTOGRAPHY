@@ -402,8 +402,9 @@ int main(int argc, char *argv[]) {
                                         std::string courseName = course["name"];
                                         int numStars = 5;           // Supposons qu'il y ait 5 étoiles par monde (peut être modifié)
                                         std::string starIcon = "☆"; // Utiliser des étoiles génériques pour le moment
+                                        bool star_collected = false;
                                         // Ajouter à la liste des étoiles pour ce monde
-                                        starList.push_back({courseName, numStars, starIcon});
+                                        starList.push_back({courseName, numStars, starIcon,star_collected});
                                     }
                                     // Afficher les étoiles pour le groupe actuel
                                     starDisplay.afficherEtoilesGroupe(groupName, starList, window, font, yOffset);
