@@ -483,7 +483,8 @@ int main(int argc, char *argv[]) {
                     }
                 }
             } else {
-                std::cerr << "Aucun émulateur détecté !" << std::endl;
+                window.draw(emulatorText);
+                window.draw(b3313Text);
             }
         } else {
             // Dessiner les connexions et les nœuds
