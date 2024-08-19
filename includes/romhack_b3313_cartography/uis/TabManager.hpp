@@ -2,7 +2,6 @@
 #include <SFML/Graphics.hpp>
 #include <string>
 #include <vector>
-
 class TabManager {
   public:
     TabManager(const std::vector<std::string> &tabNames, const sf::Font &font)
@@ -12,22 +11,25 @@ class TabManager {
 
     void initializeTabs(const std::vector<std::string> &tabNames) {
         tabs.clear();
-        float xOffset = 100; // Position initiale des onglets
+        float xOffset = 100;
         float yOffset = 50;
         for (const auto &name : tabNames) {
             tabs.emplace_back(name, xOffset, yOffset);
-            xOffset += 110; // Espacement entre les onglets
+            xOffset += 110;
         }
     }
+
     void draw(sf::RenderWindow &window) const {
         for (size_t i = 0; i < tabs.size(); ++i) {
             tabs[i].draw(window, font, i == currentTabIndex);
         }
     }
 
-    void handleMouseClick(const sf::Vector2i &mousePosition) {
+    void handleMouseClick(const sf::Vector2i &mousePosition, const sf::View &view,sf::RenderWindow &window) {
+        sf::Vector2f viewMousePosition = window.mapPixelToCoords(mousePosition, view);
+
         for (size_t i = 0; i < tabs.size(); ++i) {
-            if (tabs[i].contains(mousePosition)) {
+            if (tabs[i].contains(viewMousePosition)) {
                 currentTabIndex = i;
                 break;
             }

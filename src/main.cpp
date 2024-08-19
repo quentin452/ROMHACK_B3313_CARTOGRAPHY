@@ -325,7 +325,7 @@ int main(int argc, char *argv[]) {
             }
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
-                    tabManager.handleMouseClick(sf::Vector2i(event.mouseButton.x, event.mouseButton.y));
+                    tabManager.handleMouseClick(sf::Vector2i(event.mouseButton.x, event.mouseButton.y),scrollView,window);
                     if (saveButton.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
                         saveNodes(nodes, "b3313-v1.0.2.json");
                     } else if (dropdownMenu.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
