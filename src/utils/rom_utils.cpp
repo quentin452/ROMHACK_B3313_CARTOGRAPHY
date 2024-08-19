@@ -61,6 +61,8 @@ int getNumStarsFromMask(int mask, const std::vector<uint8_t> &saveData, int offs
         return numStars;
     }
 
+    logFile << "Offset: " << offset << ", SaveData Size: " << saveData.size() << std::endl;
+
     // Itérer à travers tous les bits du masque
     for (int bit = 0; bit < 32; ++bit) {
         if (mask & (1 << bit)) {
@@ -69,19 +71,13 @@ int getNumStarsFromMask(int mask, const std::vector<uint8_t> &saveData, int offs
 
             // Vérifier que byteOffset est dans les limites
             if (byteOffset < saveData.size()) {
-                uint8_t byteValue = saveData[byteOffset];
-                bool isCollected = (byteValue & (1 << bitIndex)) != 0;
-
-                logFile << "Mask: " << std::hex << mask
-                        << ", Bit: " << bit
+                logFile << "Bit: " << bit
                         << ", ByteOffset: " << byteOffset
                         << ", BitIndex: " << bitIndex
-                        << ", ByteValue: " << +byteValue
-                        << ", IsCollected: " << (isCollected ? "Yes" : "No") << std::endl;
+                        << ", ByteValue: " << +saveData[byteOffset] << std::endl;
 
-                if (isCollected) {
-                    numStars++;
-                }
+                // Incrémenter le compteur pour chaque bit du masque, peu importe l'état
+                numStars++;
             } else {
                 logFile << "Byte index out of range: " << byteOffset << std::endl;
                 break; // Exit loop if out of range

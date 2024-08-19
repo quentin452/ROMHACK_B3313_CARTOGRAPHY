@@ -103,7 +103,7 @@ std::wstring stringToWstring(const std::string &str) {
     return converter.from_bytes(str);
 }
 
-bool isEmulatorDetected(const std::vector<std::wstring>& emulators, std::wstring& detectedEmulator) {
+bool isEmulatorDetected(const std::vector<std::wstring> &emulators, std::wstring &detectedEmulator) {
     HANDLE hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hProcessSnap == INVALID_HANDLE_VALUE)
         return false;
@@ -163,6 +163,7 @@ void fixEndianness(uint *data, size_t words) {
 }
 
 std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &params) {
+    std::cerr << "Ouverture du fichier: " << filePath << std::endl;
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         std::cerr << "Erreur lors de l'ouverture du fichier: " << filePath << std::endl;
@@ -172,20 +173,37 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &
     std::streamsize size = file.tellg();
     file.seekg(0, std::ios::beg);
 
+    std::cerr << "Taille du fichier: " << size << " octets" << std::endl;
+
     uint saveFileSize = params.slotSize * params.numSlots;
+    std::cerr << "Paramètres de sauvegarde - slotSize: " << params.slotSize
+              << ", numSlots: " << params.numSlots
+              << ", taille attendue pour le buffer: " << saveFileSize << " octets" << std::endl;
+
+    // Vérification de la taille attendue du buffer
+    if (saveFileSize == 0) {
+        std::cerr << "Erreur: Taille du buffer calculée est 0. Vérifiez les paramètres de sauvegarde." << std::endl;
+        return {};
+    }
+
     std::vector<uint8_t> buffer(saveFileSize);
+
+    std::cerr << "Taille du buffer alloué: " << buffer.size() << " octets" << std::endl;
 
     switch (params.saveFormat) {
     case SaveFormat::EEPROM: {
+        std::cerr << "Traitement du format EEPROM" << std::endl;
         if (size < 0x800) {
             std::cerr << "Erreur: La taille du fichier est inférieure à la taille attendue pour EEPROM." << std::endl;
             return {};
         }
         file.seekg(0);
         file.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
+        std::cerr << "Lecture EEPROM effectuée" << std::endl;
         break;
     }
     case SaveFormat::SRAM: {
+        std::cerr << "Traitement du format SRAM" << std::endl;
         if (size < 0x8000) {
             std::cerr << "Erreur: La taille du fichier est inférieure à la taille attendue pour SRAM." << std::endl;
             return {};
@@ -193,9 +211,11 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &
         file.seekg(0x20800u);
         file.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
         fixEndianness(reinterpret_cast<uint *>(buffer.data()), buffer.size() / sizeof(uint));
+        std::cerr << "Lecture SRAM effectuée" << std::endl;
         break;
     }
     case SaveFormat::FlashRAM: {
+        std::cerr << "Traitement du format FlashRAM" << std::endl;
         if (size < 0x20000) {
             std::cerr << "Erreur: La taille du fichier est inférieure à la taille attendue pour FlashRAM." << std::endl;
             return {};
@@ -203,19 +223,22 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &
         file.seekg(0x28800);
         file.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
         fixEndianness(reinterpret_cast<uint *>(buffer.data()), buffer.size() / sizeof(uint));
+        std::cerr << "Lecture FlashRAM effectuée" << std::endl;
         break;
     }
     case SaveFormat::MemPak: {
+        std::cerr << "Traitement du format MemPak" << std::endl;
         if (size < 0x20000) {
             std::cerr << "Erreur: La taille du fichier est inférieure à la taille attendue pour MemPak." << std::endl;
             return {};
         }
         file.seekg(0x800);
         file.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
+        std::cerr << "Lecture MemPak effectuée" << std::endl;
         break;
     }
     default: {
-        std::cerr << "Format de sauvegarde non reconnu." << std::endl;
+        std::cerr << "Format de sauvegarde non reconnu: " << static_cast<int>(params.saveFormat) << std::endl;
         return {};
     }
     }
@@ -225,8 +248,11 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &
         return {};
     }
 
+    std::cerr << "Lecture du fichier réussie." << std::endl;
+
     return buffer;
 }
+
 SaveFormat parseSaveFormat(const std::string &saveType) {
     if (saveType == "MemPak")
         return SaveFormat::MemPak;
@@ -284,6 +310,7 @@ int main(int argc, char *argv[]) {
     window.setView(scrollView);
     std::vector<std::string> tabNames;
     TabManager tabManager(tabNames, font);
+    sf::Clock clock;
     while (window.isOpen()) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -336,97 +363,130 @@ int main(int argc, char *argv[]) {
         }
         window.clear(sf::Color::White);
         std::wstring detectedEmulator;
-        if (isEmulatorDetected(parallelLauncher, detectedEmulator))
-            emulatorText.setFillColor(sf::Color::Green);
-        else
-            emulatorText.setFillColor(sf::Color::Black);
-        if (isRomHackLoaded(detectedEmulator))
-            b3313Text.setFillColor(sf::Color::Green);
-        else
-            b3313Text.setFillColor(sf::Color::Black);
+        sf::Time elapsed = clock.getElapsedTime();
+        if (elapsed.asSeconds() >= 1.0f) { // Vérifiez toutes les secondes
+            if (isEmulatorDetected(parallelLauncher, detectedEmulator))
+                emulatorText.setFillColor(sf::Color::Green);
+            else
+                emulatorText.setFillColor(sf::Color::Black);
+
+            if (isRomHackLoaded(detectedEmulator))
+                b3313Text.setFillColor(sf::Color::Green);
+            else
+                b3313Text.setFillColor(sf::Color::Black);
+
+            clock.restart();
+        }
         if (showStarDisplay) {
             if (isRomHackLoaded(detectedEmulator)) {
                 std::string saveLocation = GetParallelLauncherSaveLocation();
                 std::cerr << "1" << std::endl;
 
-                // Récupérer les paramètres de sauvegarde depuis jsonData
+                if (!jsonData.contains("format") || !jsonData["format"].contains("save_type") ||
+                    !jsonData["format"].contains("slots_start") || !jsonData["format"].contains("slot_size") ||
+                    !jsonData["format"].contains("active_bit") || !jsonData["format"].contains("checksum_offset")) {
+                    std::cerr << "Erreur: Les paramètres de sauvegarde sont manquants dans le JSON." << std::endl;
+                }
+
                 const json &format = jsonData["format"];
                 SaveParams params;
                 params.saveFormat = parseSaveFormat(format["save_type"].get<std::string>());
                 params.slotsStart = format["slots_start"].get<uint>();
                 params.slotSize = format["slot_size"].get<uint>();
                 params.activeBit = format["active_bit"].get<uint>();
+                params.numSlots = format["num_slots"].get<uint>();
                 params.checksumOffset = format["checksum_offset"].get<uint>();
 
                 auto saveData = ReadSrmFile(saveLocation, params);
                 std::cerr << "2" << std::endl;
-                if (!saveData.empty()) {
-                    int yOffset = 0;
-                    std::cerr << "2_3" << std::endl;
-                    int numSlots = params.numSlots;
-                    std::cerr << "2_4" << std::endl;
-                    std::vector<std::string> tabNames;
-                    std::cerr << "2_5" << std::endl;
-                    for (int i = 1; i <= numSlots; ++i) {
-                        tabNames.push_back("Mario " + std::to_string(i));
+
+                if (saveData.empty()) {
+                    std::cerr << "Erreur: Les données de sauvegarde sont vides." << std::endl;
+                }
+
+                int yOffset = 0;
+                int numSlots = params.numSlots;
+                if (numSlots <= 0) {
+                    std::cerr << "Erreur: Nombre de slots invalide." << std::endl;
+                }
+
+                std::vector<std::string> tabNames;
+                for (int i = 1; i <= numSlots; ++i) {
+                    tabNames.push_back("Mario " + std::to_string(i));
+                }
+
+                tabManager.initializeTabs(tabNames);
+                std::string currentTabName = tabManager.getCurrentTabName();
+                if (currentTabName.empty()) {
+                    std::cerr << "Erreur: Nom de l'onglet actuel est vide." << std::endl;
+                }
+
+                for (int i = 0; i < numSlots; ++i) {
+                    if (i >= tabNames.size()) {
+                        std::cerr << "Erreur: Index de tabName hors limites." << std::endl;
                     }
-                    std::cerr << "2_6" << std::endl;
-                    tabManager.initializeTabs(tabNames);
-                    std::cerr << "3" << std::endl;
+                    std::string tabName = tabNames[i];
+                    if (tabName == currentTabName) {
+                        sf::Text tabText;
+                        tabText.setFont(font);
+                        tabText.setString(tabName);
+                        tabText.setCharacterSize(24);
+                        tabText.setFillColor(sf::Color::Black);
+                        tabText.setPosition(100, 100 + yOffset);
+                        window.draw(tabText);
 
-                    std::string currentTabName = tabManager.getCurrentTabName();
-                    std::cerr << "4" << std::endl;
+                        yOffset += 30;
 
-                    for (int i = 0; i < numSlots; ++i) {
-                        std::string tabName = tabNames[i];
-                        if (tabName == currentTabName) {
-                            sf::Text tabText;
-                            tabText.setFont(font);
-                            tabText.setString(tabName);
-                            tabText.setCharacterSize(24);
-                            tabText.setFillColor(sf::Color::Black);
-                            tabText.setPosition(100, 100 + yOffset);
-                            window.draw(tabText);
-
-                            yOffset += 30;
-                            std::cerr << "5" << std::endl;
-
-                            for (const auto &group : jsonData["groups"]) {
-                                std::string groupName = group["name"];
-                                std::vector<StarData> groupStarData;
-
-                                sf::Text groupText;
-                                groupText.setFont(font);
-                                groupText.setString(groupName);
-                                groupText.setCharacterSize(24);
-                                groupText.setFillColor(sf::Color::Black);
-                                groupText.setPosition(100, 130 + yOffset);
-                                window.draw(groupText);
-
-                                yOffset += 30;
-
-                                for (const auto &course : group["courses"]) {
-                                    std::string courseName = course["name"];
-                                    std::vector<StarData> courseStarList;
-
-                                    for (const auto &data : course["data"]) {
-                                        int offset = data["offset"];
-                                        int mask = data["mask"];
-                                        int numStars = getNumStarsFromMask(mask, saveData, offset);
-                                        bool star_collected = false;
-
-                                        courseStarList.push_back({courseName, numStars, star_collected, offset, mask});
-                                    }
-
-                                    groupStarData.insert(groupStarData.end(), courseStarList.begin(), courseStarList.end());
-                                }
-
-                                starDisplay.afficherEtoilesGroupe(groupName, groupStarData, window, font, yOffset);
+                        for (const auto &group : jsonData["groups"]) {
+                            if (!group.contains("name") || !group.contains("courses")) {
+                                std::cerr << "Erreur: Le groupe dans JSON est mal formé." << std::endl;
+                                continue;
                             }
 
-                            tabManager.draw(window);
-                            break;
+                            std::string groupName = group["name"];
+                            std::vector<StarData> groupStarData;
+
+                            sf::Text groupText;
+                            groupText.setFont(font);
+                            groupText.setString(groupName);
+                            groupText.setCharacterSize(24);
+                            groupText.setFillColor(sf::Color::Black);
+                            groupText.setPosition(100, 130 + yOffset);
+                            window.draw(groupText);
+
+                            yOffset += 30;
+
+                            for (const auto &course : group["courses"]) {
+                                if (!course.contains("name") || !course.contains("data")) {
+                                    std::cerr << "Erreur: Le cours dans JSON est mal formé." << std::endl;
+                                    continue;
+                                }
+
+                                std::string courseName = course["name"];
+                                std::vector<StarData> courseStarList;
+
+                                for (const auto &data : course["data"]) {
+                                    if (!data.contains("offset") || !data.contains("mask")) {
+                                        std::cerr << "Erreur: Données de course mal formées dans JSON." << std::endl;
+                                        continue;
+                                    }
+
+                                    int offset = data["offset"];
+                                    int mask = data["mask"];
+                                    int numStars = getNumStarsFromMask(mask, saveData, offset);
+                                    bool star_collected = false;
+
+                                    courseStarList.push_back({courseName, numStars, star_collected, offset, mask});
+                                }
+
+                                groupStarData.insert(groupStarData.end(), courseStarList.begin(), courseStarList.end());
+                            }
+
+                            starDisplay.afficherEtoilesGroupe(groupName, groupStarData, window, font, yOffset);
                         }
+
+                        tabManager.draw(window);
+                        break;
                     }
                 }
             } else {
