@@ -419,7 +419,7 @@ int main(int argc, char *argv[]) {
                 if (currentTabName.empty()) {
                     std::cerr << "Erreur: Nom de l'onglet actuel est vide." << std::endl;
                 }
-
+                float reservedHeight = tabManager.getTabsHeight();
                 for (int i = 0; i < numSlots; ++i) {
                     if (i >= tabNames.size()) {
                         std::cerr << "Erreur: Index de tabName hors limites." << std::endl;
@@ -476,7 +476,7 @@ int main(int argc, char *argv[]) {
                             }
 
                             // Afficher les étoiles pour le groupe courant avec les cours filtrés
-                            starDisplay.afficherEtoilesGroupeFusionne(tabManager.getCurrentTabName(), courseStarsMap, window, font, yOffset);
+                            starDisplay.afficherEtoilesGroupeFusionne(groupName, courseStarsMap, window, font, yOffset, reservedHeight);
                         }
 
                         tabManager.draw(window, tabsView);
