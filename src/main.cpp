@@ -307,6 +307,7 @@ int main(int argc, char *argv[]) {
     bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles
     StarDisplay starDisplay;      // Instance de la classe StarDisplay
     sf::View scrollView(sf::FloatRect(0, 0, 1280, 720));
+    sf::View tabsView(sf::FloatRect(0, 0, 1280, 720));
     window.setView(scrollView);
     std::vector<std::string> tabNames;
     TabManager tabManager(tabNames, font);
@@ -318,14 +319,14 @@ int main(int argc, char *argv[]) {
                 window.close();
             if (showStarDisplay && event.type == sf::Event::MouseWheelScrolled) {
                 // Défilement avec la molette de la souris
-                float offset = event.mouseWheelScroll.delta * -10.0f; // Ajustez la vitesse de défilement
+                float offset = event.mouseWheelScroll.delta * -35.0f; // Ajustez la vitesse de défilement
                 sf::Vector2f newCenter = scrollView.getCenter() + sf::Vector2f(0, offset);
                 scrollView.setCenter(newCenter);
                 window.setView(scrollView);
             }
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
-                    tabManager.handleMouseClick(sf::Vector2i(event.mouseButton.x, event.mouseButton.y),scrollView,window);
+                    tabManager.handleMouseClick(sf::Vector2i(event.mouseButton.x, event.mouseButton.y), tabsView, window);
                     if (saveButton.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
                         saveNodes(nodes, "b3313-v1.0.2.json");
                     } else if (dropdownMenu.isClicked(sf::Vector2i(event.mouseButton.x, event.mouseButton.y))) {
@@ -475,10 +476,10 @@ int main(int argc, char *argv[]) {
                             }
 
                             // Afficher les étoiles pour le groupe courant avec les cours filtrés
-                            starDisplay.afficherEtoilesGroupeFusionne(groupName, courseStarsMap, window, font, yOffset);
+                            starDisplay.afficherEtoilesGroupeFusionne(tabManager.getCurrentTabName(), courseStarsMap, window, font, yOffset);
                         }
 
-                        tabManager.draw(window);
+                        tabManager.draw(window, tabsView);
                         break; // On sort de la boucle une fois que le tabName est trouvé et traité
                     }
                 }
