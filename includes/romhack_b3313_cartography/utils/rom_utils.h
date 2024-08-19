@@ -23,6 +23,5 @@ struct SaveParams {
 };
 
 std::string GetProcessPath(const std::string &processName);
-int getNumStarsFromMask(int mask, const std::vector<uint8_t> &saveData, int offset);
-bool isStarCollected(int mask, const std::vector<uint8_t> &saveData, int offset);
+bool isStarCollected(const std::vector<uint8_t> &saveData, int offset, int index, int slotIndex = 0, int slotSize = 0);
 #endif // ROM_UTILS_H

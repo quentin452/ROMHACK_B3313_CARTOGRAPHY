@@ -3,7 +3,7 @@
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
 #include <romhack_b3313_cartography/utils/rom_utils.h>
 
-void StarDisplay::afficherEtoilesGroupe(const std::string &groupName, const std::vector<StarData> &stars, sf::RenderWindow &window, const sf::Font &font, int &yOffset) {
+void StarDisplay::afficherEtoilesGroupeFusionne(const std::string &groupName, const std::map<std::string, std::vector<StarData>> &courseStarsMap, sf::RenderWindow &window, const sf::Font &font, int &yOffset) {
     sf::Text groupText;
     groupText.setFont(font);
     groupText.setString(groupName);
@@ -14,49 +14,45 @@ void StarDisplay::afficherEtoilesGroupe(const std::string &groupName, const std:
 
     yOffset += 30; // Espacement après le nom du groupe
 
-    // Espacement pour les étoiles
-    float starSpacing = 20.0f; // Espacement entre les étoiles
-    float maxTextWidth = 0;    // Largeur maximale pour les noms de cours
-    float maxTextHeight = 0;   // Hauteur maximale pour les étoiles
-
-    // Calculer la largeur et la hauteur maximales du texte
-    for (const auto &star : stars) {
-        sf::Text tempText;
-        tempText.setFont(font);
-        tempText.setString(star.courseName);
-        tempText.setCharacterSize(18);
-        sf::FloatRect textBounds = tempText.getLocalBounds();
-        if (textBounds.width > maxTextWidth) {
-            maxTextWidth = textBounds.width;
-        }
-        if (textBounds.height > maxTextHeight) {
-            maxTextHeight = textBounds.height;
-        }
+    // Extraire les noms de cours dans un vecteur
+    std::vector<std::string> courseNames;
+    for (const auto &entry : courseStarsMap) {
+        courseNames.push_back(entry.first);
     }
 
-    // Afficher les étoiles pour chaque cours
-    for (const auto &star : stars) {
-        // Afficher le texte du cours
-        sf::Text starText;
-        starText.setFont(font);
-        starText.setString(star.courseName);
-        starText.setCharacterSize(18);
-        starText.setFillColor(sf::Color::Black);
-        starText.setPosition(100, 130 + yOffset); // Position du texte du cours
-        window.draw(starText);
+    // Trier les noms de cours par ordre alphabétique
+    std::sort(courseNames.begin(), courseNames.end());
 
-        // Afficher les étoiles en fonction de star_collected
-        float startX = 100 + maxTextWidth + 10; // Position de départ pour les étoiles
+    // Afficher les cours et les étoiles dans l'ordre trié
+    for (const auto &courseName : courseNames) {
+        const auto &stars = courseStarsMap.at(courseName);
+
+        // Afficher le texte du cours
+        sf::Text courseText;
+        courseText.setFont(font);
+        courseText.setString(courseName);
+        courseText.setCharacterSize(18);
+        courseText.setFillColor(sf::Color::Black);
+        sf::FloatRect textBounds = courseText.getLocalBounds();
+        courseText.setPosition(100, 130 + yOffset);
+        window.draw(courseText);
+
+        // Afficher les étoiles
+        float startX = 100 + textBounds.width + 10;
+        float starSpacing = 20.0f;
         float starTextureHeight = std::max(textures.starCollectedTexture.getSize().y, textures.starMissingTexture.getSize().y);
 
-        for (int i = 0; i < star.numStars; ++i) {
-            sf::Sprite starSprite;
-            starSprite.setTexture(star.collected ? textures.starCollectedTexture : textures.starMissingTexture);
-            starSprite.setPosition(startX + i * starSpacing, 130 + yOffset + (maxTextHeight - starTextureHeight) / 2);
-            window.draw(starSprite);
+        for (const auto &star : stars) {
+            for (int i = 0; i < star.numStars; ++i) {
+                sf::Sprite starSprite;
+                starSprite.setTexture(star.collected ? textures.starCollectedTexture : textures.starMissingTexture);
+                starSprite.setPosition(startX + i * starSpacing, 130 + yOffset + (textBounds.height - starTextureHeight) / 2);
+                window.draw(starSprite);
+            }
+            startX += starSpacing; // Ajuster la position pour les prochaines étoiles
         }
 
-        yOffset += std::max(30, static_cast<int>(starTextureHeight)); // Espacement entre les étoiles, ajusté pour la hauteur de la texture
+        yOffset += std::max(30, static_cast<int>(starTextureHeight)); // Espacement après les étoiles
     }
 
     yOffset += 30; // Espacement après le groupe

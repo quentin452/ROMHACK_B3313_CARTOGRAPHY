@@ -163,7 +163,7 @@ void fixEndianness(uint *data, size_t words) {
 }
 
 std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &params) {
-  //  std::cerr << "Ouverture du fichier: " << filePath << std::endl;
+    //  std::cerr << "Ouverture du fichier: " << filePath << std::endl;
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         std::cerr << "Erreur lors de l'ouverture du fichier: " << filePath << std::endl;
@@ -173,10 +173,10 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &
     std::streamsize size = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    //std::cerr << "Taille du fichier: " << size << " octets" << std::endl;
+    // std::cerr << "Taille du fichier: " << size << " octets" << std::endl;
 
     uint saveFileSize = params.slotSize * params.numSlots;
-   // std::cerr << "Paramètres de sauvegarde - slotSize: " << params.slotSize
+    // std::cerr << "Paramètres de sauvegarde - slotSize: " << params.slotSize
     //          << ", numSlots: " << params.numSlots
     //          << ", taille attendue pour le buffer: " << saveFileSize << " octets" << std::endl;
 
@@ -188,18 +188,18 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &
 
     std::vector<uint8_t> buffer(saveFileSize);
 
-    //std::cerr << "Taille du buffer alloué: " << buffer.size() << " octets" << std::endl;
+    // std::cerr << "Taille du buffer alloué: " << buffer.size() << " octets" << std::endl;
 
     switch (params.saveFormat) {
     case SaveFormat::EEPROM: {
-        //std::cerr << "Traitement du format EEPROM" << std::endl;
+        // std::cerr << "Traitement du format EEPROM" << std::endl;
         if (size < 0x800) {
             std::cerr << "Erreur: La taille du fichier est inférieure à la taille attendue pour EEPROM." << std::endl;
             return {};
         }
         file.seekg(0);
         file.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
-        //std::cerr << "Lecture EEPROM effectuée" << std::endl;
+        // std::cerr << "Lecture EEPROM effectuée" << std::endl;
         break;
     }
     case SaveFormat::SRAM: {
@@ -248,7 +248,7 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &
         return {};
     }
 
-   // std::cerr << "Lecture du fichier réussie." << std::endl;
+    // std::cerr << "Lecture du fichier réussie." << std::endl;
 
     return buffer;
 }
@@ -422,7 +422,9 @@ int main(int argc, char *argv[]) {
                 for (int i = 0; i < numSlots; ++i) {
                     if (i >= tabNames.size()) {
                         std::cerr << "Erreur: Index de tabName hors limites." << std::endl;
+                        continue; // Continue pour éviter une erreur potentielle
                     }
+
                     std::string tabName = tabNames[i];
                     if (tabName == currentTabName) {
                         sf::Text tabText;
@@ -435,6 +437,7 @@ int main(int argc, char *argv[]) {
 
                         yOffset += 30;
 
+                        // Parcourir les groupes
                         for (const auto &group : jsonData["groups"]) {
                             if (!group.contains("name") || !group.contains("courses")) {
                                 std::cerr << "Erreur: Le groupe dans JSON est mal formé." << std::endl;
@@ -442,18 +445,13 @@ int main(int argc, char *argv[]) {
                             }
 
                             std::string groupName = group["name"];
-                            std::vector<StarData> groupStarData;
 
-                            sf::Text groupText;
-                            groupText.setFont(font);
-                            groupText.setString(groupName);
-                            groupText.setCharacterSize(24);
-                            groupText.setFillColor(sf::Color::Black);
-                            groupText.setPosition(100, 130 + yOffset);
-                            window.draw(groupText);
+                            // Réinitialiser la carte des cours pour chaque groupe
+                            std::map<std::string, std::vector<StarData>> courseStarsMap;
 
-                            yOffset += 30;
+                            yOffset += 30; // Espacement avant les cours du groupe
 
+                            // Parcourir les cours du groupe
                             for (const auto &course : group["courses"]) {
                                 if (!course.contains("name") || !course.contains("data")) {
                                     std::cerr << "Erreur: Le cours dans JSON est mal formé." << std::endl;
@@ -461,30 +459,27 @@ int main(int argc, char *argv[]) {
                                 }
 
                                 std::string courseName = course["name"];
-                                std::vector<StarData> courseStarList;
+                                std::vector<StarData> &courseStarList = courseStarsMap[courseName];
 
                                 for (const auto &data : course["data"]) {
-                                    if (!data.contains("offset") || !data.contains("mask")) {
-                                        std::cerr << "Erreur: Données de course mal formées dans JSON." << std::endl;
-                                        continue;
-                                    }
-
                                     int offset = data["offset"];
                                     int mask = data["mask"];
-                                    int numStars = getNumStarsFromMask(mask, saveData, offset);
-                                    bool star_collected = isStarCollected(mask, saveData, offset);
-
-                                    courseStarList.push_back({courseName, numStars, star_collected, offset, mask});
+                                    int numStars = 1;
+                                    for (int bit = 0; bit < 32; ++bit) {
+                                        if (mask & (1 << bit)) {
+                                            bool star_collected = isStarCollected(saveData, offset, bit, i, params.slotSize);
+                                            courseStarList.push_back({courseName, numStars, star_collected, offset, mask});
+                                        }
+                                    }
                                 }
-
-                                groupStarData.insert(groupStarData.end(), courseStarList.begin(), courseStarList.end());
                             }
 
-                            starDisplay.afficherEtoilesGroupe(groupName, groupStarData, window, font, yOffset);
+                            // Afficher les étoiles pour le groupe courant avec les cours filtrés
+                            starDisplay.afficherEtoilesGroupeFusionne(groupName, courseStarsMap, window, font, yOffset);
                         }
 
                         tabManager.draw(window);
-                        break;
+                        break; // On sort de la boucle une fois que le tabName est trouvé et traité
                     }
                 }
             } else {
