@@ -13,6 +13,8 @@
 #include <iostream>
 #include <locale>
 #include <nlohmann/json.hpp>
+#include <romhack_b3313_cartography/utils/rom_utils.h>
+
 #include <romhack_b3313_cartography/uis/Textures.h>
 
 #include <romhack_b3313_cartography/uis/Button.h>
@@ -20,13 +22,10 @@
 #include <romhack_b3313_cartography/uis/Node.h>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
 #include <romhack_b3313_cartography/uis/TabManager.hpp>
-#include <romhack_b3313_cartography/utils/utils.hpp>
 #include <string>
 #include <tlhelp32.h>
 #include <vector>
 #include <windows.h>
-const DWORD STAR_OFFSET = 0x33B8; // Offset pour les étoiles (à adapter selon la version du jeu)
-
 using json = nlohmann::json;
 std::vector<std::string> generateTabNames(int numSlots) {
     std::vector<std::string> tabNames;
@@ -251,6 +250,38 @@ bool RunCurrentAsAdministrator() {
         return false; // Échec
     }
 }
+void printBuffer(const std::vector<uint8_t> &buffer) {
+    std::cout << "Buffer content (" << buffer.size() << " bytes):" << std::endl;
+    for (size_t i = 0; i < buffer.size(); ++i) {
+        if (i % 16 == 0) {
+            std::cout << std::endl; // Nouvelle ligne tous les 16 octets
+        }
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buffer[i]) << ' ';
+    }
+    std::cout << std::dec << std::endl; // Retour au format décimal pour le reste du code
+}
+
+std::vector<uint8_t> ReadSrmFile(const std::string &filePath) {
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) {
+        std::cerr << "Erreur lors de l'ouverture du fichier: " << filePath << std::endl;
+        return {};
+    }
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> buffer(size);
+    if (!file.read(reinterpret_cast<char *>(buffer.data()), size)) {
+        std::cerr << "Erreur lors de la lecture du fichier." << std::endl;
+    }
+
+    // Afficher le contenu du buffer pour le débogage
+    //printBuffer(buffer);
+
+    return buffer;
+}
+
 
 int main(int argc, char *argv[]) {
     std::string retroarch_path = GetProcessPath("retroarch.exe");
@@ -375,42 +406,78 @@ int main(int argc, char *argv[]) {
                     if (hProcess != NULL) {
                         DWORD baseAddress = getBaseAddress(hProcess);
                         if (baseAddress != 0) {
-                            int yOffset = 0;
-                            int numSlots = jsonData["format"]["num_slots"]; // Récupérer le nombre de slots depuis le JSON
-                            std::vector<std::string> tabNames;
-                            for (int i = 1; i <= numSlots; ++i) {
-                                tabNames.push_back("Mario " + std::to_string(i));
-                            }
-                            tabManager.initializeTabs(tabNames);
-                            for (int i = 0; i < numSlots; ++i) {
-                                std::string tabName = tabNames[i];
-                                sf::Text tabText;
-                                tabText.setFont(font);
-                                tabText.setString(tabName);
-                                tabText.setCharacterSize(24);
-                                tabText.setFillColor(sf::Color::Black);
-                                tabText.setPosition(100, 100 + yOffset); // Position du texte de l'onglet
-                                window.draw(tabText);
+                            std::string saveLocation = GetParallelLauncherSaveLocation();
+                            auto saveData = ReadSrmFile(saveLocation);
 
-                                yOffset += 30; // Espacement après le nom de l'onglet
+                            if (!saveData.empty()) {
+                                int yOffset = 0;
+                                int numSlots = jsonData["format"]["num_slots"]; // Récupérer le nombre de slots depuis le JSON
+                                std::vector<std::string> tabNames;
+                                for (int i = 1; i <= numSlots; ++i) {
+                                    tabNames.push_back("Mario " + std::to_string(i));
+                                }
+                                tabManager.initializeTabs(tabNames);
 
-                                for (const auto &group : jsonData["groups"]) {
-                                    std::string groupName = group["name"];
-                                    std::vector<StarData> starList;
-                                    // Parcourir les cours (mondes) du groupe
-                                    for (const auto &course : group["courses"]) {
-                                        std::string courseName = course["name"];
-                                        int numStars = 5;           // Supposons qu'il y ait 5 étoiles par monde (peut être modifié)
-                                        std::string starIcon = "☆"; // Utiliser des étoiles génériques pour le moment
-                                        bool star_collected = false;
-                                        // Ajouter à la liste des étoiles pour ce monde
-                                        starList.push_back({courseName, numStars, starIcon,star_collected});
+                                // Obtenir le nom de l'onglet actuellement sélectionné
+                                std::string currentTabName = tabManager.getCurrentTabName();
+
+                                for (int i = 0; i < numSlots; ++i) {
+                                    std::string tabName = tabNames[i];
+                                    if (tabName == currentTabName) {
+                                        sf::Text tabText;
+                                        tabText.setFont(font);
+                                        tabText.setString(tabName);
+                                        tabText.setCharacterSize(24);
+                                        tabText.setFillColor(sf::Color::Black);
+                                        tabText.setPosition(100, 100 + yOffset); // Position du texte de l'onglet
+                                        window.draw(tabText);
+
+                                        yOffset += 30; // Espacement après le nom de l'onglet
+
+                                        // Parcourir les groupes
+                                        for (const auto &group : jsonData["groups"]) {
+                                            std::string groupName = group["name"];
+                                            std::vector<StarData> groupStarData;
+
+                                            // Afficher le nom du groupe une seule fois
+                                            sf::Text groupText;
+                                            groupText.setFont(font);
+                                            groupText.setString(groupName);
+                                            groupText.setCharacterSize(24);
+                                            groupText.setFillColor(sf::Color::Black);
+                                            groupText.setPosition(100, 130 + yOffset); // Position du texte du groupe
+                                            window.draw(groupText);
+
+                                            yOffset += 30; // Espacement après le nom du groupe
+
+                                            // Parcourir les cours (mondes) du groupe
+                                            for (const auto &course : group["courses"]) {
+                                                std::string courseName = course["name"];
+                                                std::vector<StarData> courseStarList;
+
+                                                for (const auto &data : course["data"]) {
+                                                    int offset = data["offset"];
+                                                    int mask = data["mask"];
+                                                    int numStars = getNumStarsFromMask(mask, saveData, offset); // Calculer le nombre d'étoiles
+                                                    bool star_collected = false;
+
+                                                    // Ajouter à la liste des étoiles pour ce monde
+                                                    courseStarList.push_back({courseName, numStars, star_collected, offset, mask});
+                                                }
+
+                                                // Ajouter les étoiles du cours au groupe
+                                                groupStarData.insert(groupStarData.end(), courseStarList.begin(), courseStarList.end());
+                                            }
+
+                                            // Afficher les étoiles pour le groupe
+                                            starDisplay.afficherEtoilesGroupe(groupName, groupStarData, window, font, yOffset);
+                                        }
+
+                                        tabManager.draw(window);
+                                        break; // Quitter la boucle une fois que l'onglet sélectionné est trouvé
                                     }
-                                    // Afficher les étoiles pour le groupe actuel
-                                    starDisplay.afficherEtoilesGroupe(groupName, starList, window, font, yOffset);
                                 }
                             }
-                            tabManager.draw(window);
                         } else {
                             CloseHandle(hProcess);
                             std::cerr << "[ERREUR] Adresse de base non trouvée." << std::endl;
@@ -421,9 +488,6 @@ int main(int argc, char *argv[]) {
                 } else {
                     std::cerr << "Processus non trouvé !" << std::endl;
                 }
-                std::string saveLocation = GetParallelLauncherSaveLocation();
-                std::cout << "saveLocation: " << saveLocation << std::endl; // Log pour saveLocation
-
             } else {
                 std::cerr << "Aucun émulateur détecté !" << std::endl;
             }
