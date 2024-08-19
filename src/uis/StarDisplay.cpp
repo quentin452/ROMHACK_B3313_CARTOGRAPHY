@@ -45,14 +45,13 @@ void StarDisplay::afficherEtoilesGroupe(const std::string &groupName, const std:
         starText.setPosition(100, 130 + yOffset); // Position du texte du cours
         window.draw(starText);
 
-        // Afficher les étoiles en fonction du masque
+        // Afficher les étoiles en fonction de star_collected
         float startX = 100 + maxTextWidth + 10; // Position de départ pour les étoiles
         float starTextureHeight = std::max(textures.starCollectedTexture.getSize().y, textures.starMissingTexture.getSize().y);
 
         for (int i = 0; i < star.numStars; ++i) {
             sf::Sprite starSprite;
-            bool isCollected = (star.mask & (1 << i)) != 0; // Vérifie si l'étoile i est collectée
-            starSprite.setTexture(isCollected ? textures.starCollectedTexture : textures.starMissingTexture);
+            starSprite.setTexture(star.collected ? textures.starCollectedTexture : textures.starMissingTexture);
             starSprite.setPosition(startX + i * starSpacing, 130 + yOffset + (maxTextHeight - starTextureHeight) / 2);
             window.draw(starSprite);
         }

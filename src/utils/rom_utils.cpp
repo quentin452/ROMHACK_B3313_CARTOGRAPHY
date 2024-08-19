@@ -48,20 +48,20 @@ std::string GetProcessPath(const std::string &processName) {
 
 int getNumStarsFromMask(int mask, const std::vector<uint8_t> &saveData, int offset) {
     int numStars = 0;
-    std::cout << "Starting getNumStarsFromMask with mask: " << std::hex << mask << std::dec << std::endl;
+    //std::cout << "Starting getNumStarsFromMask with mask: " << std::hex << mask << std::dec << std::endl;
 
-    std::ofstream logFile("mask_check_log.txt", std::ios::app);
-    if (!logFile.is_open()) {
-        std::cerr << "Failed to open log file." << std::endl;
-        return numStars;
-    }
+    //std::ofstream logFile("mask_check_log.txt", std::ios::app);
+    //if (!logFile.is_open()) {
+       // std::cerr << "Failed to open log file." << std::endl;
+    //    return numStars;
+   // }
 
     if (offset >= saveData.size()) {
-        std::cerr << "Offset out of bounds." << std::endl;
+       // std::cerr << "Offset out of bounds." << std::endl;
         return numStars;
     }
 
-    logFile << "Offset: " << offset << ", SaveData Size: " << saveData.size() << std::endl;
+   // logFile << "Offset: " << offset << ", SaveData Size: " << saveData.size() << std::endl;
 
     // Itérer à travers tous les bits du masque
     for (int bit = 0; bit < 32; ++bit) {
@@ -71,24 +71,73 @@ int getNumStarsFromMask(int mask, const std::vector<uint8_t> &saveData, int offs
 
             // Vérifier que byteOffset est dans les limites
             if (byteOffset < saveData.size()) {
-                logFile << "Bit: " << bit
-                        << ", ByteOffset: " << byteOffset
-                        << ", BitIndex: " << bitIndex
-                        << ", ByteValue: " << +saveData[byteOffset] << std::endl;
+                //logFile << "Bit: " << bit
+               //         << ", ByteOffset: " << byteOffset
+               //         << ", BitIndex: " << bitIndex
+               //         << ", ByteValue: " << +saveData[byteOffset] << std::endl;
 
                 // Incrémenter le compteur pour chaque bit du masque, peu importe l'état
                 numStars++;
             } else {
-                logFile << "Byte index out of range: " << byteOffset << std::endl;
+                //logFile << "Byte index out of range: " << byteOffset << std::endl;
                 break; // Exit loop if out of range
             }
         }
     }
 
-    logFile << "Mask: " << std::hex << mask
+    /*logFile << "Mask: " << std::hex << mask
             << ", Offset: " << offset
-            << ", NumStars: " << numStars << std::endl;
-    logFile.close();
-    std::cout << "Mask: " << mask << " Offset: " << offset << " NumStars: " << numStars << std::endl;
+            << ", NumStars: " << numStars << std::endl;*/
+    //logFile.close();
+   // std::cout << "Mask: " << mask << " Offset: " << offset << " NumStars: " << numStars << std::endl;
     return numStars;
+}
+bool isStarCollected(int mask, const std::vector<uint8_t> &saveData, int offset) {
+   // std::cout << "Starting isStarCollected with mask: " << std::hex << mask << std::dec << std::endl;
+
+   // std::ofstream logFile("star_check_log.txt", std::ios::app);
+    //if (!logFile.is_open()) {
+       // std::cerr << "Failed to open log file." << std::endl;
+  //      return false;
+   // }
+
+    if (offset >= saveData.size()) {
+     //   std::cerr << "Offset out of bounds." << std::endl;
+        return false;
+    }
+
+ //   logFile << "Offset: " << offset << ", SaveData Size: " << saveData.size() << std::endl;
+
+    // Itérer à travers tous les bits du masque
+    for (int bit = 0; bit < 32; ++bit) {
+        if (mask & (1 << bit)) {
+            int byteOffset = offset + (bit / 8); // Calculer l'index du byte
+            int bitIndex = bit % 8;              // Calculer l'index du bit à vérifier
+
+            // Vérifier que byteOffset est dans les limites
+            if (byteOffset < saveData.size()) {
+                /*logFile << "Bit: " << bit
+                        << ", ByteOffset: " << byteOffset
+                        << ", BitIndex: " << bitIndex
+                        << ", ByteValue: " << +saveData[byteOffset] << std::endl;*/
+
+                // Vérifier si le bit est défini (étoile collectée)
+                if (saveData[byteOffset] & (1 << bitIndex)) {
+                  //  logFile << "Star collected at bit: " << bit << std::endl;
+                   // logFile.close();
+                    return true;
+                }
+            } else {
+              //  logFile << "Byte index out of range: " << byteOffset << std::endl;
+                break; // Exit loop if out of range
+            }
+        }
+    }
+
+   /* logFile << "Mask: " << std::hex << mask
+            << ", Offset: " << offset
+            << ", Star collected: false" << std::endl;*/
+   // logFile.close();
+   // std::cout << "Mask: " << mask << " Offset: " << offset << " Star collected: false" << std::endl;
+    return false;
 }

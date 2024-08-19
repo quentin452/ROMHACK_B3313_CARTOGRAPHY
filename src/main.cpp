@@ -163,7 +163,7 @@ void fixEndianness(uint *data, size_t words) {
 }
 
 std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &params) {
-    std::cerr << "Ouverture du fichier: " << filePath << std::endl;
+  //  std::cerr << "Ouverture du fichier: " << filePath << std::endl;
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         std::cerr << "Erreur lors de l'ouverture du fichier: " << filePath << std::endl;
@@ -173,12 +173,12 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &
     std::streamsize size = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    std::cerr << "Taille du fichier: " << size << " octets" << std::endl;
+    //std::cerr << "Taille du fichier: " << size << " octets" << std::endl;
 
     uint saveFileSize = params.slotSize * params.numSlots;
-    std::cerr << "Paramètres de sauvegarde - slotSize: " << params.slotSize
-              << ", numSlots: " << params.numSlots
-              << ", taille attendue pour le buffer: " << saveFileSize << " octets" << std::endl;
+   // std::cerr << "Paramètres de sauvegarde - slotSize: " << params.slotSize
+    //          << ", numSlots: " << params.numSlots
+    //          << ", taille attendue pour le buffer: " << saveFileSize << " octets" << std::endl;
 
     // Vérification de la taille attendue du buffer
     if (saveFileSize == 0) {
@@ -188,18 +188,18 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &
 
     std::vector<uint8_t> buffer(saveFileSize);
 
-    std::cerr << "Taille du buffer alloué: " << buffer.size() << " octets" << std::endl;
+    //std::cerr << "Taille du buffer alloué: " << buffer.size() << " octets" << std::endl;
 
     switch (params.saveFormat) {
     case SaveFormat::EEPROM: {
-        std::cerr << "Traitement du format EEPROM" << std::endl;
+        //std::cerr << "Traitement du format EEPROM" << std::endl;
         if (size < 0x800) {
             std::cerr << "Erreur: La taille du fichier est inférieure à la taille attendue pour EEPROM." << std::endl;
             return {};
         }
         file.seekg(0);
         file.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
-        std::cerr << "Lecture EEPROM effectuée" << std::endl;
+        //std::cerr << "Lecture EEPROM effectuée" << std::endl;
         break;
     }
     case SaveFormat::SRAM: {
@@ -248,7 +248,7 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &
         return {};
     }
 
-    std::cerr << "Lecture du fichier réussie." << std::endl;
+   // std::cerr << "Lecture du fichier réussie." << std::endl;
 
     return buffer;
 }
@@ -380,7 +380,6 @@ int main(int argc, char *argv[]) {
         if (showStarDisplay) {
             if (isRomHackLoaded(detectedEmulator)) {
                 std::string saveLocation = GetParallelLauncherSaveLocation();
-                std::cerr << "1" << std::endl;
 
                 if (!jsonData.contains("format") || !jsonData["format"].contains("save_type") ||
                     !jsonData["format"].contains("slots_start") || !jsonData["format"].contains("slot_size") ||
@@ -398,7 +397,6 @@ int main(int argc, char *argv[]) {
                 params.checksumOffset = format["checksum_offset"].get<uint>();
 
                 auto saveData = ReadSrmFile(saveLocation, params);
-                std::cerr << "2" << std::endl;
 
                 if (saveData.empty()) {
                     std::cerr << "Erreur: Les données de sauvegarde sont vides." << std::endl;
@@ -474,7 +472,7 @@ int main(int argc, char *argv[]) {
                                     int offset = data["offset"];
                                     int mask = data["mask"];
                                     int numStars = getNumStarsFromMask(mask, saveData, offset);
-                                    bool star_collected = false;
+                                    bool star_collected = isStarCollected(mask, saveData, offset);
 
                                     courseStarList.push_back({courseName, numStars, star_collected, offset, mask});
                                 }
