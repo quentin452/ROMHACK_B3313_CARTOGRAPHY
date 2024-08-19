@@ -35,6 +35,9 @@ class TabManager {
     }
 
     std::string getCurrentTabName() const {
+        if (currentTabIndex < 0 || currentTabIndex >= tabs.size()) {
+            throw std::out_of_range("currentTabIndex is out of range");
+        }
         return tabs[currentTabIndex].getName();
     }
 

@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+SaveFormat saveFormat;
 
 std::string GetProcessPath(const std::string &processName) {
     HANDLE hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -60,24 +61,37 @@ int getNumStarsFromMask(int mask, const std::vector<uint8_t> &saveData, int offs
         return numStars;
     }
 
-    // Vérifier un seul byte
-    int byteIndex = offset; // Pas de décalage basé sur les bits, vérifier tout le byte
-    if (byteIndex < saveData.size()) {
-        uint8_t byteValue = saveData[byteIndex];
-        for (int bit = 0; bit < 32; ++bit) {
-            if (mask & (1 << bit)) {
-                int bitIndex = bit % 8;
+    // Itérer à travers tous les bits du masque
+    for (int bit = 0; bit < 32; ++bit) {
+        if (mask & (1 << bit)) {
+            int byteOffset = offset + (bit / 8); // Calculer l'index du byte
+            int bitIndex = bit % 8;              // Calculer l'index du bit à vérifier
+
+            // Vérifier que byteOffset est dans les limites
+            if (byteOffset < saveData.size()) {
+                uint8_t byteValue = saveData[byteOffset];
                 bool isCollected = (byteValue & (1 << bitIndex)) != 0;
+
+                logFile << "Mask: " << std::hex << mask
+                        << ", Bit: " << bit
+                        << ", ByteOffset: " << byteOffset
+                        << ", BitIndex: " << bitIndex
+                        << ", ByteValue: " << +byteValue
+                        << ", IsCollected: " << (isCollected ? "Yes" : "No") << std::endl;
+
                 if (isCollected) {
                     numStars++;
                 }
+            } else {
+                logFile << "Byte index out of range: " << byteOffset << std::endl;
+                break; // Exit loop if out of range
             }
         }
-    } else {
-        logFile << "Byte index out of range: " << byteIndex << std::endl;
     }
 
-    logFile << "Mask: " << std::hex << mask << ", Offset: " << offset << ", NumStars: " << numStars << std::endl;
+    logFile << "Mask: " << std::hex << mask
+            << ", Offset: " << offset
+            << ", NumStars: " << numStars << std::endl;
     logFile.close();
     std::cout << "Mask: " << mask << " Offset: " << offset << " NumStars: " << numStars << std::endl;
     return numStars;

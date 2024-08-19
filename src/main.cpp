@@ -13,6 +13,8 @@
 #include <iostream>
 #include <locale>
 #include <nlohmann/json.hpp>
+#include <romhack_b3313_cartography/utils/byteswap.hpp>
+
 #include <romhack_b3313_cartography/utils/rom_utils.h>
 
 #include <romhack_b3313_cartography/uis/Textures.h>
@@ -26,6 +28,8 @@
 #include <tlhelp32.h>
 #include <vector>
 #include <windows.h>
+std::vector<std::wstring> parallelLauncher = {L"parallel-launcher.exe"};
+std::vector<std::wstring> retroarch = {L"retroarch.exe"};
 using json = nlohmann::json;
 std::vector<std::string> generateTabNames(int numSlots) {
     std::vector<std::string> tabNames;
@@ -99,66 +103,34 @@ std::wstring stringToWstring(const std::string &str) {
     return converter.from_bytes(str);
 }
 
-bool isEmulatorDetected(std::wstring &detectedEmulator) {
-    std::vector<std::wstring> emulators = {L"project64.exe", L"wine-preloader.exe", L"mupen64.exe", L"retroarch.exe"};
-    HANDLE hProcessSnap;
-    PROCESSENTRY32 pe32;
-    hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+bool isEmulatorDetected(const std::vector<std::wstring>& emulators, std::wstring& detectedEmulator) {
+    HANDLE hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hProcessSnap == INVALID_HANDLE_VALUE)
         return false;
+
+    PROCESSENTRY32 pe32;
     pe32.dwSize = sizeof(PROCESSENTRY32);
     if (!Process32First(hProcessSnap, &pe32)) {
         CloseHandle(hProcessSnap);
         return false;
     }
+
     do {
-        std::string processNameStr = pe32.szExeFile;
-        std::wstring processName = stringToWstring(processNameStr);
-        for (const auto &emulator : emulators) {
-            if (processName == emulator) {
-                detectedEmulator = processName;
-                CloseHandle(hProcessSnap);
-                return true;
-            }
+        std::wstring processName = stringToWstring(pe32.szExeFile);
+        if (std::find(emulators.begin(), emulators.end(), processName) != emulators.end()) {
+            detectedEmulator = processName;
+            CloseHandle(hProcessSnap);
+            return true;
         }
     } while (Process32Next(hProcessSnap, &pe32));
-    CloseHandle(hProcessSnap);
-    return false;
-}
 
-bool readMemory(HANDLE hProcess, DWORD_PTR address, void *buffer, SIZE_T size) { // UNUSED
-    MEMORY_BASIC_INFORMATION mbi;
-    if (VirtualQueryEx(hProcess, reinterpret_cast<LPCVOID>(address), &mbi, sizeof(mbi))) {
-        if (address >= reinterpret_cast<DWORD_PTR>(mbi.BaseAddress) && address < reinterpret_cast<DWORD_PTR>(mbi.BaseAddress) + mbi.RegionSize) {
-            SIZE_T bytesRead;
-            if (ReadProcessMemory(hProcess, reinterpret_cast<LPCVOID>(address), buffer, size, &bytesRead)) {
-                if (bytesRead == size) {
-                    return true;
-                } else {
-                    std::cerr << "[ERREUR] Nombre d'octets lus incorrect à l'adresse 0x"
-                              << std::hex << address << ". Attendu: "
-                              << size << ", Lu: " << bytesRead << std::endl;
-                }
-            } else {
-                std::cerr << "[ERREUR] Lecture mémoire échouée à l'adresse 0x"
-                          << std::hex << address << ". Code d'erreur: "
-                          << GetLastError() << std::endl;
-            }
-        } else {
-            std::cerr << "[ERREUR] L'adresse est hors de la région mémoire valide : 0x"
-                      << std::hex << address << ". BaseAddress: 0x" << std::hex << mbi.BaseAddress << ", RegionSize: " << mbi.RegionSize << std::endl;
-        }
-    } else {
-        std::cerr << "[ERREUR] VirtualQueryEx a échoué à l'adresse 0x"
-                  << std::hex << address << ". Code d'erreur: "
-                  << GetLastError() << std::endl;
-    }
+    CloseHandle(hProcessSnap);
     return false;
 }
 
 bool isRomHackLoaded(const std::wstring &targetProcessName) {
     std::wstring detectedEmulator;
-    if (!isEmulatorDetected(detectedEmulator))
+    if (!isEmulatorDetected(retroarch, detectedEmulator))
         return false;
     HANDLE hProcessSnap;
     PROCESSENTRY32 pe32;
@@ -181,87 +153,16 @@ bool isRomHackLoaded(const std::wstring &targetProcessName) {
     return false;
 }
 
-DWORD getProcessID(const std::wstring &targetProcessName) {
-    HANDLE hProcessSnap;
-    PROCESSENTRY32W pe32; // Utiliser PROCESSENTRY32W pour les noms Unicode
-    hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (hProcessSnap == INVALID_HANDLE_VALUE) {
-        std::wcerr << L"[ERREUR] Échec de la capture des processus. Code d'erreur: " << GetLastError() << std::endl;
-        return 0;
+/* Mupen and ParallelN64 current have a bug where the SRAM and FlashRAM
+ * is incorrectly stored according to the endianness of the system.
+ */
+void fixEndianness(uint *data, size_t words) {
+    for (size_t i = 0; i < words; i++) {
+        data[i] = htonl(data[i]);
     }
-    pe32.dwSize = sizeof(PROCESSENTRY32W);
-    if (!Process32FirstW(hProcessSnap, &pe32)) { // Utiliser Process32FirstW
-        std::wcerr << L"[ERREUR] Échec de Process32First. Code d'erreur: " << GetLastError() << std::endl;
-        CloseHandle(hProcessSnap);
-        return 0;
-    }
-    do {
-        std::wstring processName = pe32.szExeFile;
-        if (processName == targetProcessName) {
-            DWORD processID = pe32.th32ProcessID;
-            CloseHandle(hProcessSnap);
-            return processID;
-        }
-    } while (Process32NextW(hProcessSnap, &pe32)); // Utiliser Process32NextW
-    std::wcerr << L"[ERREUR] Processus non trouvé" << std::endl;
-    CloseHandle(hProcessSnap);
-    return 0;
 }
 
-DWORD_PTR getBaseAddress(HANDLE hProcess) {
-    MODULEINFO modInfo;
-    HMODULE hMods[1024];
-    DWORD cbNeeded;
-    // Obtenir la liste des modules du processus
-    if (EnumProcessModules(hProcess, hMods, sizeof(hMods), &cbNeeded)) {
-        for (size_t i = 0; i < (cbNeeded / sizeof(HMODULE)); i++) {
-            // Récupérer les informations sur le module
-            if (GetModuleInformation(hProcess, hMods[i], &modInfo, sizeof(modInfo))) {
-                // Retourner l'adresse de base en utilisant DWORD_PTR
-                return reinterpret_cast<DWORD_PTR>(modInfo.lpBaseOfDll);
-            }
-        }
-    } else {
-        std::cerr << "[ERREUR] EnumProcessModules a échoué. Code d'erreur: " << GetLastError() << std::endl;
-    }
-    return 0;
-}
-
-bool RunCurrentAsAdministrator() {
-    wchar_t path[MAX_PATH];
-    if (!GetModuleFileNameW(NULL, path, MAX_PATH)) {
-        std::wcerr << L"Erreur de récupération du chemin du module : " << GetLastError() << std::endl;
-        return false;
-    }
-    std::wstring arguments = L"--admin";
-    SHELLEXECUTEINFOW sei = {0};
-    sei.cbSize = sizeof(sei);
-    sei.fMask = SEE_MASK_FLAG_DDEWAIT | SEE_MASK_FLAG_NO_UI;
-    sei.hwnd = NULL;
-    sei.lpVerb = L"runas";                // Lancer avec les droits administratifs
-    sei.lpFile = path;                    // Chemin du programme en cours
-    sei.lpParameters = arguments.c_str(); // Passer l'argument
-    sei.lpDirectory = NULL;
-    sei.nShow = SW_SHOWNORMAL;
-    if (ShellExecuteExW(&sei)) {
-        return true; // Succès
-    } else {
-        std::wcerr << L"Erreur lors du lancement en mode administrateur : " << GetLastError() << std::endl;
-        return false; // Échec
-    }
-}
-void printBuffer(const std::vector<uint8_t> &buffer) {
-    std::cout << "Buffer content (" << buffer.size() << " bytes):" << std::endl;
-    for (size_t i = 0; i < buffer.size(); ++i) {
-        if (i % 16 == 0) {
-            std::cout << std::endl; // Nouvelle ligne tous les 16 octets
-        }
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buffer[i]) << ' ';
-    }
-    std::cout << std::dec << std::endl; // Retour au format décimal pour le reste du code
-}
-
-std::vector<uint8_t> ReadSrmFile(const std::string &filePath) {
+std::vector<uint8_t> ReadSrmFile(const std::string &filePath, const SaveParams &params) {
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         std::cerr << "Erreur lors de l'ouverture du fichier: " << filePath << std::endl;
@@ -271,32 +172,77 @@ std::vector<uint8_t> ReadSrmFile(const std::string &filePath) {
     std::streamsize size = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    std::vector<uint8_t> buffer(size);
-    if (!file.read(reinterpret_cast<char *>(buffer.data()), size)) {
-        std::cerr << "Erreur lors de la lecture du fichier." << std::endl;
+    uint saveFileSize = params.slotSize * params.numSlots;
+    std::vector<uint8_t> buffer(saveFileSize);
+
+    switch (params.saveFormat) {
+    case SaveFormat::EEPROM: {
+        if (size < 0x800) {
+            std::cerr << "Erreur: La taille du fichier est inférieure à la taille attendue pour EEPROM." << std::endl;
+            return {};
+        }
+        file.seekg(0);
+        file.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
+        break;
+    }
+    case SaveFormat::SRAM: {
+        if (size < 0x8000) {
+            std::cerr << "Erreur: La taille du fichier est inférieure à la taille attendue pour SRAM." << std::endl;
+            return {};
+        }
+        file.seekg(0x20800u);
+        file.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
+        fixEndianness(reinterpret_cast<uint *>(buffer.data()), buffer.size() / sizeof(uint));
+        break;
+    }
+    case SaveFormat::FlashRAM: {
+        if (size < 0x20000) {
+            std::cerr << "Erreur: La taille du fichier est inférieure à la taille attendue pour FlashRAM." << std::endl;
+            return {};
+        }
+        file.seekg(0x28800);
+        file.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
+        fixEndianness(reinterpret_cast<uint *>(buffer.data()), buffer.size() / sizeof(uint));
+        break;
+    }
+    case SaveFormat::MemPak: {
+        if (size < 0x20000) {
+            std::cerr << "Erreur: La taille du fichier est inférieure à la taille attendue pour MemPak." << std::endl;
+            return {};
+        }
+        file.seekg(0x800);
+        file.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
+        break;
+    }
+    default: {
+        std::cerr << "Format de sauvegarde non reconnu." << std::endl;
+        return {};
+    }
     }
 
-    // Afficher le contenu du buffer pour le débogage
-    //printBuffer(buffer);
+    if (file.bad()) {
+        std::cerr << "Erreur lors de la lecture du fichier." << std::endl;
+        return {};
+    }
 
     return buffer;
 }
-
-
+SaveFormat parseSaveFormat(const std::string &saveType) {
+    if (saveType == "MemPak")
+        return SaveFormat::MemPak;
+    if (saveType == "SRAM")
+        return SaveFormat::SRAM;
+    if (saveType == "FlashRAM")
+        return SaveFormat::FlashRAM;
+    if (saveType == "EEPROM")
+        return SaveFormat::EEPROM;
+    if (saveType == "Multi")
+        return SaveFormat::RawSRM;
+    throw std::invalid_argument("Invalid save_type");
+}
 int main(int argc, char *argv[]) {
     std::string retroarch_path = GetProcessPath("retroarch.exe");
     std::cout << "RetroArch path: " << retroarch_path << std::endl;
-    if (argc > 1 && std::string(argv[1]) == "--admin") {
-        std::wcout << L"Programme exécuté en mode administrateur." << std::endl;
-    } else {
-        if (RunCurrentAsAdministrator()) {
-            std::wcout << L"Programme relancé en mode administrateur avec succès." << std::endl;
-            return 0; // Quitter le programme actuel pour éviter la boucle infinie
-        } else {
-            std::wcout << L"Échec du relancement en mode administrateur." << std::endl;
-            return 1; // Échec
-        }
-    }
     std::ifstream star_layout("resources/stars_layout/b3313-V1.0.2/layout.json");
     json jsonData;
     if (!star_layout.is_open() || !(star_layout >> jsonData)) {
@@ -324,7 +270,7 @@ int main(int argc, char *argv[]) {
     std::vector<std::pair<int, int>> connections;
     sf::Text emulatorText;
     emulatorText.setFont(font);
-    emulatorText.setString("Is emulator running?");
+    emulatorText.setString("Is parallel launcher running?");
     emulatorText.setCharacterSize(24);
     emulatorText.setPosition(10, 10);
     sf::Text b3313Text;
@@ -390,7 +336,7 @@ int main(int argc, char *argv[]) {
         }
         window.clear(sf::Color::White);
         std::wstring detectedEmulator;
-        if (isEmulatorDetected(detectedEmulator))
+        if (isEmulatorDetected(parallelLauncher, detectedEmulator))
             emulatorText.setFillColor(sf::Color::Green);
         else
             emulatorText.setFillColor(sf::Color::Black);
@@ -400,93 +346,88 @@ int main(int argc, char *argv[]) {
             b3313Text.setFillColor(sf::Color::Black);
         if (showStarDisplay) {
             if (isRomHackLoaded(detectedEmulator)) {
-                DWORD processID = getProcessID(detectedEmulator);
-                if (processID != 0) {
-                    HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
-                    if (hProcess != NULL) {
-                        DWORD baseAddress = getBaseAddress(hProcess);
-                        if (baseAddress != 0) {
-                            std::string saveLocation = GetParallelLauncherSaveLocation();
-                            auto saveData = ReadSrmFile(saveLocation);
+                std::string saveLocation = GetParallelLauncherSaveLocation();
+                std::cerr << "1" << std::endl;
 
-                            if (!saveData.empty()) {
-                                int yOffset = 0;
-                                int numSlots = jsonData["format"]["num_slots"]; // Récupérer le nombre de slots depuis le JSON
-                                std::vector<std::string> tabNames;
-                                for (int i = 1; i <= numSlots; ++i) {
-                                    tabNames.push_back("Mario " + std::to_string(i));
-                                }
-                                tabManager.initializeTabs(tabNames);
+                // Récupérer les paramètres de sauvegarde depuis jsonData
+                const json &format = jsonData["format"];
+                SaveParams params;
+                params.saveFormat = parseSaveFormat(format["save_type"].get<std::string>());
+                params.slotsStart = format["slots_start"].get<uint>();
+                params.slotSize = format["slot_size"].get<uint>();
+                params.activeBit = format["active_bit"].get<uint>();
+                params.checksumOffset = format["checksum_offset"].get<uint>();
 
-                                // Obtenir le nom de l'onglet actuellement sélectionné
-                                std::string currentTabName = tabManager.getCurrentTabName();
-
-                                for (int i = 0; i < numSlots; ++i) {
-                                    std::string tabName = tabNames[i];
-                                    if (tabName == currentTabName) {
-                                        sf::Text tabText;
-                                        tabText.setFont(font);
-                                        tabText.setString(tabName);
-                                        tabText.setCharacterSize(24);
-                                        tabText.setFillColor(sf::Color::Black);
-                                        tabText.setPosition(100, 100 + yOffset); // Position du texte de l'onglet
-                                        window.draw(tabText);
-
-                                        yOffset += 30; // Espacement après le nom de l'onglet
-
-                                        // Parcourir les groupes
-                                        for (const auto &group : jsonData["groups"]) {
-                                            std::string groupName = group["name"];
-                                            std::vector<StarData> groupStarData;
-
-                                            // Afficher le nom du groupe une seule fois
-                                            sf::Text groupText;
-                                            groupText.setFont(font);
-                                            groupText.setString(groupName);
-                                            groupText.setCharacterSize(24);
-                                            groupText.setFillColor(sf::Color::Black);
-                                            groupText.setPosition(100, 130 + yOffset); // Position du texte du groupe
-                                            window.draw(groupText);
-
-                                            yOffset += 30; // Espacement après le nom du groupe
-
-                                            // Parcourir les cours (mondes) du groupe
-                                            for (const auto &course : group["courses"]) {
-                                                std::string courseName = course["name"];
-                                                std::vector<StarData> courseStarList;
-
-                                                for (const auto &data : course["data"]) {
-                                                    int offset = data["offset"];
-                                                    int mask = data["mask"];
-                                                    int numStars = getNumStarsFromMask(mask, saveData, offset); // Calculer le nombre d'étoiles
-                                                    bool star_collected = false;
-
-                                                    // Ajouter à la liste des étoiles pour ce monde
-                                                    courseStarList.push_back({courseName, numStars, star_collected, offset, mask});
-                                                }
-
-                                                // Ajouter les étoiles du cours au groupe
-                                                groupStarData.insert(groupStarData.end(), courseStarList.begin(), courseStarList.end());
-                                            }
-
-                                            // Afficher les étoiles pour le groupe
-                                            starDisplay.afficherEtoilesGroupe(groupName, groupStarData, window, font, yOffset);
-                                        }
-
-                                        tabManager.draw(window);
-                                        break; // Quitter la boucle une fois que l'onglet sélectionné est trouvé
-                                    }
-                                }
-                            }
-                        } else {
-                            CloseHandle(hProcess);
-                            std::cerr << "[ERREUR] Adresse de base non trouvée." << std::endl;
-                        }
-                    } else {
-                        std::cerr << "[ERREUR] Impossible d'ouvrir le processus. Code d'erreur: " << GetLastError() << std::endl;
+                auto saveData = ReadSrmFile(saveLocation, params);
+                std::cerr << "2" << std::endl;
+                if (!saveData.empty()) {
+                    int yOffset = 0;
+                    std::cerr << "2_3" << std::endl;
+                    int numSlots = params.numSlots;
+                    std::cerr << "2_4" << std::endl;
+                    std::vector<std::string> tabNames;
+                    std::cerr << "2_5" << std::endl;
+                    for (int i = 1; i <= numSlots; ++i) {
+                        tabNames.push_back("Mario " + std::to_string(i));
                     }
-                } else {
-                    std::cerr << "Processus non trouvé !" << std::endl;
+                    std::cerr << "2_6" << std::endl;
+                    tabManager.initializeTabs(tabNames);
+                    std::cerr << "3" << std::endl;
+
+                    std::string currentTabName = tabManager.getCurrentTabName();
+                    std::cerr << "4" << std::endl;
+
+                    for (int i = 0; i < numSlots; ++i) {
+                        std::string tabName = tabNames[i];
+                        if (tabName == currentTabName) {
+                            sf::Text tabText;
+                            tabText.setFont(font);
+                            tabText.setString(tabName);
+                            tabText.setCharacterSize(24);
+                            tabText.setFillColor(sf::Color::Black);
+                            tabText.setPosition(100, 100 + yOffset);
+                            window.draw(tabText);
+
+                            yOffset += 30;
+                            std::cerr << "5" << std::endl;
+
+                            for (const auto &group : jsonData["groups"]) {
+                                std::string groupName = group["name"];
+                                std::vector<StarData> groupStarData;
+
+                                sf::Text groupText;
+                                groupText.setFont(font);
+                                groupText.setString(groupName);
+                                groupText.setCharacterSize(24);
+                                groupText.setFillColor(sf::Color::Black);
+                                groupText.setPosition(100, 130 + yOffset);
+                                window.draw(groupText);
+
+                                yOffset += 30;
+
+                                for (const auto &course : group["courses"]) {
+                                    std::string courseName = course["name"];
+                                    std::vector<StarData> courseStarList;
+
+                                    for (const auto &data : course["data"]) {
+                                        int offset = data["offset"];
+                                        int mask = data["mask"];
+                                        int numStars = getNumStarsFromMask(mask, saveData, offset);
+                                        bool star_collected = false;
+
+                                        courseStarList.push_back({courseName, numStars, star_collected, offset, mask});
+                                    }
+
+                                    groupStarData.insert(groupStarData.end(), courseStarList.begin(), courseStarList.end());
+                                }
+
+                                starDisplay.afficherEtoilesGroupe(groupName, groupStarData, window, font, yOffset);
+                            }
+
+                            tabManager.draw(window);
+                            break;
+                        }
+                    }
                 }
             } else {
                 std::cerr << "Aucun émulateur détecté !" << std::endl;
