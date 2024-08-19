@@ -3,7 +3,6 @@
 #include <romhack_b3313_cartography/utils/rom_utils.h>
 
 void StarDisplay::afficherEtoilesGroupeFusionne(const std::string &groupName, const std::map<std::string, std::vector<StarData>> &courseStarsMap, sf::RenderWindow &window, const sf::Font &font, int &yOffset, float reservedHeight) {
-    // Sauvegarder la vue actuelle
     sf::View originalView = window.getView();
 
     // Définir les dimensions et la position du rectangle
@@ -19,12 +18,13 @@ void StarDisplay::afficherEtoilesGroupeFusionne(const std::string &groupName, co
     rectangle.setOutlineColor(sf::Color::Black);
     rectangle.setOutlineThickness(1);
 
-    // Créer une vue pour dessiner le rectangle en utilisant les coordonnées de la fenêtre
+    // Dessiner le rectangle
     sf::View fixedView = window.getDefaultView();
     window.setView(fixedView);
     window.draw(rectangle);
 
-    // Restaurer la vue originale
+    // Calculer le décalage de la vue
+    sf::Vector2f viewOffset(-fixedView.getCenter().x + window.getSize().x / 2.0f, -fixedView.getCenter().y + window.getSize().y / 2.0f);
     window.setView(originalView);
 
     // Dessiner le texte du groupe
@@ -33,13 +33,14 @@ void StarDisplay::afficherEtoilesGroupeFusionne(const std::string &groupName, co
     groupText.setString(groupName);
     groupText.setCharacterSize(24);
     groupText.setFillColor(sf::Color::Black);
-    groupText.setPosition(rectLeft + 100, rectTop + 100 + yOffset + reservedHeight);
+    groupText.setPosition(rectLeft, rectTop + 100 + yOffset + reservedHeight);
 
-    // Vérifiez si le texte du groupe est entièrement dans les limites visibles de la vue
+    // Vérifiez si le texte du groupe est dans le rectangle
     if (groupText.getGlobalBounds().intersects(sf::FloatRect(originalView.getCenter().x - originalView.getSize().x / 2,
                                                              originalView.getCenter().y - originalView.getSize().y / 2,
                                                              originalView.getSize().x,
                                                              originalView.getSize().y))) {
+
         window.draw(groupText);
     }
 
@@ -67,7 +68,7 @@ void StarDisplay::afficherEtoilesGroupeFusionne(const std::string &groupName, co
         sf::FloatRect textBounds = courseText.getLocalBounds();
         courseText.setPosition(rectLeft + 100, rectTop + 130 + yOffset + reservedHeight);
 
-        // Vérifiez si le texte du cours est entièrement dans les limites visibles de la vue
+        // Vérifiez si le texte du cours est dans le rectangle
         if (courseText.getGlobalBounds().intersects(sf::FloatRect(originalView.getCenter().x - originalView.getSize().x / 2,
                                                                   originalView.getCenter().y - originalView.getSize().y / 2,
                                                                   originalView.getSize().x,
@@ -84,7 +85,6 @@ void StarDisplay::afficherEtoilesGroupeFusionne(const std::string &groupName, co
                     starSprite.setPosition(startX + i * starSpacing, rectTop + 130 + yOffset + (textBounds.height - starTextureHeight) / 2 + reservedHeight);
                     sf::FloatRect spriteBounds = starSprite.getGlobalBounds();
 
-                    // Vérifiez si le sprite est entièrement dans les limites visibles de la vue
                     if (spriteBounds.intersects(sf::FloatRect(originalView.getCenter().x - originalView.getSize().x / 2,
                                                               originalView.getCenter().y - originalView.getSize().y / 2,
                                                               originalView.getSize().x,
