@@ -424,8 +424,6 @@ int main(int argc, char *argv[]) {
 #include <romhack_b3313_cartography/uis/Textures.h>
 
 #include "uis/TabManager.hpp"
-#include <romhack_b3313_cartography/uis/Button.h>
-#include <romhack_b3313_cartography/uis/DropdownMenu.h>
 #include <romhack_b3313_cartography/uis/Node.h>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
 
