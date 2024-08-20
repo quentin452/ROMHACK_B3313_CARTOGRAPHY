@@ -566,6 +566,7 @@ int main(int argc, char *argv[]) {
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QVector>
+#include <QMenu>
 
 // Define constants
 const int WIDTH = 1280;
@@ -609,6 +610,10 @@ class MainWindow : public QMainWindow {
         dropdownMenu = new QComboBox(this);
         dropdownMenu->addItems({"b3313-v1.0.2.json"});
         layout->addWidget(dropdownMenu);
+        contextMenu = new QMenu(this);
+        QAction *removeConnectionsAction = new QAction("Remove Connections", this);
+        connect(removeConnectionsAction, &QAction::triggered, this, &MainWindow::removeConnections);
+        contextMenu->addAction(removeConnectionsAction);
 
         connect(dropdownMenu, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index) {
             QString selectedFile = dropdownMenu->itemText(index);
@@ -655,6 +660,14 @@ class MainWindow : public QMainWindow {
     }
 
     void mousePressEvent(QMouseEvent *event) override {
+        if (event->button() == Qt::RightButton) {
+            QPointF mousePos = graphicsView->mapToScene(event->pos());
+            int nodeIndex;
+            if (isMouseOverNode(mousePos, nodeIndex)) {
+                rightClickedNodeIndex = nodeIndex;
+                contextMenu->exec(QCursor::pos());
+            }
+        }
         if (shiftPressed && event->button() == Qt::LeftButton) {
             startPos = graphicsView->mapToScene(event->pos());
             int nodeIndex;
@@ -666,10 +679,16 @@ class MainWindow : public QMainWindow {
 #ifdef DEBUG
         if (!shiftPressed && event->button() == Qt::RightButton) {
             QPointF worldPos = graphicsView->mapToScene(event->pos());
-            Node *newNode = new Node(worldPos.x(), worldPos.y(), "New Node", font());
-            newNode->setModified(true);
-            graphicsView->scene()->addItem(newNode);
-            nodes.append(newNode);
+
+            // Vérifiez si un nœud existe déjà à cette position
+            int nodeIndex;
+            if (!isMouseOverNode(worldPos, nodeIndex)) {
+                // Aucun nœud trouvé à cette position, créez un nouveau nœud
+                Node *newNode = new Node(worldPos.x(), worldPos.y(), "New Node", font());
+                newNode->setModified(true);
+                graphicsScene->addItem(newNode);
+                nodes.append(newNode);
+            }
         }
 #endif
     }
@@ -716,6 +735,31 @@ class MainWindow : public QMainWindow {
     }
 
   private slots:
+    void removeConnections() {
+        if (rightClickedNodeIndex != -1) {
+            Node *nodeToRemove = nodes[rightClickedNodeIndex];
+            QVector<int> indicesToRemove;
+
+            // Trouver les connexions à supprimer
+            for (int i = 0; i < connections.size(); ++i) {
+                QPair<int, int> conn = connections[i];
+                if (conn.first == rightClickedNodeIndex || conn.second == rightClickedNodeIndex) {
+                    indicesToRemove.push_back(i);
+                }
+            }
+
+            // Supprimer les connexions
+            for (int i = indicesToRemove.size() - 1; i >= 0; --i) {
+                connections.removeAt(indicesToRemove[i]);
+            }
+
+            // Supprimer les connexions dans les nœuds
+            nodeToRemove->connections.clear();
+
+            // Réinitialiser la scène
+            updateDisplay(lastJsonData);
+        }
+    }
     void saveNodes() {
         QJsonArray jsonArray;
         for (const auto &nodePtr : mind_map_nodes) {
@@ -1076,6 +1120,8 @@ class MainWindow : public QMainWindow {
     Node *startArrowNode = nullptr; // Node where the arrow starts
     bool shiftPressed = false;      // Indicates if Shift key is pressed
     QGraphicsLineItem *currentArrow = nullptr;
+    QMenu *contextMenu;
+    int rightClickedNodeIndex = -1;
 };
 
 int main(int argc, char *argv[]) {
