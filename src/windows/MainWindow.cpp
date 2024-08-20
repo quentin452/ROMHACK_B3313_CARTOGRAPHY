@@ -65,33 +65,49 @@ void MainWindow::setNodesMovable(bool movable) {
 }
 
 void MainWindow::mousePressEvent(QMouseEvent *event) {
+    // Gestion du clic droit pour afficher le menu contextuel
     if (event->button() == Qt::RightButton) {
         QPointF mousePos = graphicsView->mapToScene(event->pos());
+        qDebug() << "Right Button Clicked at Scene Position:" << mousePos; // Afficher la position de la souris
         int nodeIndex;
         if (isMouseOverNode(mousePos, nodeIndex)) {
             rightClickedNodeIndex = nodeIndex;
             contextMenu->exec(QCursor::pos());
         }
     }
+
+    // Gestion du clic gauche avec Shift pour créer une connexion entre les nœuds
     if (shiftPressed && event->button() == Qt::LeftButton) {
         startPos = graphicsView->mapToScene(event->pos());
+        qDebug() << "Shift + Left Button Clicked at Scene Position:" << startPos; // Afficher la position de la souris
         int nodeIndex;
         if (isMouseOverNode(startPos, nodeIndex)) {
             startNodeIndex = nodeIndex;
             dragging = true;
+            qDebug() << "Start Node Index:" << startNodeIndex; // Débogage
         }
     }
+
 #ifdef DEBUG
+    // Création d'un nouveau nœud si on clique avec le bouton droit sans Shift
     if (!shiftPressed && event->button() == Qt::RightButton) {
-        QPointF worldPos = graphicsView->mapToScene(event->pos());
-        int nodeIndex;
-        if (!isMouseOverNode(worldPos, nodeIndex)) {
-            Node *newNode = new Node(worldPos.x(), worldPos.y(), "New Node", font());
+        QPointF scenePos = graphicsView->mapToScene(event->pos());
+        qDebug() << "Creating New Node at Scene Position:" << scenePos; // Afficher la position de la souris
+
+        // Utiliser un raycast pour détecter les objets sous la souris
+        QGraphicsItem *itemUnderMouse = graphicsScene->itemAt(scenePos, QTransform());
+        if (!itemUnderMouse) {
+            // Crée un nouveau nœud à la position de la souris
+            Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font());
             newNode->setModified(true);
             graphicsScene->addItem(newNode);
             nodes.append(newNode);
+
+            // Débogage pour vérifier la position du nouveau nœud
+            qDebug() << "New Node Created at Scene Position:" << newNode->pos();
         }
     }
+
 #endif
 }
 
@@ -115,10 +131,13 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
         QPointF mousePos = graphicsView->mapToScene(event->pos());
         int endNodeIndex;
         if (isMouseOverNode(mousePos, endNodeIndex) && endNodeIndex != startNodeIndex) {
+            qDebug() << "End Node Index:" << endNodeIndex; // Debugging statement
             connections.push_back(QPair<int, int>(startNodeIndex, endNodeIndex));
             nodes[startNodeIndex]->connections.push_back(endNodeIndex);
             nodes[endNodeIndex]->connections.push_back(startNodeIndex);
             updateDisplay(lastJsonData);
+        } else {
+            qDebug() << "No valid end node detected."; // Debugging statement
         }
         dragging = false;
         if (currentArrow) {
