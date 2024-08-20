@@ -1,17 +1,22 @@
 #include <romhack_b3313_cartography/uis/Node.h>
 
 Node::Node(float x, float y, const QString &text, const QFont &font)
-    : QGraphicsEllipseItem(x - 30, y - 30, 60, 60),
+    : QGraphicsEllipseItem(-30, -30, 60, 60),
       label(text), font(font), color(Qt::cyan), modified(false), labelItem(nullptr) {
     setBrush(color);
     setPen(QPen(Qt::cyan));
     setFlag(ItemIsMovable);
 
-    // Initialisation de labelItem avec du texte
+    // Positionne le nœud au centre de la position souhaitée
+    setPos(x, y);
+
+    // Initialisation du texte
     labelItem = new QGraphicsTextItem(label, this);
     labelItem->setFont(font);
-    labelItem->setPos(x - labelItem->boundingRect().width() / 2, y - labelItem->boundingRect().height() / 2);
+    // Positionne le texte pour qu'il soit centré par rapport à l'ellipse
+    labelItem->setPos(-labelItem->boundingRect().width() / 2, -labelItem->boundingRect().height() / 2);
 }
+
 void Node::setPosition(float x, float y) {
     modified = true;
     setPos(x, y);

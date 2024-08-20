@@ -89,24 +89,50 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
 #ifdef DEBUG
     // Création d'un nouveau nœud si on clique avec le bouton droit sans Shift
     if (!shiftPressed && event->button() == Qt::RightButton) {
-        QPointF scenePos = graphicsView->mapToScene(event->pos());
-        qDebug() << "Mouse Position in Scene Coordinates:" << scenePos;
+        QPoint viewPos = event->pos();
+        qDebug() << "Mouse Position in View Coordinates:" << viewPos;
+
+        // Obtenir les coordonnées de la scène en tenant compte des transformations de la vue
+        QPointF scenePos = graphicsView->mapToScene(viewPos);
+        qDebug() << "Mouse Position in Scene Coordinates (Before Transformation):" << scenePos;
+
+        // Vérifiez que les coordonnées de la scène sont valides
+        if (scenePos.x() < 0 || scenePos.y() < 0) {
+            qDebug() << "Invalid scene coordinates, skipping node creation.";
+            return;
+        }
+
+        // Ajoutez des logs pour vérifier les transformations de la vue
+        qDebug() << "View Transform:" << graphicsView->transform();
 
         // Crée un nouveau nœud à la position de la souris
         Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font());
 
-        // Vérifiez la position du nœud après la création
+        // Vérifiez la position du nœud après sa création
         QPointF nodePos = newNode->pos();
         qDebug() << "New Node Created at Scene Coordinates:" << nodePos;
 
-        // Ajouter le nœud à la scène
+        // Vérifiez les dimensions et la position du nœud
+        QRectF nodeRect = newNode->boundingRect();
+        qDebug() << "Node Bounding Rect:" << nodeRect;
+        qDebug() << "Node Center Position:" << nodeRect.center();
+
+        // Ajoutez le nœud à la scène
         newNode->setModified(true);
         graphicsScene->addItem(newNode);
         nodes.append(newNode);
+
+        // Affichez les dimensions de la scène et de la vue
+        qDebug() << "Scene Rect:" << graphicsScene->sceneRect();
+        qDebug() << "View Rect:" << graphicsView->rect();
+
+        // Ajustez les dimensions de la scène pour inclure tous les nœuds
+        QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
+        QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajoutez une marge autour des nœuds
+        graphicsScene->setSceneRect(adjustedSceneRect);
     }
 #endif
 }
-
 void MainWindow::mouseMoveEvent(QMouseEvent *event) {
     if (shiftPressed && dragging && startNodeIndex != -1) {
         QPointF mousePos = graphicsView->mapToScene(event->pos());
