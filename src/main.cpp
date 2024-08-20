@@ -564,8 +564,8 @@ int main(int argc, char *argv[]) {
 #include <QVBoxLayout>
 #include <QVector>
 
-    // Define constants
-    const int WIDTH = 1280;
+// Define constants
+const int WIDTH = 1280;
 const int HEIGHT = 720;
 std::wstring global_detected_emulator;
 class MainWindow : public QMainWindow {
@@ -578,6 +578,7 @@ class MainWindow : public QMainWindow {
         emulatorText = new QGraphicsTextItem("Emulator Status");
         b3313Text = new QGraphicsTextItem("B3313 V1.0.2 Status");
         tabManager = new TabManager(tabNames, this);
+
         // Setup graphics view and scene
         graphicsView = new QGraphicsView(this);
         graphicsScene = new QGraphicsScene(this);
@@ -586,8 +587,6 @@ class MainWindow : public QMainWindow {
 
         // Setup UI elements
         QVBoxLayout *layout = new QVBoxLayout;
-        QWidget *container = new QWidget;
-        container->setLayout(layout);
         layout->addWidget(graphicsView);
 
         // Load data
@@ -605,7 +604,7 @@ class MainWindow : public QMainWindow {
 
         // Setup dropdown menu
         dropdownMenu = new QComboBox(this);
-        dropdownMenu->addItems({"b3313-v1.0.2.json", "another_file.json"});
+        dropdownMenu->addItems({"b3313-v1.0.2.json"});
         layout->addWidget(dropdownMenu);
 
         connect(dropdownMenu, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index) {
@@ -615,7 +614,6 @@ class MainWindow : public QMainWindow {
                 mind_map_nodes = loadNodes("b3313-v1.0.2.json", font);
             }
         });
-
         // Setup timer
         updateTimer = new QTimer(this);
         connect(updateTimer, &QTimer::timeout, this, &MainWindow::onTimerUpdate);
