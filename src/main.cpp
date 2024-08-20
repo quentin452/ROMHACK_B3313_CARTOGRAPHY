@@ -565,7 +565,6 @@ int main(int argc, char *argv[]) {
 #include <QVBoxLayout>
 #include <QVector>
 
-
 // Define constants
 const int WIDTH = 1280;
 const int HEIGHT = 720;
@@ -735,7 +734,6 @@ class MainWindow : public QMainWindow {
         return false;
     }
     void onTimerUpdate() {
-        graphicsScene->clear();
         static QElapsedTimer elapsedTimer;
         static bool timerStarted = false;
 
@@ -822,7 +820,7 @@ class MainWindow : public QMainWindow {
 
         // Update timer
         elapsedTimer.restart();
-
+        graphicsScene->clear();
         // Check emulator status and update text color
         bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
         bool romLoaded = isRomHackLoaded(global_detected_emulator);
