@@ -1,7 +1,12 @@
 #include "MainWindow.h"
 
+#ifdef DEBUG
+QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
+#else
+QString b33_13_mind_map_str = "stars_layout/b3313-V1.0.2/b3313-v1.0.2-Mind_map.json";
+#endif
+
 MainWindow::MainWindow() {
-    loadJsonData("resources/stars_layout/b3313-V1.0.2/layout.json");
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
     emulatorText = new QGraphicsTextItem("Emulator Status");
@@ -31,7 +36,7 @@ MainWindow::MainWindow() {
         QString selectedFile = dropdownMenu->itemText(index);
         if (!selectedFile.isEmpty()) {
             QFont font = this->font();
-            mind_map_nodes = loadNodes("b3313-v1.0.2.json", font);
+            mind_map_nodes = loadNodes(b33_13_mind_map_str, font);
         }
     });
     updateTimer = new QTimer(this);
@@ -41,6 +46,11 @@ MainWindow::MainWindow() {
     graphicsView->setMouseTracking(true);
     layout->setSpacing(10);
     layout->setContentsMargins(10, 10, 10, 10);
+    QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
+    QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajoutez une marge autour des nœuds
+    graphicsScene->setSceneRect(adjustedSceneRect);
+    loadJsonData(b33_13_mind_map_str);
+    loadJsonData("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -90,11 +100,9 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     // Création d'un nouveau nœud si on clique avec le bouton droit sans Shift
     if (!shiftPressed && event->button() == Qt::RightButton) {
         QPoint viewPos = event->pos();
-        qDebug() << "Mouse Position in View Coordinates:" << viewPos;
 
         // Obtenir les coordonnées de la scène en tenant compte des transformations de la vue
         QPointF scenePos = graphicsView->mapToScene(viewPos);
-        qDebug() << "Mouse Position in Scene Coordinates (Before Transformation):" << scenePos;
 
         // Vérifiez que les coordonnées de la scène sont valides
         if (scenePos.x() < 0 || scenePos.y() < 0) {
@@ -102,34 +110,19 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
             return;
         }
 
-        // Ajoutez des logs pour vérifier les transformations de la vue
-        qDebug() << "View Transform:" << graphicsView->transform();
-
         // Crée un nouveau nœud à la position de la souris
         Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font());
 
         // Vérifiez la position du nœud après sa création
         QPointF nodePos = newNode->pos();
-        qDebug() << "New Node Created at Scene Coordinates:" << nodePos;
 
         // Vérifiez les dimensions et la position du nœud
         QRectF nodeRect = newNode->boundingRect();
-        qDebug() << "Node Bounding Rect:" << nodeRect;
-        qDebug() << "Node Center Position:" << nodeRect.center();
 
         // Ajoutez le nœud à la scène
         newNode->setModified(true);
         graphicsScene->addItem(newNode);
         nodes.append(newNode);
-
-        // Affichez les dimensions de la scène et de la vue
-        qDebug() << "Scene Rect:" << graphicsScene->sceneRect();
-        qDebug() << "View Rect:" << graphicsView->rect();
-
-        // Ajustez les dimensions de la scène pour inclure tous les nœuds
-        QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
-        QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajoutez une marge autour des nœuds
-        graphicsScene->setSceneRect(adjustedSceneRect);
     }
 #endif
 }
@@ -198,12 +191,12 @@ void MainWindow::removeConnections() {
 
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;
-    for (const auto &nodePtr : nodes) { 
+    for (const auto &nodePtr : nodes) {
         jsonArray.append(nodePtr->toJson());
     }
 
     QJsonDocument jsonDoc(jsonArray);
-    QFile file("b3313-v1.0.2.json");
+    QFile file(b33_13_mind_map_str);
     if (file.open(QIODevice::WriteOnly)) {
         file.write(jsonDoc.toJson(QJsonDocument::Indented)); // Pretty print JSON
         file.close();
@@ -273,26 +266,50 @@ void MainWindow::loadJsonData(const QString &filename) {
         return;
     }
     QByteArray data = file.readAll();
+    qDebug() << "Raw JSON data:" << data;
     QJsonDocument doc(QJsonDocument::fromJson(data));
-    QJsonObject jsonData = doc.object();
-    lastJsonData = jsonData; // Store the loaded JSON data
-    parseJsonData(jsonData);
+    qDebug() << "Parsed JSON document:" << doc;
+
+    if (doc.isNull() || !doc.isArray()) {
+        qWarning() << "Failed to parse JSON or JSON is not an array.";
+        return;
+    }
+
+    QJsonArray jsonArray = doc.array();
+    lastJsonData = QJsonObject(); // Clear lastJsonData if not used
+
+    parseJsonData(jsonArray);
 }
 
-void MainWindow::parseJsonData(const QJsonObject &jsonData) {
+void MainWindow::parseJsonData(const QJsonArray &jsonArray) {
     nodes.clear();
     connections.clear();
     QFont defaultFont("Arial", 12, QFont::Bold);
-    QJsonArray nodeArray = jsonData["nodes"].toArray();
-    for (const QJsonValue &value : nodeArray) {
+
+    for (const QJsonValue &value : jsonArray) {
+        if (!value.isObject()) {
+            qWarning() << "Invalid node format.";
+            continue;
+        }
+
         QJsonObject nodeObj = value.toObject();
+        if (!nodeObj.contains("x") || !nodeObj["x"].isDouble() ||
+            !nodeObj.contains("y") || !nodeObj["y"].isDouble() ||
+            !nodeObj.contains("text") || !nodeObj["text"].isString()) {
+            qWarning() << "Node data is incomplete or invalid.";
+            continue;
+        }
+
         qreal x = nodeObj["x"].toDouble();
         qreal y = nodeObj["y"].toDouble();
-        QString label = nodeObj["label"].toString();
+        QString label = nodeObj["text"].toString();
         Node *node = new Node(x, y, label, defaultFont);
         graphicsScene->addItem(node);
         nodes.append(node);
     }
+
+    // Declare jsonData here
+    QJsonObject jsonData;
     QJsonArray connectionArray = jsonData["connections"].toArray();
     for (const QJsonValue &value : connectionArray) {
         QJsonObject connObj = value.toObject();
@@ -306,7 +323,6 @@ void MainWindow::parseJsonData(const QJsonObject &jsonData) {
         }
     }
 }
-
 void MainWindow::updateDisplay(const QJsonObject &jsonData) {
     static QElapsedTimer elapsedTimer;
     static bool timerStarted = false;

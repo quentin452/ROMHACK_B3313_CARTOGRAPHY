@@ -14,7 +14,6 @@
 #include <nlohmann/json.hpp>
 #include <romhack_b3313_cartography/utils/defines.hpp>
 
-
 #include <romhack_b3313_cartography/utils/rom_utils.h>
 
 #include <romhack_b3313_cartography/uis/Textures.h>
@@ -76,7 +75,7 @@ class MainWindow : public QMainWindow {
     bool isModified() const;
     void onTimerUpdate();
     void loadJsonData(const QString &filename);
-    void parseJsonData(const QJsonObject &jsonData);
+    void parseJsonData(const QJsonArray &jsonArray);
     void updateDisplay(const QJsonObject &jsonData);
 
     void displayStars(const QJsonObject &jsonData);
