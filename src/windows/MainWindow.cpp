@@ -50,7 +50,7 @@ MainWindow::MainWindow() {
     QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajoutez une marge autour des nœuds
     graphicsScene->setSceneRect(adjustedSceneRect);
     loadJsonData(b33_13_mind_map_str);
-    loadJsonData("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
+    // loadJsonData("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -207,6 +207,7 @@ void MainWindow::saveNodes() {
 
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
+    loadJsonData("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
     updateDisplay(lastJsonData);
 }
 
@@ -330,11 +331,9 @@ void MainWindow::updateDisplay(const QJsonObject &jsonData) {
     if (!timerStarted) {
         elapsedTimer.start();
         timerStarted = true;
-        qDebug() << "Timer started";
     }
 
     qint64 elapsedMilliseconds = elapsedTimer.elapsed();
-    qDebug() << "Elapsed time:" << elapsedMilliseconds << "ms";
 
     if (elapsedMilliseconds < 1000) {
         return; // Exit early if not enough time has passed
@@ -342,25 +341,13 @@ void MainWindow::updateDisplay(const QJsonObject &jsonData) {
 
     // Update timer
     elapsedTimer.restart();
-    qDebug() << "Timer restarted";
-
-    if (!graphicsScene) {
-        qWarning() << "graphicsScene is null!";
-        return;
-    }
-
-    qDebug() << "Clearing graphics scene";
 
     // Check emulator status and update text color
     bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
     bool romLoaded = isRomHackLoaded(global_detected_emulator);
-    qDebug() << "Emulator running:" << emulatorRunning;
-    qDebug() << "ROM loaded:" << romLoaded;
-
     if (emulatorText) {
         emulatorText->setPlainText(emulatorRunning ? "Emulator Running" : "Emulator Not Running");
         emulatorText->setDefaultTextColor(emulatorRunning ? Qt::green : Qt::black);
-        qDebug() << "Emulator text updated";
     } else {
         qWarning() << "emulatorText is null!";
     }
@@ -368,13 +355,11 @@ void MainWindow::updateDisplay(const QJsonObject &jsonData) {
     if (b3313Text) {
         b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
         b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
-        qDebug() << "B3313 text updated";
     } else {
         qWarning() << "b3313Text is null!";
     }
 
     // Draw connections
-    qDebug() << "Drawing connections";
     graphicsScene->clear();
 
     for (const QPair<int, int> &conn : connections) {
@@ -402,7 +387,6 @@ void MainWindow::updateDisplay(const QJsonObject &jsonData) {
         qDebug() << "Displaying stars";
         displayStars(jsonData);
     } else {
-        qDebug() << "Adding nodes and texts";
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
                 conn.second >= 0 && conn.second < nodes.size()) {
@@ -423,7 +407,6 @@ void MainWindow::updateDisplay(const QJsonObject &jsonData) {
 
         for (Node *node : nodes) {
             if (node) {
-                qDebug() << "Node is not null. Updating and adding node";
                 // Test if the node's properties are valid before updating and adding
                 if (node->x() < 0 || node->y() < 0) {
                     qWarning() << "Node has invalid position. Skipping node:" << node;
@@ -437,7 +420,6 @@ void MainWindow::updateDisplay(const QJsonObject &jsonData) {
                         qWarning() << "Node is already in the scene. Skipping add.";
                     } else {
                         graphicsScene->addItem(node);
-                        qDebug() << "Node added to the scene:" << node;
                     }
                 } catch (const std::exception &e) {
                     qCritical() << "Exception during node update or addition:" << e.what();
@@ -449,12 +431,10 @@ void MainWindow::updateDisplay(const QJsonObject &jsonData) {
             }
         }
         if (emulatorText) {
-            qDebug() << "Adding emulator text to scene";
             graphicsScene->addItem(emulatorText);
         }
 
         if (b3313Text) {
-            qDebug() << "Adding B3313 text to scene";
             graphicsScene->addItem(b3313Text);
         }
     }
