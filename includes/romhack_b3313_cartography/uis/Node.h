@@ -6,11 +6,13 @@
 #include <QGraphicsEllipseItem>
 #include <QGraphicsTextItem>
 #include <QJsonObject>
+#include <QPainter>
 #include <QPen>
 #include <QPointF>
 #include <QRectF>
 #include <QString>
 #include <vector>
+
 
 class Node : public QGraphicsEllipseItem {
   public:
@@ -19,10 +21,16 @@ class Node : public QGraphicsEllipseItem {
     QJsonObject toJson() const;
     static Node fromJson(const QJsonObject &json, const QFont &font);
     void setColor(const QColor &color);
-    std::vector<int> connections; // Indices of connected nodes
     void setModified(bool modified) { this->modified = modified; }
     bool isModified() { return modified; }
     void setMovable(bool movable);
+    void addConnection(int nodeIndex);
+    void removeConnection(int nodeIndex);
+    const QVector<int> &getConnections() const { return connections; }
+    QVector<int> connections;
+    QRectF boundingRect() const override;
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    void updateStar();
 
   private:
     QString label;
@@ -33,4 +41,6 @@ class Node : public QGraphicsEllipseItem {
 
     float radius;
     QRectF boundingBox;
+    QGraphicsTextItem *labelItem;
+    QGraphicsPixmapItem *starItem;
 };

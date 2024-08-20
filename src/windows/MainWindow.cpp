@@ -112,39 +112,21 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
 }
 
 void MainWindow::mouseMoveEvent(QMouseEvent *event) {
-    if (shiftPressed && dragging && startNodeIndex != -1) {
-        QPointF mousePos = graphicsView->mapToScene(event->pos());
-        if (currentArrow) {
-            graphicsScene->removeItem(currentArrow);
-            delete currentArrow;
-        }
-        Node *startNode = nodes[startNodeIndex];
-        QLineF line(startNode->pos(), mousePos);
-        currentArrow = new QGraphicsLineItem(line);
-        currentArrow->setPen(QPen(Qt::black, 2, Qt::SolidLine, Qt::RoundCap));
-        graphicsScene->addItem(currentArrow);
-    }
 }
-
 void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
     if (shiftPressed && event->button() == Qt::LeftButton && dragging) {
         QPointF mousePos = graphicsView->mapToScene(event->pos());
         int endNodeIndex;
         if (isMouseOverNode(mousePos, endNodeIndex) && endNodeIndex != startNodeIndex) {
-            qDebug() << "End Node Index:" << endNodeIndex; // Debugging statement
+            qDebug() << "End Node Index:" << endNodeIndex;
             connections.push_back(QPair<int, int>(startNodeIndex, endNodeIndex));
-            nodes[startNodeIndex]->connections.push_back(endNodeIndex);
-            nodes[endNodeIndex]->connections.push_back(startNodeIndex);
+            nodes[startNodeIndex]->addConnection(endNodeIndex);
+            nodes[endNodeIndex]->addConnection(startNodeIndex);
             updateDisplay(lastJsonData);
         } else {
-            qDebug() << "No valid end node detected."; // Debugging statement
+            qDebug() << "No valid end node detected.";
         }
         dragging = false;
-        if (currentArrow) {
-            graphicsScene->removeItem(currentArrow);
-            delete currentArrow;
-            currentArrow = nullptr;
-        }
     }
 }
 
@@ -161,10 +143,15 @@ void MainWindow::removeConnections() {
         for (int i = indicesToRemove.size() - 1; i >= 0; --i) {
             connections.removeAt(indicesToRemove[i]);
         }
+        // Retirer les connexions des autres nœuds
+        for (int i : nodeToRemove->getConnections()) {
+            nodes[i]->removeConnection(rightClickedNodeIndex);
+        }
         nodeToRemove->connections.clear();
         updateDisplay(lastJsonData);
     }
 }
+
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;
     for (const auto &nodePtr : mind_map_nodes) {
@@ -284,6 +271,7 @@ void MainWindow::updateDisplay(const QJsonObject &jsonData) {
     // Update timer
     elapsedTimer.restart();
     graphicsScene->clear();
+
     // Check emulator status and update text color
     bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
     bool romLoaded = isRomHackLoaded(global_detected_emulator);
@@ -309,6 +297,7 @@ void MainWindow::updateDisplay(const QJsonObject &jsonData) {
             graphicsScene->addItem(lineItem);
         }
         for (Node *node : nodes) {
+            node->updateStar(); // Met à jour l'étoile pour chaque nœud
             graphicsScene->addItem(node);
         }
         if (emulatorText) {

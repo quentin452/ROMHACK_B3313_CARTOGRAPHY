@@ -30,3 +30,34 @@ Node Node::fromJson(const QJsonObject &json, const QFont &font) {
     QString text = json["text"].toString();
     return Node(x, y, text, font);
 }
+void Node::addConnection(int nodeIndex) {
+    if (!connections.contains(nodeIndex)) {
+        connections.append(nodeIndex);
+    }
+}
+
+void Node::removeConnection(int nodeIndex) {
+    connections.removeAll(nodeIndex);
+}
+QRectF Node::boundingRect() const {
+    return labelItem->boundingRect(); // Ajuster en fonction des besoins
+}
+
+void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
+    // Dessine le nœud
+    painter->drawRect(boundingRect());
+    // Dessine l'étiquette
+    labelItem->paint(painter, option, widget);
+}
+
+void Node::updateStar() {
+    if (starItem) {
+        delete starItem;
+        starItem = nullptr;
+    }
+    if (modified) {
+        QPixmap starPixmap("resources/textures/star-missing.png"); // Remplace par le chemin de ton image d'étoile
+        starItem = new QGraphicsPixmapItem(starPixmap, this);
+        starItem->setPos(boundingRect().topRight() - QPointF(starPixmap.width(), 0)); // Positionne l'étoile en haut à droite
+    }
+}
