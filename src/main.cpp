@@ -502,9 +502,9 @@ class MainWindow : public QMainWindow {
         });
 
         // Setup timer
-        QTimer *timer = new QTimer(this);
-        connect(timer, &QTimer::timeout, this, &MainWindow::updateStatus);
-        timer->start(1000); // Update every second
+        updateTimer = new QTimer(this);
+        connect(updateTimer, &QTimer::timeout, this, &MainWindow::onTimerUpdate);
+        updateTimer->start(1000); // Update every second
 
         // Add mouse events
         setMouseTracking(true);
@@ -596,7 +596,10 @@ class MainWindow : public QMainWindow {
         showStarDisplay = !showStarDisplay;
         updateDisplay(lastJsonData);
     }
-    void updateStatus() {
+
+  private:
+    void onTimerUpdate() {
+        graphicsScene->clear();
         static QElapsedTimer elapsedTimer;
         static bool timerStarted = false;
 
@@ -622,9 +625,8 @@ class MainWindow : public QMainWindow {
 
         b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
         b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
+        updateDisplay(lastJsonData);
     }
-
-  private:
     void loadJsonData(const QString &filename) {
         QFile file(filename);
         if (!file.open(QIODevice::ReadOnly)) {
@@ -640,7 +642,6 @@ class MainWindow : public QMainWindow {
 
     void parseJsonData(const QJsonObject &jsonData) {
         // Clear existing nodes and connections
-        graphicsScene->clear();
         nodes.clear();
         connections.clear();
 
@@ -668,11 +669,33 @@ class MainWindow : public QMainWindow {
                 connections.push_back(QPair<int, int>(startIndex, endIndex));
             }
         }
-
-        updateDisplay(jsonData);
     }
     void updateDisplay(const QJsonObject &jsonData) {
-        graphicsScene->clear();
+        static QElapsedTimer elapsedTimer;
+        static bool timerStarted = false;
+
+        if (!timerStarted) {
+            elapsedTimer.start();
+            timerStarted = true;
+        }
+
+        qint64 elapsedMilliseconds = elapsedTimer.elapsed();
+        if (elapsedMilliseconds < 1000) {
+            return; // Exit early if not enough time has passed
+        }
+
+        // Update timer
+        elapsedTimer.restart();
+
+        // Check emulator status and update text color
+        bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
+        bool romLoaded = isRomHackLoaded(global_detected_emulator);
+
+        emulatorText->setPlainText(emulatorRunning ? "Emulator Running" : "Emulator Not Running");
+        emulatorText->setDefaultTextColor(emulatorRunning ? Qt::green : Qt::black);
+
+        b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
+        b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
 
         for (const QPair<int, int> &conn : connections) {
             Node *startNode = nodes[conn.first];
@@ -753,8 +776,6 @@ class MainWindow : public QMainWindow {
                 return;
             }
 
-            // Clear the scene
-            graphicsScene->clear();
             float reservedHeight = tabManager->getTabsHeight();
             QRectF windowRect = graphicsView->rect();
 
@@ -886,6 +907,7 @@ class MainWindow : public QMainWindow {
     QComboBox *dropdownMenu = nullptr;
     QPushButton *saveButton = nullptr;
     QPushButton *switchViewButton = nullptr;
+    QTimer *updateTimer = nullptr;
 };
 
 int main(int argc, char *argv[]) {
