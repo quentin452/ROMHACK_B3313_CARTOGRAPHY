@@ -526,6 +526,7 @@ int main(int argc, char *argv[]) {
 
 #include <psapi.h>
 
+#include "utils/defines.hpp"
 #include <algorithm>
 #include <chrono>
 #include <ctime>
@@ -534,6 +535,7 @@ int main(int argc, char *argv[]) {
 #include <iostream>
 #include <locale>
 #include <nlohmann/json.hpp>
+
 #include <romhack_b3313_cartography/utils/rom_utils.h>
 
 #include <romhack_b3313_cartography/uis/Textures.h>
@@ -574,8 +576,10 @@ class MainWindow : public QMainWindow {
 
   public:
     MainWindow() {
+        loadJsonData("resources/stars_layout/b3313-V1.0.2/layout.json");
         setWindowTitle("Mind Map Example");
         setFixedSize(WIDTH, HEIGHT);
+
         emulatorText = new QGraphicsTextItem("Emulator Status");
         b3313Text = new QGraphicsTextItem("B3313 V1.0.2 Status");
         tabManager = new TabManager(tabNames, this);
@@ -584,14 +588,14 @@ class MainWindow : public QMainWindow {
         graphicsView = new QGraphicsView(this);
         graphicsScene = new QGraphicsScene(this);
         graphicsView->setScene(graphicsScene);
-        setCentralWidget(graphicsView);
 
-        // Setup UI elements
-        QVBoxLayout *layout = new QVBoxLayout;
+        // Create a central widget and set it as the central widget
+        QWidget *centralWidget = new QWidget(this);
+        setCentralWidget(centralWidget);
+
+        // Create a vertical layout and set it on the central widget
+        QVBoxLayout *layout = new QVBoxLayout(centralWidget);
         layout->addWidget(graphicsView);
-
-        // Load data
-        loadJsonData("resources/stars_layout/b3313-V1.0.2/layout.json");
 
         // Setup buttons and dropdown
         saveButton = new QPushButton("Save", this);
@@ -613,6 +617,7 @@ class MainWindow : public QMainWindow {
                 mind_map_nodes = loadNodes("b3313-v1.0.2.json", font);
             }
         });
+
         // Setup timer
         updateTimer = new QTimer(this);
         connect(updateTimer, &QTimer::timeout, this, &MainWindow::onTimerUpdate);
@@ -621,67 +626,93 @@ class MainWindow : public QMainWindow {
         // Add mouse events
         setMouseTracking(true);
         graphicsView->setMouseTracking(true);
+
+        // Optionally, you can configure the layout spacing and margins here if needed
+        layout->setSpacing(10);
+        layout->setContentsMargins(10, 10, 10, 10);
     }
 
   protected:
-    void mousePressEvent(QMouseEvent *event) override {
-        if (event->button() == Qt::LeftButton && dragging) {
-            QPointF mousePos = graphicsView->mapToScene(event->pos());
+    void keyPressEvent(QKeyEvent *event) override {
+        if (event->key() == Qt::Key_Shift && !shiftPressed) {
+            shiftPressed = true;
+            dragging = false;
+            setNodesMovable(false);
+        }
+    }
 
-            // Handle tab click
-            if (tabManager->contains(mousePos)) {
-                tabManager->handleMouseClick(mousePos);
+    void keyReleaseEvent(QKeyEvent *event) override {
+        if (event->key() == Qt::Key_Shift && shiftPressed) {
+            shiftPressed = false;
+            setNodesMovable(true);
+        }
+    }
+
+    void setNodesMovable(bool movable) {
+        for (Node *node : nodes) {
+            node->setMovable(movable);
+        }
+    }
+
+    void mousePressEvent(QMouseEvent *event) override {
+        if (shiftPressed && event->button() == Qt::LeftButton) {
+            startPos = graphicsView->mapToScene(event->pos());
+            int nodeIndex;
+            if (isMouseOverNode(startPos, nodeIndex)) {
+                startNodeIndex = nodeIndex;
+                dragging = true;
             }
         }
-
 #ifdef DEBUG
-        if (event->button() == Qt::RightButton) {
+        if (!shiftPressed && event->button() == Qt::RightButton) {
             QPointF worldPos = graphicsView->mapToScene(event->pos());
-
-            // Create a new Node instance
             Node *newNode = new Node(worldPos.x(), worldPos.y(), "New Node", font());
             newNode->setModified(true);
             graphicsView->scene()->addItem(newNode);
-            // Add the new Node to the QList
             nodes.append(newNode);
         }
 #endif
     }
 
-    void mouseReleaseEvent(QMouseEvent *event) override {
-        if (event->button() == Qt::LeftButton && dragging) {
+    void mouseMoveEvent(QMouseEvent *event) override {
+        if (shiftPressed && dragging && startNodeIndex != -1) {
             QPointF mousePos = graphicsView->mapToScene(event->pos());
-            int endNodeIndex = -1;
+
+            // Effacer l'ancienne flèche si elle existe
+            if (currentArrow) {
+                graphicsScene->removeItem(currentArrow);
+                delete currentArrow;
+            }
+
+            // Dessiner la nouvelle flèche
+            Node *startNode = nodes[startNodeIndex];
+            QLineF line(startNode->pos(), mousePos);
+            currentArrow = new QGraphicsLineItem(line);
+            currentArrow->setPen(QPen(Qt::black, 2, Qt::SolidLine, Qt::RoundCap));
+            graphicsScene->addItem(currentArrow);
+        }
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override {
+        if (shiftPressed && event->button() == Qt::LeftButton && dragging) {
+            QPointF mousePos = graphicsView->mapToScene(event->pos());
+            int endNodeIndex;
             if (isMouseOverNode(mousePos, endNodeIndex) && endNodeIndex != startNodeIndex) {
                 connections.push_back(QPair<int, int>(startNodeIndex, endNodeIndex));
                 nodes[startNodeIndex]->connections.push_back(endNodeIndex);
                 nodes[endNodeIndex]->connections.push_back(startNodeIndex);
+                updateDisplay(lastJsonData); // Met à jour l'affichage pour inclure la nouvelle connexion
             }
+
             dragging = false;
+            // Restore the flag for nodes to be movable after drawing
+            // setFlag(ItemIsMovable, true); // Re-enable node moving
+            if (currentArrow) {
+                graphicsScene->removeItem(currentArrow);
+                delete currentArrow;
+                currentArrow = nullptr;
+            }
         }
-    }
-
-    void mouseMoveEvent(QMouseEvent *event) override {
-        QPointF mousePos = graphicsView->mapToScene(event->pos());
-
-        // Réinitialiser la couleur de tous les nœuds
-        for (Node *node : nodes) {
-            node->setColor(Qt::white); // Assurez-vous que `Node` a une méthode `setColor`
-        }
-
-        // Trouver le nœud sous la souris et changer sa couleur
-        int nodeIndex = -1;
-        if (isMouseOverNode(mousePos, nodeIndex)) {
-            Node *hoveredNode = nodes[nodeIndex];
-            hoveredNode->setColor(Qt::yellow); // Changer la couleur du nœud survolé
-        }
-        // if (event.type == sf::Event::MouseMoved && dragging) {
-        //  Handle dragging logic if needed
-        //}
-        // Mettre à jour l'affichage des coordonnées de la souris ou d'autres informations
-        // Par exemple, vous pouvez afficher les coordonnées dans un label ou un autre widget
-        // Exemple :
-        // statusLabel->setText(QString("Mouse Position: (%1, %2)").arg(mousePos.x()).arg(mousePos.y()));
     }
 
   private slots:
@@ -1042,6 +1073,9 @@ class MainWindow : public QMainWindow {
     QPushButton *saveButton = nullptr;
     QPushButton *switchViewButton = nullptr;
     QTimer *updateTimer = nullptr;
+    Node *startArrowNode = nullptr; // Node where the arrow starts
+    bool shiftPressed = false;      // Indicates if Shift key is pressed
+    QGraphicsLineItem *currentArrow = nullptr;
 };
 
 int main(int argc, char *argv[]) {

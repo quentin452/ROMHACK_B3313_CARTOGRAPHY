@@ -16,13 +16,13 @@ class Node : public QGraphicsEllipseItem {
   public:
     Node(float x, float y, const QString &text, const QFont &font);
 
-    void setPosition(float x, float y);
     QJsonObject toJson() const;
     static Node fromJson(const QJsonObject &json, const QFont &font);
     void setColor(const QColor &color);
     std::vector<int> connections; // Indices of connected nodes
     void setModified(bool modified) { this->modified = modified; }
     bool isModified() { return modified; }
+    void setMovable(bool movable);
 
   private:
     QString label;

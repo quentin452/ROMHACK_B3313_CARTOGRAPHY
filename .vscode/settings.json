@@ -150,6 +150,7 @@
     "valarray": "cpp",
     "queue": "cpp",
     "regex": "cpp",
-    "stack": "cpp"
+    "stack": "cpp",
+    "*.moc": "cpp"
   }
 }

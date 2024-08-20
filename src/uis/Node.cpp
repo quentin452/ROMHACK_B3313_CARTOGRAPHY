@@ -8,9 +8,8 @@ Node::Node(float x, float y, const QString &text, const QFont &font)
     setPen(QPen(Qt::black)); // Create a QPen with the desired color
     setFlag(ItemIsMovable);
 }
-
-void Node::setPosition(float x, float y) {
-    setPos(x - 30, y - 30);
+void Node::setMovable(bool movable) {
+    setFlag(ItemIsMovable, movable); // Définit le drapeau ItemIsMovable en fonction du paramètre
 }
 void Node::setColor(const QColor &color) {
     this->color = color;
