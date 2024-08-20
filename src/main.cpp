@@ -674,7 +674,6 @@ class MainWindow : public QMainWindow {
     void updateDisplay(const QJsonObject &jsonData) {
         graphicsScene->clear();
 
-        // Draw connections
         for (const QPair<int, int> &conn : connections) {
             Node *startNode = nodes[conn.first];
             Node *endNode = nodes[conn.second];
@@ -683,13 +682,28 @@ class MainWindow : public QMainWindow {
             graphicsScene->addItem(lineItem);
         }
 
-        // Draw nodes
-        for (Node *node : nodes) {
-            graphicsScene->addItem(node);
-        }
-
         if (showStarDisplay) {
             displayStars(jsonData);
+        } else {
+            for (const QPair<int, int> &conn : connections) {
+                Node *startNode = nodes[conn.first];
+                Node *endNode = nodes[conn.second];
+                QGraphicsLineItem *lineItem = new QGraphicsLineItem(startNode->x(), startNode->y(), endNode->x(), endNode->y());
+                lineItem->setPen(QPen(Qt::black));
+                graphicsScene->addItem(lineItem);
+            }
+
+            for (Node *node : nodes) {
+                graphicsScene->addItem(node);
+            }
+
+            // Dessiner le texte de l'émulateur
+            if (emulatorText) {
+                graphicsScene->addItem(emulatorText);
+            }
+            if (b3313Text) {
+                graphicsScene->addItem(b3313Text);
+            }
         }
     }
 
