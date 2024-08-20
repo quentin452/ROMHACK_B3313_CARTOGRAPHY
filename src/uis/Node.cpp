@@ -14,7 +14,7 @@ Node::Node(float x, float y, const QString &text, const QFont &font)
 }
 void Node::setPosition(float x, float y) {
     modified = true;
-    setPos(x - 30, y - 30);
+    setPos(x, y);
 }
 
 void Node::setMovable(bool movable) {
@@ -49,8 +49,9 @@ void Node::removeConnection(int nodeIndex) {
     connections.removeAll(nodeIndex);
 }
 QRectF Node::boundingRect() const {
-    return labelItem->boundingRect(); // Ajuster en fonction des besoins
+    return QGraphicsEllipseItem::boundingRect(); // Utilise le rectangle de l'ellipse
 }
+
 void Node::updateStar() {
     if (starItem) {
         delete starItem;

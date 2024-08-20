@@ -4,7 +4,6 @@
 
 #include <psapi.h>
 
-#include <romhack_b3313_cartography/utils/defines.hpp>
 #include <algorithm>
 #include <chrono>
 #include <ctime>
@@ -13,6 +12,8 @@
 #include <iostream>
 #include <locale>
 #include <nlohmann/json.hpp>
+#include <romhack_b3313_cartography/utils/defines.hpp>
+
 
 #include <romhack_b3313_cartography/utils/rom_utils.h>
 
