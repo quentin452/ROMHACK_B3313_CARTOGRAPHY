@@ -50,7 +50,6 @@ MainWindow::MainWindow() {
     QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajoutez une marge autour des nœuds
     graphicsScene->setSceneRect(adjustedSceneRect);
     loadJsonData(b33_13_mind_map_str);
-    // loadJsonData("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -149,7 +148,7 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
                 connections.push_back(QPair<int, int>(startNodeIndex, endNodeIndex));
                 nodes[startNodeIndex]->addConnection(endNodeIndex);
                 nodes[endNodeIndex]->addConnection(startNodeIndex);
-                updateDisplay(lastJsonData);
+                updateDisplay();
             } else {
                 qDebug() << "Invalid node index in connections.";
             }
@@ -182,7 +181,7 @@ void MainWindow::removeConnections() {
                 }
             }
             nodeToRemove->connections.clear();
-            updateDisplay(lastJsonData);
+            updateDisplay();
         } else {
             qDebug() << "Invalid node index in removeConnections.";
         }
@@ -207,8 +206,7 @@ void MainWindow::saveNodes() {
 
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
-    loadJsonData("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
-    updateDisplay(lastJsonData);
+    updateDisplay();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -258,7 +256,23 @@ void MainWindow::onTimerUpdate() {
 
     b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
     b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
-    updateDisplay(lastJsonData);
+    updateDisplay();
+}
+QJsonObject MainWindow::loadJsonData2(const QString &filePath) {
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Could not open file:" << filePath;
+        return QJsonObject(); // Return an empty QJsonObject on failure
+    }
+
+    QByteArray jsonData = file.readAll();
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
+    if (!jsonDoc.isObject()) {
+        qWarning() << "Invalid JSON format in file:" << filePath;
+        return QJsonObject(); // Return an empty QJsonObject on failure
+    }
+
+    return jsonDoc.object(); // Return the parsed QJsonObject
 }
 void MainWindow::loadJsonData(const QString &filename) {
     QFile file(filename);
@@ -267,9 +281,7 @@ void MainWindow::loadJsonData(const QString &filename) {
         return;
     }
     QByteArray data = file.readAll();
-    qDebug() << "Raw JSON data:" << data;
     QJsonDocument doc(QJsonDocument::fromJson(data));
-    qDebug() << "Parsed JSON document:" << doc;
 
     if (doc.isNull() || !doc.isArray()) {
         qWarning() << "Failed to parse JSON or JSON is not an array.";
@@ -309,22 +321,26 @@ void MainWindow::parseJsonData(const QJsonArray &jsonArray) {
         nodes.append(node);
     }
 
-    // Declare jsonData here
-    QJsonObject jsonData;
-    QJsonArray connectionArray = jsonData["connections"].toArray();
-    for (const QJsonValue &value : connectionArray) {
-        QJsonObject connObj = value.toObject();
-        int startIndex = connObj["start"].toInt();
-        int endIndex = connObj["end"].toInt();
-        if (startIndex >= 0 && startIndex < nodes.size() &&
-            endIndex >= 0 && endIndex < nodes.size()) {
-            connections.push_back(QPair<int, int>(startIndex, endIndex));
-        } else {
-            qDebug() << "Invalid connection indices in JSON data.";
+    // Gestion des connexions si présentes
+    if (jsonArray.size() > 1) {                         // Assurez-vous que jsonArray contient les connexions
+        QJsonObject jsonData = jsonArray[1].toObject(); // Supposons que les connexions sont dans le deuxième élément
+        QJsonArray connectionArray = jsonData["connections"].toArray();
+        for (const QJsonValue &value : connectionArray) {
+            QJsonObject connObj = value.toObject();
+            int startIndex = connObj["start"].toInt();
+            int endIndex = connObj["end"].toInt();
+            if (startIndex >= 0 && startIndex < nodes.size() &&
+                endIndex >= 0 && endIndex < nodes.size()) {
+                connections.push_back(QPair<int, int>(startIndex, endIndex));
+            } else {
+                qDebug() << "Invalid connection indices in JSON data.";
+            }
         }
     }
 }
-void MainWindow::updateDisplay(const QJsonObject &jsonData) {
+
+void MainWindow::updateDisplay() {
+    QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
     static QElapsedTimer elapsedTimer;
     static bool timerStarted = false;
 

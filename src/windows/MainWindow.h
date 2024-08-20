@@ -75,8 +75,9 @@ class MainWindow : public QMainWindow {
     bool isModified() const;
     void onTimerUpdate();
     void loadJsonData(const QString &filename);
+    QJsonObject loadJsonData2(const QString &filePath);
     void parseJsonData(const QJsonArray &jsonArray);
-    void updateDisplay(const QJsonObject &jsonData);
+    void updateDisplay();
 
     void displayStars(const QJsonObject &jsonData);
 
