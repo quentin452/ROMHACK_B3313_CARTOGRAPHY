@@ -38,7 +38,6 @@ target_link_libraries(ROMHACK_B3313_CARTOGRAPHY
 
 # Définir les options de compilation pour le mode Debug
 target_compile_definitions(ROMHACK_B3313_CARTOGRAPHY PRIVATE $<$<CONFIG:Debug>:DEBUG>)
-
 # Copier les ressources dans le répertoire de construction
 add_custom_command(TARGET ROMHACK_B3313_CARTOGRAPHY POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E remove_directory "$<TARGET_FILE_DIR:ROMHACK_B3313_CARTOGRAPHY>/resources"

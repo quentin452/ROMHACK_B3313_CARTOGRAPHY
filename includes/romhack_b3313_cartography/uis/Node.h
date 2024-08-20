@@ -21,6 +21,8 @@ class Node : public QGraphicsEllipseItem {
     static Node fromJson(const QJsonObject &json, const QFont &font);
     void setColor(const QColor &color);
     std::vector<int> connections; // Indices of connected nodes
+    void setModified(bool modified) { this->modified = modified; }
+    bool isModified() { return modified; }
 
   private:
     QString label;

@@ -556,6 +556,7 @@ int main(int argc, char *argv[]) {
 #include <QJsonObject>
 #include <QList>
 #include <QMainWindow>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPair>
 #include <QPushButton>
@@ -563,6 +564,7 @@ int main(int argc, char *argv[]) {
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QVector>
+
 
 // Define constants
 const int WIDTH = 1280;
@@ -597,9 +599,7 @@ class MainWindow : public QMainWindow {
         switchViewButton = new QPushButton("Switch View", this);
         layout->addWidget(saveButton);
         layout->addWidget(switchViewButton);
-#ifdef DEBUG
         connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveNodes);
-#endif
         connect(switchViewButton, &QPushButton::clicked, this, &MainWindow::toggleStarDisplay);
 
         // Setup dropdown menu
@@ -641,7 +641,8 @@ class MainWindow : public QMainWindow {
 
             // Create a new Node instance
             Node *newNode = new Node(worldPos.x(), worldPos.y(), "New Node", font());
-
+            newNode->setModified(true);
+            graphicsView->scene()->addItem(newNode);
             // Add the new Node to the QList
             nodes.append(newNode);
         }
@@ -705,6 +706,34 @@ class MainWindow : public QMainWindow {
     }
 
   private:
+    void closeEvent(QCloseEvent *event) override {
+        if (isModified()) {
+            QMessageBox::StandardButton resBtn = QMessageBox::question(this, "Mind Map Example",
+                                                                       tr("You have unsaved changes.\nDo you want to save your changes before exiting?"),
+                                                                       QMessageBox::Cancel | QMessageBox::No | QMessageBox::Yes,
+                                                                       QMessageBox::Yes);
+
+            if (resBtn == QMessageBox::Yes) {
+                saveNodes();
+                event->accept();
+            } else if (resBtn == QMessageBox::No) {
+                event->accept();
+            } else {
+                event->ignore();
+            }
+        } else {
+            event->accept();
+        }
+    }
+
+    bool isModified() const {
+        for (const auto &node : nodes) {
+            if (node->isModified()) {
+                return true;
+            }
+        }
+        return false;
+    }
     void onTimerUpdate() {
         graphicsScene->clear();
         static QElapsedTimer elapsedTimer;

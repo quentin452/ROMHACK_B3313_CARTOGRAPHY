@@ -147,6 +147,9 @@
     "numeric": "cpp",
     "ranges": "cpp",
     "span": "cpp",
-    "valarray": "cpp"
+    "valarray": "cpp",
+    "queue": "cpp",
+    "regex": "cpp",
+    "stack": "cpp"
   }
 }
