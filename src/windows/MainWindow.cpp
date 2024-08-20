@@ -87,31 +87,38 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
             qDebug() << "Start Node Index:" << startNodeIndex; // Débogage
         }
     }
-
 #ifdef DEBUG
     // Création d'un nouveau nœud si on clique avec le bouton droit sans Shift
     if (!shiftPressed && event->button() == Qt::RightButton) {
         QPointF scenePos = graphicsView->mapToScene(event->pos());
-        qDebug() << "Creating New Node at Scene Position:" << scenePos; // Afficher la position de la souris
+        qDebug() << "Creating New Node at Scene Position:" << scenePos;
 
         // Utiliser un raycast pour détecter les objets sous la souris
         QGraphicsItem *itemUnderMouse = graphicsScene->itemAt(scenePos, QTransform());
         if (!itemUnderMouse) {
             // Crée un nouveau nœud à la position de la souris
             Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font());
+            qDebug() << "New Node Created at Initial Position:" << newNode->pos();
+            newNode->setPosition(scenePos.x(),scenePos.y()); // Met à jour la position du nœud
+            qDebug() << "New Node Position Updated to:" << newNode->pos();
+
             newNode->setModified(true);
             graphicsScene->addItem(newNode);
             nodes.append(newNode);
-
-            // Débogage pour vérifier la position du nouveau nœud
-            qDebug() << "New Node Created at Scene Position:" << newNode->pos();
         }
     }
-
 #endif
 }
 
 void MainWindow::mouseMoveEvent(QMouseEvent *event) {
+    if (shiftPressed && dragging && startNodeIndex != -1) {
+        QPointF mousePos = graphicsView->mapToScene(event->pos());
+        Node *startNode = nodes[startNodeIndex];
+        QLineF line(startNode->pos(), mousePos);
+        currentArrow = new QGraphicsLineItem(line);
+        currentArrow->setPen(QPen(Qt::black, 2, Qt::SolidLine, Qt::RoundCap));
+        graphicsScene->addItem(currentArrow);
+    }
 }
 void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
     if (shiftPressed && event->button() == Qt::LeftButton && dragging) {
@@ -119,36 +126,50 @@ void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
         int endNodeIndex;
         if (isMouseOverNode(mousePos, endNodeIndex) && endNodeIndex != startNodeIndex) {
             qDebug() << "End Node Index:" << endNodeIndex;
-            connections.push_back(QPair<int, int>(startNodeIndex, endNodeIndex));
-            nodes[startNodeIndex]->addConnection(endNodeIndex);
-            nodes[endNodeIndex]->addConnection(startNodeIndex);
-            updateDisplay(lastJsonData);
+
+            // Vérifiez les indices avant d'accéder à la liste
+            if (startNodeIndex >= 0 && startNodeIndex < nodes.size() &&
+                endNodeIndex >= 0 && endNodeIndex < nodes.size()) {
+                connections.push_back(QPair<int, int>(startNodeIndex, endNodeIndex));
+                nodes[startNodeIndex]->addConnection(endNodeIndex);
+                nodes[endNodeIndex]->addConnection(startNodeIndex);
+                updateDisplay(lastJsonData);
+            } else {
+                qDebug() << "Invalid node index in connections.";
+            }
         } else {
             qDebug() << "No valid end node detected.";
         }
         dragging = false;
     }
 }
-
 void MainWindow::removeConnections() {
     if (rightClickedNodeIndex != -1) {
-        Node *nodeToRemove = nodes[rightClickedNodeIndex];
-        QVector<int> indicesToRemove;
-        for (int i = 0; i < connections.size(); ++i) {
-            QPair<int, int> conn = connections[i];
-            if (conn.first == rightClickedNodeIndex || conn.second == rightClickedNodeIndex) {
-                indicesToRemove.push_back(i);
+        if (rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {
+            Node *nodeToRemove = nodes[rightClickedNodeIndex];
+            QVector<int> indicesToRemove;
+            for (int i = 0; i < connections.size(); ++i) {
+                QPair<int, int> conn = connections[i];
+                if (conn.first == rightClickedNodeIndex || conn.second == rightClickedNodeIndex) {
+                    indicesToRemove.push_back(i);
+                }
             }
+            for (int i = indicesToRemove.size() - 1; i >= 0; --i) {
+                connections.removeAt(indicesToRemove[i]);
+            }
+            // Retirer les connexions des autres nœuds
+            for (int i : nodeToRemove->getConnections()) {
+                if (i >= 0 && i < nodes.size()) {
+                    nodes[i]->removeConnection(rightClickedNodeIndex);
+                } else {
+                    qDebug() << "Invalid node index in removeConnections.";
+                }
+            }
+            nodeToRemove->connections.clear();
+            updateDisplay(lastJsonData);
+        } else {
+            qDebug() << "Invalid node index in removeConnections.";
         }
-        for (int i = indicesToRemove.size() - 1; i >= 0; --i) {
-            connections.removeAt(indicesToRemove[i]);
-        }
-        // Retirer les connexions des autres nœuds
-        for (int i : nodeToRemove->getConnections()) {
-            nodes[i]->removeConnection(rightClickedNodeIndex);
-        }
-        nodeToRemove->connections.clear();
-        updateDisplay(lastJsonData);
     }
 }
 
@@ -252,63 +273,151 @@ void MainWindow::parseJsonData(const QJsonObject &jsonData) {
         QJsonObject connObj = value.toObject();
         int startIndex = connObj["start"].toInt();
         int endIndex = connObj["end"].toInt();
-        if (startIndex >= 0 && startIndex < nodes.size() && endIndex >= 0 && endIndex < nodes.size()) {
+        if (startIndex >= 0 && startIndex < nodes.size() &&
+            endIndex >= 0 && endIndex < nodes.size()) {
             connections.push_back(QPair<int, int>(startIndex, endIndex));
+        } else {
+            qDebug() << "Invalid connection indices in JSON data.";
         }
     }
 }
+
 void MainWindow::updateDisplay(const QJsonObject &jsonData) {
     static QElapsedTimer elapsedTimer;
     static bool timerStarted = false;
+
     if (!timerStarted) {
         elapsedTimer.start();
         timerStarted = true;
+        qDebug() << "Timer started";
     }
+
     qint64 elapsedMilliseconds = elapsedTimer.elapsed();
+    qDebug() << "Elapsed time:" << elapsedMilliseconds << "ms";
+
     if (elapsedMilliseconds < 1000) {
         return; // Exit early if not enough time has passed
     }
+
     // Update timer
     elapsedTimer.restart();
-    graphicsScene->clear();
+    qDebug() << "Timer restarted";
+
+    if (!graphicsScene) {
+        qWarning() << "graphicsScene is null!";
+        return;
+    }
+
+    qDebug() << "Clearing graphics scene";
 
     // Check emulator status and update text color
     bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
     bool romLoaded = isRomHackLoaded(global_detected_emulator);
-    emulatorText->setPlainText(emulatorRunning ? "Emulator Running" : "Emulator Not Running");
-    emulatorText->setDefaultTextColor(emulatorRunning ? Qt::green : Qt::black);
-    b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
-    b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
-    for (const QPair<int, int> &conn : connections) {
-        Node *startNode = nodes[conn.first];
-        Node *endNode = nodes[conn.second];
-        QGraphicsLineItem *lineItem = new QGraphicsLineItem(startNode->x(), startNode->y(), endNode->x(), endNode->y());
-        lineItem->setPen(QPen(Qt::black));
-        graphicsScene->addItem(lineItem);
-    }
-    if (showStarDisplay) {
-        displayStars(jsonData);
+    qDebug() << "Emulator running:" << emulatorRunning;
+    qDebug() << "ROM loaded:" << romLoaded;
+
+    if (emulatorText) {
+        emulatorText->setPlainText(emulatorRunning ? "Emulator Running" : "Emulator Not Running");
+        emulatorText->setDefaultTextColor(emulatorRunning ? Qt::green : Qt::black);
+        qDebug() << "Emulator text updated";
     } else {
-        for (const QPair<int, int> &conn : connections) {
+        qWarning() << "emulatorText is null!";
+    }
+
+    if (b3313Text) {
+        b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
+        b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
+        qDebug() << "B3313 text updated";
+    } else {
+        qWarning() << "b3313Text is null!";
+    }
+
+    // Draw connections
+    qDebug() << "Drawing connections";
+    graphicsScene->clear();
+
+    for (const QPair<int, int> &conn : connections) {
+        if (conn.first >= 0 && conn.first < nodes.size() &&
+            conn.second >= 0 && conn.second < nodes.size()) {
             Node *startNode = nodes[conn.first];
             Node *endNode = nodes[conn.second];
+
+            if (!startNode || !endNode) {
+                qWarning() << "Invalid node pointers for connection:" << conn;
+                continue;
+            }
+
+            qDebug() << "Drawing line from node" << conn.first << "to node" << conn.second;
             QGraphicsLineItem *lineItem = new QGraphicsLineItem(startNode->x(), startNode->y(), endNode->x(), endNode->y());
             lineItem->setPen(QPen(Qt::black));
             graphicsScene->addItem(lineItem);
+        } else {
+            qWarning() << "Connection has invalid node index:" << conn;
         }
+    }
+
+    // Add nodes and texts
+    if (showStarDisplay) {
+        qDebug() << "Displaying stars";
+        displayStars(jsonData);
+    } else {
+        qDebug() << "Adding nodes and texts";
+        for (const QPair<int, int> &conn : connections) {
+            if (conn.first >= 0 && conn.first < nodes.size() &&
+                conn.second >= 0 && conn.second < nodes.size()) {
+                Node *startNode = nodes[conn.first];
+                Node *endNode = nodes[conn.second];
+
+                if (!startNode || !endNode) {
+                    qWarning() << "Invalid node pointers for connection:" << conn;
+                    continue;
+                }
+
+                qDebug() << "Drawing line from node" << conn.first << "to node" << conn.second;
+                QGraphicsLineItem *lineItem = new QGraphicsLineItem(startNode->x(), startNode->y(), endNode->x(), endNode->y());
+                lineItem->setPen(QPen(Qt::black));
+                graphicsScene->addItem(lineItem);
+            }
+        }
+
         for (Node *node : nodes) {
-            node->updateStar(); // Met à jour l'étoile pour chaque nœud
-            graphicsScene->addItem(node);
+            if (node) {
+                qDebug() << "Node is not null. Updating and adding node";
+                // Test if the node's properties are valid before updating and adding
+                if (node->x() < 0 || node->y() < 0) {
+                    qWarning() << "Node has invalid position. Skipping node:" << node;
+                    continue;
+                }
+
+                // Try-catch block for safety
+                try {
+                    node->updateStar(); // Update the star for each node
+                    if (graphicsScene->items().contains(node)) {
+                        qWarning() << "Node is already in the scene. Skipping add.";
+                    } else {
+                        graphicsScene->addItem(node);
+                        qDebug() << "Node added to the scene:" << node;
+                    }
+                } catch (const std::exception &e) {
+                    qCritical() << "Exception during node update or addition:" << e.what();
+                } catch (...) {
+                    qCritical() << "Unknown exception during node update or addition.";
+                }
+            } else {
+                qWarning() << "Node is null!";
+            }
         }
         if (emulatorText) {
+            qDebug() << "Adding emulator text to scene";
             graphicsScene->addItem(emulatorText);
         }
+
         if (b3313Text) {
+            qDebug() << "Adding B3313 text to scene";
             graphicsScene->addItem(b3313Text);
         }
     }
 }
-
 void MainWindow::displayStars(const QJsonObject &jsonData) {
     if (isRomHackLoaded(global_detected_emulator)) {
         std::string saveLocation = GetParallelLauncherSaveLocation();

@@ -29,8 +29,8 @@ class Node : public QGraphicsEllipseItem {
     const QVector<int> &getConnections() const { return connections; }
     QVector<int> connections;
     QRectF boundingRect() const override;
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void updateStar();
+    void setPosition(float x, float y);
 
   private:
     QString label;
