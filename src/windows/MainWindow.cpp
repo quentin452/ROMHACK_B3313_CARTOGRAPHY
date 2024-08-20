@@ -198,7 +198,7 @@ void MainWindow::removeConnections() {
 
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;
-    for (const auto &nodePtr : mind_map_nodes) {
+    for (const auto &nodePtr : nodes) { 
         jsonArray.append(nodePtr->toJson());
     }
 
@@ -207,6 +207,8 @@ void MainWindow::saveNodes() {
     if (file.open(QIODevice::WriteOnly)) {
         file.write(jsonDoc.toJson(QJsonDocument::Indented)); // Pretty print JSON
         file.close();
+    } else {
+        qWarning() << "Failed to open file for writing:" << file.errorString();
     }
 }
 
