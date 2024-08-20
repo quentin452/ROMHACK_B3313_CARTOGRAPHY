@@ -1,50 +1,59 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.5.0)
 
 # Nom et version du projet
 project(ROMHACK_B3313_CARTOGRAPHY VERSION 0.1.0 LANGUAGES CXX)
 
-# Trouver SFML
-set(SFML_DIR "${CMAKE_SOURCE_DIR}/ThirdPartyLibs/SFML-2.6.1/lib/cmake/SFML")
-find_package(SFML 2.5 COMPONENTS system window graphics REQUIRED)
+# Set the build type
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
 
+# Trouver les modules nécessaires de Qt
+find_package(Qt6 6.7 REQUIRED COMPONENTS Widgets Gui Core)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
 
+# Ajouter les répertoires d'inclusion
 set(ALL_INCLUDE_DIR
     "${CMAKE_SOURCE_DIR}/ThirdPartyLibs/nlohmann-json"
     "${CMAKE_SOURCE_DIR}/includes"
 )
+
 # Créer l'exécutable principal
-file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
+file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp ${PROJECT_SOURCE_DIR}/src/*.hpp)
 add_executable(ROMHACK_B3313_CARTOGRAPHY ${SOURCES})
 
-# Ajouter les répertoires d'inclusion et de lien pour SFML
-include_directories("${CMAKE_SOURCE_DIR}/ThirdPartyLibs/SFML-2.6.1/include")
-link_directories("${CMAKE_SOURCE_DIR}/ThirdPartyLibs/SFML-2.6.1/lib")
-
+# Ajouter les répertoires d'inclusion pour Qt
 target_include_directories(${PROJECT_NAME} PUBLIC
-${ALL_INCLUDE_DIR}
+    ${ALL_INCLUDE_DIR}
 )
-# Lier SFML aux cibles
-target_link_libraries(ROMHACK_B3313_CARTOGRAPHY sfml-system sfml-window sfml-graphics)
 
+# Lier Qt aux cibles
+target_link_libraries(ROMHACK_B3313_CARTOGRAPHY
+    Qt6::Widgets
+    Qt6::Gui
+    Qt6::Core
+)
+
+# Définir les options de compilation pour le mode Debug
 target_compile_definitions(ROMHACK_B3313_CARTOGRAPHY PRIVATE $<$<CONFIG:Debug>:DEBUG>)
 
-# Copier les DLL de SFML dans le répertoire de construction
-if(MSVC)
-  add_custom_command(TARGET ROMHACK_B3313_CARTOGRAPHY POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/ThirdPartyLibs/SFML-2.6.1/bin"
-    "$<TARGET_FILE_DIR:ROMHACK_B3313_CARTOGRAPHY>"
-    COMMENT "Copying SFML DLLs to the build directory"
-  )
-endif()
-
-# Ajouter une commande personnalisée pour supprimer le répertoire de destination avant de copier les nouveaux fichiers
+# Copier les ressources dans le répertoire de construction
 add_custom_command(TARGET ROMHACK_B3313_CARTOGRAPHY POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E remove_directory "$<TARGET_FILE_DIR:ROMHACK_B3313_CARTOGRAPHY>/resources"
   COMMAND ${CMAKE_COMMAND} -E copy_directory
   "${CMAKE_SOURCE_DIR}/resources"
   "$<TARGET_FILE_DIR:ROMHACK_B3313_CARTOGRAPHY>/resources"
   COMMENT "Updating resources in the build directory"
+)
+# Find windeployqt
+find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${Qt6_DIR}/../../../bin")
+
+# Custom command to run windeployqt
+add_custom_command(TARGET ROMHACK_B3313_CARTOGRAPHY POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "Running windeployqt..."
+    COMMAND ${WINDEPLOYQT_EXECUTABLE} $<TARGET_FILE:ROMHACK_B3313_CARTOGRAPHY>
 )
 
 # Inclure les tests et le packaging

@@ -1,15 +1,12 @@
-#include <romhack_b3313_cartography/Button.h>
+#include <romhack_b3313_cartography/uis/Button.h>
 
-Button::Button(float x, float y, const sf::Texture &texture) {
-    sprite.setTexture(texture);
-    sprite.setPosition(x, y);
-    boundingBox = sprite.getGlobalBounds();
+Button::Button(float x, float y, const QPixmap &pixmap)
+    : pixmap(pixmap), boundingBox(x, y, pixmap.width(), pixmap.height()) {}
+
+void Button::draw(QPainter &painter) {
+    painter.drawPixmap(boundingBox.topLeft(), pixmap);
 }
 
-void Button::draw(sf::RenderWindow &window) {
-    window.draw(sprite);
-}
-
-bool Button::isClicked(sf::Vector2i mousePos) {
-    return boundingBox.contains(static_cast<sf::Vector2f>(mousePos));
+bool Button::isClicked(const QPoint &mousePos) {
+    return boundingBox.contains(mousePos);
 }

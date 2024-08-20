@@ -1,65 +1,74 @@
-#include <romhack_b3313_cartography/Textures.h>
+#include <romhack_b3313_cartography/uis/StarDisplay.h>
+#include <romhack_b3313_cartography/uis/Textures.h>
+#include <romhack_b3313_cartography/utils/rom_utils.h>
 
-#include <romhack_b3313_cartography/StarDisplay.h>
-void StarDisplay::afficherEtoilesGroupe(const std::string &groupName, const std::vector<StarData> &stars, sf::RenderWindow &window, const sf::Font &font, int &yOffset) {
-    sf::Text groupText;
-    groupText.setFont(font);
-    groupText.setString(groupName);
-    groupText.setCharacterSize(24);
-    groupText.setFillColor(sf::Color::Black);
-    groupText.setPosition(100, 100 + yOffset); // Position du texte du groupe
-    window.draw(groupText);
+void StarDisplay::afficherEtoilesGroupeFusionne(const QString &groupName, const QMap<QString, QVector<StarData>> &courseStarsMap, QPainter &painter, const QFont &font, int &yOffset, float reservedHeight, const QRectF &windowRect) {
+    // Définir les dimensions et la position du rectangle fixe
+    const float rectWidth = 600;
+    const float rectLeft = 50;
+    const float rectTop = 50;
+    const float rectHeight = windowRect.height() - rectTop; // Ajuste la hauteur du rectangle pour qu'il s'étende jusqu'en bas de la fenêtre
 
-    yOffset += 30; // Espacement après le nom du groupe
+    // Dessiner le rectangle fixe
+    QRectF rectangle(rectLeft, rectTop, rectWidth, rectHeight);
+    painter.setPen(QPen(Qt::black, 1));
+    painter.setBrush(Qt::transparent);
+    painter.drawRect(rectangle);
 
-    // Calculer la largeur et la hauteur maximales du texte
-    float maxTextWidth = 0;
-    float maxTextHeight = 0;
-    for (const auto &star : stars) {
-        sf::Text tempText;
-        tempText.setFont(font);
-        tempText.setString(star.courseName);
-        tempText.setCharacterSize(18);
-        sf::FloatRect textBounds = tempText.getLocalBounds();
-        if (textBounds.width > maxTextWidth) {
-            maxTextWidth = textBounds.width;
-        }
-        if (textBounds.height > maxTextHeight) {
-            maxTextHeight = textBounds.height;
-        }
+    // Dessiner le texte du groupe
+    painter.setFont(font);
+    painter.setPen(Qt::black);
+    QRectF groupTextRect(rectLeft + 100, rectTop + 100 + yOffset + reservedHeight, rectWidth, 30);
+    painter.drawText(groupTextRect, groupName);
+
+    yOffset += 30;
+
+    // Préparer les noms des cours
+    std::vector<QString> courseNames;
+    for (auto it = courseStarsMap.cbegin(); it != courseStarsMap.cend(); ++it) {
+        courseNames.push_back(it.key());
     }
+
+    std::sort(courseNames.begin(), courseNames.end());
+
+    // Charger les textures des étoiles (Qt utilise QImage au lieu de sf::Texture)
+    QImage starCollectedTexture("resources/textures/star-collected.png");
+    QImage starMissingTexture("resources/textures/star-missing.png");
 
     // Calculer la hauteur de la texture des étoiles
-    float starTextureHeight = 0;
-    if (textures.starCollectedTexture.getSize().y > textures.starMissingTexture.getSize().y) {
-        starTextureHeight = textures.starCollectedTexture.getSize().y;
-    } else {
-        starTextureHeight = textures.starMissingTexture.getSize().y;
-    }
+    float collectedHeight = static_cast<float>(starCollectedTexture.height());
+    float missingHeight = static_cast<float>(starMissingTexture.height());
+    float starTextureHeight = (collectedHeight > missingHeight) ? collectedHeight : missingHeight;
 
-    for (const auto &star : stars) {
-        // Afficher le texte du cours
-        sf::Text starText;
-        starText.setFont(font);
-        starText.setString(star.courseName);
-        starText.setCharacterSize(18);
-        starText.setFillColor(sf::Color::Black);
-        starText.setPosition(100, 130 + yOffset); // Position du texte du cours
-        window.draw(starText);
+    // Dessiner les éléments pour chaque cours
+    for (const auto &courseName : courseNames) {
+        const QVector<StarData> &stars = courseStarsMap.value(courseName); 
+        QRectF courseTextRect(rectLeft + 100, rectTop + 130 + yOffset + reservedHeight, rectWidth, 30);
+        painter.drawText(courseTextRect, courseName);
 
-        // Afficher les étoiles à droite du texte avec espacement
-        sf::Sprite starSprite;
-        if (star.numStars > 0) {
-            starSprite.setTexture(textures.starCollectedTexture);
-        } else {
-            starSprite.setTexture(textures.starMissingTexture);
+        float startX = rectLeft + 100 + painter.fontMetrics().horizontalAdvance(courseName) + 10;
+        float starSpacing = 20.0f;
+
+        for (const auto &star : stars) {
+            for (int i = 0; i < star.numStars; ++i) {
+                QRectF starRect(
+                    startX + i * starSpacing, 
+                    rectTop + 130 + yOffset + (30 - starTextureHeight) / 2 + reservedHeight, 
+                    starCollectedTexture.width(), 
+                    starCollectedTexture.height()
+                );
+
+                if (rectangle.contains(starRect)) {
+                    // Choisir la texture selon que l'étoile est collectée ou non
+                    const QImage &starTexture = star.collected ? starCollectedTexture : starMissingTexture;
+                    painter.drawImage(starRect, starTexture);
+                }
+            }
+            startX += starSpacing;
         }
-        float starSpacing = 20.0f; // Espacement entre les étoiles
-        starSprite.setPosition(100 + maxTextWidth + 10 + starSpacing, 130 + yOffset + (maxTextHeight - starTextureHeight) / 2); // Centrer verticalement les étoiles par rapport au texte
-        window.draw(starSprite);
 
-        yOffset += std::max(30, static_cast<int>(starTextureHeight)); // Espacement entre les étoiles, ajusté pour la hauteur de la texture
+        yOffset += (30 > static_cast<int>(starTextureHeight)) ? 30 : static_cast<int>(starTextureHeight);
     }
 
-    yOffset += 30; // Espacement après le groupe
+    yOffset += 30;
 }
