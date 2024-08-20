@@ -151,6 +151,11 @@
     "queue": "cpp",
     "regex": "cpp",
     "stack": "cpp",
-    "*.moc": "cpp"
+    "*.moc": "cpp",
+    "cwctype": "cpp",
+    "numbers": "cpp",
+    "typeindex": "cpp",
+    "unordered_set": "cpp",
+    "variant": "cpp"
   }
 }

@@ -21,7 +21,7 @@ set(ALL_INCLUDE_DIR
 )
 
 # Créer l'exécutable principal
-file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp ${PROJECT_SOURCE_DIR}/src/*.hpp)
+file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp ${PROJECT_SOURCE_DIR}/src/*.hpp  ${PROJECT_SOURCE_DIR}/src/*.h)
 add_executable(ROMHACK_B3313_CARTOGRAPHY ${SOURCES})
 
 # Ajouter les répertoires d'inclusion pour Qt
