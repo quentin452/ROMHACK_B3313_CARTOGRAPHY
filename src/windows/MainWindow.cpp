@@ -320,7 +320,8 @@ void MainWindow::loadJsonData(const QString &filename) {
 void MainWindow::parseJsonData(const QJsonArray &jsonArray) {
     nodes.clear();
     connections.clear();
-    QFont defaultFont("Arial", 12, QFont::Bold);
+    QFont defaultFont("Arial", 12, QFont::Bold); // Default font settings
+
     for (const QJsonValue &value : jsonArray) {
         if (!value.isObject()) {
             qWarning() << "Invalid node format.";
@@ -333,15 +334,27 @@ void MainWindow::parseJsonData(const QJsonArray &jsonArray) {
             qWarning() << "Node data is incomplete or invalid.";
             continue;
         }
+
         qreal x = nodeObj["x"].toDouble();
         qreal y = nodeObj["y"].toDouble();
         QString label = nodeObj["text"].toString();
-        Node *node = new Node(x, y, label, defaultFont);
+
+        // Get font size from JSON, default to defaultFont size if not present
+        int fontSize = defaultFont.pointSize(); // Default size
+        if (nodeObj.contains("font_size") && nodeObj["font_size"].isDouble()) {
+            fontSize = nodeObj["font_size"].toInt();
+        }
+
+        QFont font = defaultFont;
+        font.setPointSize(fontSize);
+
+        Node *node = new Node(x, y, label, font);
         graphicsScene->addItem(node);
         nodes.append(node);
     }
-    if (jsonArray.size() > 1) {                         // Assurez-vous que jsonArray contient les connexions
-        QJsonObject jsonData = jsonArray[1].toObject(); // Supposons que les connexions sont dans le deuxième élément
+
+    if (jsonArray.size() > 1) {                         // Ensure jsonArray contains the connections
+        QJsonObject jsonData = jsonArray[1].toObject(); // Assuming connections are in the second element
         QJsonArray connectionArray = jsonData["connections"].toArray();
         for (const QJsonValue &value : connectionArray) {
             QJsonObject connObj = value.toObject();

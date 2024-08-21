@@ -35,13 +35,19 @@ QJsonObject Node::toJson() const {
     json["x"] = pos().x();
     json["y"] = pos().y();
     json["text"] = label;
+    json["font_size"] = font.pointSize(); // Save font size
     return json;
 }
-
-Node Node::fromJson(const QJsonObject &json, const QFont &font) {
+Node Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
     float x = json["x"].toDouble();
     float y = json["y"].toDouble();
     QString text = json["text"].toString();
+
+    // Create a font with the size from JSON
+    QFont font = defaultFont;
+    int fontSize = json["font_size"].toInt(font.pointSize());
+    font.setPointSize(fontSize);
+
     return Node(x, y, text, font);
 }
 void Node::addConnection(int nodeIndex) {
