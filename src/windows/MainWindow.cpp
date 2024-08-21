@@ -432,7 +432,6 @@ void MainWindow::updateDisplay() {
         }
     }
 }
-
 bool MainWindow::isMouseOverNode(const QPointF &mousePos, int &nodeIndex) {
     for (int i = 0; i < nodes.size(); ++i) {
         Node *node = nodes[i];

@@ -6,7 +6,6 @@
 
 #include <vector>
 
-
 struct StarData {
     QString courseName;
     int numStars;
@@ -21,6 +20,8 @@ struct StarData {
 };
 class StarDisplay {
   public:
-    void afficherEtoilesGroupeFusionne(const QString &groupName, const QMap<QString, QVector<StarData>> &courseStarsMap, QPainter &painter, const QFont &font, int &yOffset, int &reservedHeight, const QRectF &windowRect);
     void displayStars(const QJsonObject &jsonData);
+
+  private:
+    QRectF groupTextRect;
 };
