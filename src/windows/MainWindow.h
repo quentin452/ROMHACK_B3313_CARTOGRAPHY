@@ -25,6 +25,7 @@
 #include <memory>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
 
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -32,7 +33,8 @@ class MainWindow : public QMainWindow {
     MainWindow();
     ~MainWindow();
 
-    static void addConnectionToScene(int startNodeIndex, int endNodeIndex);
+    static bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
+
     static std::wstring global_detected_emulator;
     static QLabel *emulatorText, *b3313Text;
     static QStringList tabNames;
@@ -47,7 +49,6 @@ class MainWindow : public QMainWindow {
     static QVector<Node *> nodes;
     static QVector<QPair<int, int>> connections;
     static QGraphicsScene *graphicsScene;
-    static QGraphicsLineItem *preDrawLineItem;
 
   protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -72,10 +73,9 @@ class MainWindow : public QMainWindow {
     void updateScrollbarpos();
     void loadJsonData(const QString &filename);
     QJsonObject loadJsonData2(const QString &filePath);
-    void parseJsonData(const QJsonArray &jsonArray);
+    void parseJsonData(const QJsonObject &jsonObj);
     void updateDisplay();
     void printWidgetOrder();
-    bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
 
     QPointF startPos;
     QJsonObject lastJsonData;

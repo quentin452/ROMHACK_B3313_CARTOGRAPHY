@@ -4,13 +4,13 @@
 
 #include <vector>
 
-
 class Node : public QGraphicsEllipseItem {
   public:
     Node(float x, float y, const QString &text, const QFont &font);
-
+    Node(const Node &) = delete;
+    Node &operator=(const Node &) = delete;
     QJsonObject toJson() const;
-    static Node fromJson(const QJsonObject &json, const QFont &font);
+    static Node *fromJson(const QJsonObject &json, const QFont &defaultFont);
     void setColor(const QColor &color);
     void setModified(bool modified) { this->modified = modified; }
     bool isModified() { return modified; }

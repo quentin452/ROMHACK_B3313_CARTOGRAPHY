@@ -17,7 +17,6 @@ bool MainWindow::shiftPressed = false;
 int MainWindow::startNodeIndex = -1;
 QVector<QPair<int, int>> MainWindow::connections;
 QGraphicsScene *MainWindow::graphicsScene = nullptr;
-QGraphicsLineItem *MainWindow::preDrawLineItem = nullptr;
 MainWindow::MainWindow() {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
@@ -129,6 +128,7 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Shift && shiftPressed) {
         shiftPressed = false;
         setNodesMovable(true); // Réactive le déplacement des nœuds
+        startNodeIndex = -1;
     }
 }
 
@@ -154,8 +154,11 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         if (isMouseOverNode(startPos, nodeIndex)) {
             startNodeIndex = nodeIndex;
             qDebug() << "Start node index set to:" << startNodeIndex;
+        } else {
+            qDebug() << "No node under mouse position.";
         }
     }
+
 #ifdef DEBUG
     if (!shiftPressed && event->button() == Qt::RightButton) {
         QPoint viewPos = event->pos();
@@ -203,37 +206,30 @@ void MainWindow::removeConnections() {
         }
     }
 }
-void MainWindow::addConnectionToScene(int startNodeIndex, int endNodeIndex) {
-    if (startNodeIndex >= 0 && startNodeIndex < nodes.size() &&
-        endNodeIndex >= 0 && endNodeIndex < nodes.size()) {
-        Node *startNode = nodes[startNodeIndex];
-        Node *endNode = nodes[endNodeIndex];
-
-        if (!startNode || !endNode) {
-            qWarning() << "Invalid node pointers for connection. Start Node Index:" << startNodeIndex << "End Node Index:" << endNodeIndex;
-            return;
-        }
-
-        qDebug() << "Adding connection to scene:";
-        qDebug() << "Start Node Position:" << startNode->pos();
-        qDebug() << "End Node Position:" << endNode->pos();
-
-        QGraphicsLineItem *lineItem = new QGraphicsLineItem(QLineF(startNode->pos(), endNode->pos()));
-        lineItem->setPen(QPen(Qt::black));
-        graphicsScene->addItem(lineItem);
-
-        qDebug() << "Connection added from node" << startNodeIndex << "to node" << endNodeIndex;
-    } else {
-        qWarning() << "Connection has invalid node index. Start Node Index:" << startNodeIndex << "End Node Index:" << endNodeIndex;
-    }
-}
 
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;
     for (const auto &nodePtr : nodes) {
         jsonArray.append(nodePtr->toJson());
     }
-    QJsonDocument jsonDoc(jsonArray);
+
+    // Ajouter les connexions en tant que tableau JSON
+    QJsonObject connectionsJson;
+    QJsonArray connectionsArray;
+    for (const auto &connection : connections) {
+        QJsonObject connectionObj;
+        connectionObj["start"] = connection.first;
+        connectionObj["end"] = connection.second;
+        connectionsArray.append(connectionObj);
+    }
+    connectionsJson["connections"] = connectionsArray;
+
+    // Ajouter les connexions au JSON principal
+    QJsonObject mainJson;
+    mainJson["nodes"] = jsonArray;
+    mainJson["connections"] = connectionsJson;
+
+    QJsonDocument jsonDoc(mainJson);
     QFile file(b33_13_mind_map_str);
     if (file.open(QIODevice::WriteOnly)) {
         file.write(jsonDoc.toJson(QJsonDocument::Indented)); // Pretty print JSON
@@ -242,6 +238,7 @@ void MainWindow::saveNodes() {
         qWarning() << "Failed to open file for writing:" << file.errorString();
     }
 }
+
 void MainWindow::printWidgetOrder() {
     QVBoxLayout *layout = star_display_mainLayout;
     qDebug() << "Current widget order in layout:";
@@ -359,60 +356,62 @@ void MainWindow::loadJsonData(const QString &filename) {
     }
     QByteArray data = file.readAll();
     QJsonDocument doc(QJsonDocument::fromJson(data));
-    if (doc.isNull() || !doc.isArray()) {
-        qWarning() << "Failed to parse JSON or JSON is not an array.";
+    if (doc.isNull() || !doc.isObject()) { // Vérifiez si c'est un QJsonObject
+        qWarning() << "Failed to parse JSON or JSON is not an object.";
         return;
     }
-    QJsonArray jsonArray = doc.array();
-    lastJsonData = QJsonObject(); // Clear lastJsonData if not used
-    parseJsonData(jsonArray);
+    QJsonObject jsonObject = doc.object();
+    lastJsonData = jsonObject; // Clear lastJsonData if not used
+    parseJsonData(jsonObject);
 }
 
-void MainWindow::parseJsonData(const QJsonArray &jsonArray) {
+void MainWindow::parseJsonData(const QJsonObject &jsonObj) {
     nodes.clear();
     connections.clear();
-    QFont defaultFont("Arial", 12, QFont::Bold); // Default font settings
-    for (const QJsonValue &value : jsonArray) {
-        if (!value.isObject()) {
-            qWarning() << "Invalid node format.";
-            continue;
+    graphicsScene->clear(); // Nettoyer la scène
+
+    // Charger les nœuds
+    if (jsonObj.contains("nodes") && jsonObj["nodes"].isArray()) {
+        QJsonArray nodesArray = jsonObj["nodes"].toArray();
+        QHash<int, Node *> nodeIndexMap;
+
+        for (int i = 0; i < nodesArray.size(); ++i) {
+            QJsonObject nodeObj = nodesArray[i].toObject();
+            Node *node = Node::fromJson(nodeObj, QFont("Arial", 12, QFont::Bold));
+            graphicsScene->addItem(node);
+            nodes.append(node);
+            nodeIndexMap.insert(i, node); // Utiliser l'index comme clé
         }
-        QJsonObject nodeObj = value.toObject();
-        if (!nodeObj.contains("x") || !nodeObj["x"].isDouble() ||
-            !nodeObj.contains("y") || !nodeObj["y"].isDouble() ||
-            !nodeObj.contains("text") || !nodeObj["text"].isString()) {
-            qWarning() << "Node data is incomplete or invalid.";
-            continue;
-        }
-        qreal x = nodeObj["x"].toDouble();
-        qreal y = nodeObj["y"].toDouble();
-        QString label = nodeObj["text"].toString();
-        // Get font size from JSON, default to defaultFont size if not present
-        int fontSize = defaultFont.pointSize(); // Default size
-        if (nodeObj.contains("font_size") && nodeObj["font_size"].isDouble())
-            fontSize = nodeObj["font_size"].toInt();
-        QFont font = defaultFont;
-        font.setPointSize(fontSize);
-        Node *node = new Node(x, y, label, font);
-        graphicsScene->addItem(node);
-        nodes.append(node);
-    }
-    if (jsonArray.size() > 1) {                         // Ensure jsonArray contains the connections
-        QJsonObject jsonData = jsonArray[1].toObject(); // Assuming connections are in the second element
-        QJsonArray connectionArray = jsonData["connections"].toArray();
-        for (const QJsonValue &value : connectionArray) {
-            QJsonObject connObj = value.toObject();
-            int startIndex = connObj["start"].toInt();
-            int endIndex = connObj["end"].toInt();
-            if (startIndex >= 0 && startIndex < nodes.size() &&
-                endIndex >= 0 && endIndex < nodes.size()) {
-                connections.push_back(QPair<int, int>(startIndex, endIndex));
-            } else {
-                qDebug() << "Invalid connection indices in JSON data.";
+
+        // Charger les connexions
+        if (jsonObj.contains("connections") && jsonObj["connections"].isObject()) {
+            QJsonObject connectionsObj = jsonObj["connections"].toObject();
+            if (connectionsObj.contains("connections") && connectionsObj["connections"].isArray()) {
+                QJsonArray connectionsArray = connectionsObj["connections"].toArray();
+                for (const QJsonValue &value : connectionsArray) {
+                    QJsonObject connectionObj = value.toObject();
+                    int startIndex = connectionObj["start"].toInt();
+                    int endIndex = connectionObj["end"].toInt();
+
+                    if (nodeIndexMap.contains(startIndex) && nodeIndexMap.contains(endIndex)) {
+                        Node *startNode = nodeIndexMap[startIndex];
+                        Node *endNode = nodeIndexMap[endIndex];
+
+                        if (startNode && endNode) {
+                            connections.push_back(QPair<int, int>(startIndex, endIndex));
+                            nodes[startIndex]->addConnection(endIndex);
+                            nodes[endIndex]->addConnection(startIndex);
+                        }
+                    } else {
+
+                        qWarning() << "Invalid node index in connection.";
+                    }
+                }
             }
         }
     }
 }
+
 void MainWindow::onTimerUpdate() {
     updateDisplay();
 }
@@ -442,23 +441,44 @@ void MainWindow::updateDisplay() {
                     qWarning() << "Invalid node pointers for connection:" << conn;
                     continue;
                 }
-                QGraphicsLineItem *lineItem = new QGraphicsLineItem(startNode->x(), startNode->y(), endNode->x(), endNode->y());
+                QPointF startEdgePoint = getNodeEdgePoint(startNode, endNode->pos());
+                QPointF endEdgePoint = getNodeEdgePoint(endNode, startNode->pos());
+
+                QGraphicsLineItem *lineItem = new QGraphicsLineItem(startEdgePoint.x(), startEdgePoint.y(), endEdgePoint.x(), endEdgePoint.y());
                 lineItem->setPen(QPen(Qt::black));
                 graphicsScene->addItem(lineItem);
+
+                // Ajoutez la flèche
+                QLineF line(startEdgePoint, endEdgePoint);
+                double angle = std::atan2(-line.dy(), line.dx());
+
+                QPointF arrowP1 = line.p2() - QPointF(std::sin(angle + M_PI / 3) * 10, std::cos(angle + M_PI / 3) * 10);
+                QPointF arrowP2 = line.p2() - QPointF(std::sin(angle + M_PI - M_PI / 3) * 10, std::cos(angle + M_PI - M_PI / 3) * 10);
+
+                QPolygonF arrowHead;
+                arrowHead << line.p2() << arrowP1 << arrowP2;
+
+                QGraphicsPolygonItem *arrowItem = new QGraphicsPolygonItem(arrowHead);
+                arrowItem->setBrush(Qt::black);
+                graphicsScene->addItem(arrowItem);
             } else {
                 qWarning() << "Connection has invalid node index:" << conn;
             }
         }
     }
 }
+
 bool MainWindow::isMouseOverNode(const QPointF &mousePos, int &nodeIndex) {
     for (int i = 0; i < nodes.size(); ++i) {
         Node *node = nodes[i];
-        if (node->contains(mousePos)) {
+        QPointF mousePosLocal = node->mapFromScene(mousePos);
+        QRectF nodeRect = node->boundingRect();
+        if (nodeRect.contains(mousePosLocal)) {
             nodeIndex = i;
             return true;
         }
     }
+    qDebug() << "Mouse is not over any node.";
     return false;
 }
 #include "MainWindow.moc"

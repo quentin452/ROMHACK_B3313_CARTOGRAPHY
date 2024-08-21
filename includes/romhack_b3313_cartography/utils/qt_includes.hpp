@@ -7,6 +7,7 @@
 #include <QFont>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
+#include <QGraphicsPolygonItem>
 #include <QGraphicsScene>
 #include <QGraphicsSceneMouseEvent>
 #include <QGraphicsTextItem>
@@ -23,6 +24,8 @@
 #include <QPainter>
 #include <QPair>
 #include <QPointF>
+#include <QPointer>
+#include <QPolygonF>
 #include <QPushButton>
 #include <QRectF>
 #include <QScrollArea>
@@ -34,6 +37,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QVector2D>
 #include <QVector>
 #include <QWidget>
 

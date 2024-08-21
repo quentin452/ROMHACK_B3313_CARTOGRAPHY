@@ -1,83 +1,67 @@
 #include "MouseFixGraphicScene.h"
 
+QGraphicsLineItem *previousLineItem = nullptr;
+
+QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint) {
+    QPointF nodeCenter = node->pos();
+    QRectF nodeRect = node->boundingRect();
+    QPointF nodeTopLeft = nodeCenter + QPointF(nodeRect.left(), nodeRect.top());
+    QPointF nodeBottomRight = nodeCenter + QPointF(nodeRect.right(), nodeRect.bottom());
+    QLineF line(nodeCenter, endPoint);
+    QPointF edgePoint = line.p2();
+    line.setLength(nodeRect.width() / 2);
+    edgePoint = line.p2();
+    return edgePoint;
+}
+
 void MouseFixGraphicScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
     QGraphicsScene::mouseMoveEvent(event);
-
-    // Les coordonnées fournies par l'événement sont déjà en coordonnées de la scène
     QPointF mousePosScene = event->scenePos();
-
     if (MainWindow::shiftPressed && MainWindow::startNodeIndex != -1) {
         Node *startNode = MainWindow::nodes[MainWindow::startNodeIndex];
-
         if (startNode) {
-            QLineF line(startNode->pos(), mousePosScene);
+            QPointF startEdgePoint = getNodeEdgePoint(startNode, mousePosScene);
+            QLineF line(startEdgePoint, mousePosScene);
 
-            if (MainWindow::preDrawLineItem) {
-                MainWindow::graphicsScene->removeItem(MainWindow::preDrawLineItem);
-                delete MainWindow::preDrawLineItem;
-                MainWindow::preDrawLineItem = nullptr;
+            if (previousLineItem) {
+                if (MainWindow::graphicsScene->items().contains(previousLineItem))
+                    MainWindow::graphicsScene->removeItem(previousLineItem);
+                previousLineItem = nullptr;
             }
-
-            MainWindow::preDrawLineItem = MainWindow::graphicsScene->addLine(line, QPen(Qt::DashLine));
+            previousLineItem = MainWindow::graphicsScene->addLine(line, QPen(Qt::DashLine));
         }
-
-        QApplication::setOverrideCursor(Qt::CrossCursor);
     }
 }
 
 void MouseFixGraphicScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
     QGraphicsScene::mouseReleaseEvent(event);
-
     if (MainWindow::shiftPressed && event->button() == Qt::LeftButton) {
         QPointF mousePos = event->scenePos();
-        qDebug() << "Mouse released at scene position:" << mousePos;
-
         int endNodeIndex;
-        bool isNodeOver = isMouseOverNode(mousePos, endNodeIndex);
-
-        qDebug() << "Node over check result:" << isNodeOver << ", End Node Index:" << endNodeIndex;
-
+        bool isNodeOver = MainWindow::isMouseOverNode(mousePos, endNodeIndex);
         if (isNodeOver && endNodeIndex != MainWindow::startNodeIndex) {
             if (MainWindow::startNodeIndex >= 0 && MainWindow::startNodeIndex < MainWindow::nodes.size() &&
                 endNodeIndex >= 0 && endNodeIndex < MainWindow::nodes.size()) {
-
-                qDebug() << "Adding connection between nodes:" << MainWindow::startNodeIndex << "and" << endNodeIndex;
-                MainWindow::connections.push_back(QPair<int, int>(MainWindow::startNodeIndex, endNodeIndex));
-                MainWindow::nodes[MainWindow::startNodeIndex]->addConnection(endNodeIndex);
-                MainWindow::nodes[endNodeIndex]->addConnection(MainWindow::startNodeIndex);
-
-                MainWindow::addConnectionToScene(MainWindow::startNodeIndex, endNodeIndex);
+                bool connectionExists = false;
+                for (const auto &connection : MainWindow::connections) {
+                    if ((connection.first == MainWindow::startNodeIndex && connection.second == endNodeIndex) ||
+                        (connection.first == endNodeIndex && connection.second == MainWindow::startNodeIndex)) {
+                        connectionExists = true;
+                        break;
+                    }
+                }
+                if (!connectionExists) {
+                    MainWindow::connections.push_back(QPair<int, int>(MainWindow::startNodeIndex, endNodeIndex));
+                    MainWindow::nodes[MainWindow::startNodeIndex]->addConnection(endNodeIndex);
+                    MainWindow::nodes[endNodeIndex]->addConnection(MainWindow::startNodeIndex);
+                }
             }
-        }
-
-        if (MainWindow::preDrawLineItem) {
-            MainWindow::graphicsScene->removeItem(MainWindow::preDrawLineItem);
-            delete MainWindow::preDrawLineItem;
-            MainWindow::preDrawLineItem = nullptr;
-        }
-
-        QApplication::restoreOverrideCursor();
-    }
-}
-
-bool MouseFixGraphicScene::isMouseOverNode(const QPointF &mousePosScene, int &nodeIndex) {
-    qDebug() << "Checking mouse position in scene coordinates:" << mousePosScene;
-
-    for (int i = 0; i < MainWindow::nodes.size(); ++i) {
-        Node *node = MainWindow::nodes[i];
-        QPointF mousePosLocal = node->mapFromScene(mousePosScene);
-        QRectF nodeRect = node->boundingRect();
-
-        qDebug() << "Checking node at position:" << node->pos();
-        qDebug() << "Node bounding rect:" << nodeRect;
-        qDebug() << "Mouse position in node's local coordinates:" << mousePosLocal;
-
-        if (nodeRect.contains(mousePosLocal)) {
-            nodeIndex = i;
-            qDebug() << "Mouse is over node at index:" << i;
-            return true;
+            MainWindow::startNodeIndex = -1;
         }
     }
-    qDebug() << "Mouse is not over any node.";
-    return false;
+    if (previousLineItem) {
+        if (MainWindow::graphicsScene->items().contains(previousLineItem))
+            MainWindow::graphicsScene->removeItem(previousLineItem);
+        previousLineItem = nullptr;
+    }
 }

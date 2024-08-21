@@ -35,23 +35,41 @@ QJsonObject Node::toJson() const {
     json["x"] = pos().x();
     json["y"] = pos().y();
     json["text"] = label;
-    json["font_size"] = font.pointSize(); // Save font size
+    json["font_size"] = font.pointSize(); // Sauvegarder la taille de la police
+    QJsonArray connectionsArray;
+    for (int conn : connections) {
+        connectionsArray.append(conn);
+    }
+    json["connections"] = connectionsArray; // Sauvegarder les connexions
     return json;
 }
-Node Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
+Node* Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
     float x = json["x"].toDouble();
     float y = json["y"].toDouble();
     QString text = json["text"].toString();
 
-    // Create a font with the size from JSON
     QFont font = defaultFont;
     int fontSize = json["font_size"].toInt(font.pointSize());
     font.setPointSize(fontSize);
 
-    return Node(x, y, text, font);
+    // Créez une nouvelle instance de Node
+    Node* node = new Node(x, y, text, font);
+
+    // Charger les connexions
+    if (json.contains("connections") && json["connections"].isArray()) {
+        QJsonArray connectionsArray = json["connections"].toArray();
+        for (const QJsonValue &value : connectionsArray) {
+            if (value.isDouble()) {
+                node->addConnection(value.toInt());
+            }
+        }
+    }
+
+    return node;
 }
+
 void Node::addConnection(int nodeIndex) {
-    if (!connections.contains(nodeIndex)) 
+    if (!connections.contains(nodeIndex))
         connections.append(nodeIndex);
 }
 
