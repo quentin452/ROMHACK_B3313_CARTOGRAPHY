@@ -23,6 +23,8 @@
 #include <QPointF>
 #include <QPushButton>
 #include <QRectF>
+#include <QScrollArea>
+#include <QScrollBar>
 #include <QStackedWidget>
 #include <QString>
 #include <QStringList>
@@ -32,4 +34,3 @@
 #include <QVBoxLayout>
 #include <QVector>
 #include <QWidget>
-

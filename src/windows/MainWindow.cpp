@@ -4,13 +4,21 @@ QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
 #else
 QString b33_13_mind_map_str = "stars_layout/b3313-V1.0.2/b3313-v1.0.2-Mind_map.json";
 #endif
+std::basic_string<wchar_t> MainWindow::global_detected_emulator;
+QLabel *MainWindow::emulatorText, *MainWindow::b3313Text = nullptr;
+QStringList MainWindow::tabNames;
+QGraphicsView *MainWindow::graphicsView = nullptr;
+QTabWidget *MainWindow::tabWidget = nullptr;
+QFont MainWindow::qfont;
+QVBoxLayout *MainWindow::star_display_mainLayout = nullptr;
+QPushButton *MainWindow::switchViewButton = nullptr;
 
 MainWindow::MainWindow() {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
     // Initialisation des objets graphiques
-    emulatorText = new QGraphicsTextItem("Emulator Status");
-    b3313Text = new QGraphicsTextItem("B3313 V1.0.2 Status");
+    emulatorText = new QLabel("Emulator Status", this);
+    b3313Text = new QLabel("B3313 V1.0.2 Status", this);
     // Initialisation de la vue graphique et de la scène
     graphicsView = new QGraphicsView(this);
     graphicsScene = new QGraphicsScene(this);
@@ -33,10 +41,11 @@ MainWindow::MainWindow() {
     connect(removeConnectionsAction, &QAction::triggered, this, &MainWindow::removeConnections);
     contextMenu->addAction(removeConnectionsAction);
     // Initialisation des objets graphiques
-    graphicsScene->addItem(emulatorText);
-    graphicsScene->addItem(b3313Text);
+    layout->addWidget(emulatorText);
+    layout->addWidget(b3313Text);
     b3313Text->hide();
     emulatorText->hide();
+
     // Initialisation et démarrage du thread de mise à jour
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
@@ -58,9 +67,11 @@ MainWindow::MainWindow() {
     if (!tabWidget) {
         tabWidget = new QTabWidget(this);
         tabWidget->setObjectName("tabWidget");
-        star_display_mainLayout->insertWidget(1, tabWidget);
+        star_display_mainLayout->insertWidget(0, tabWidget);
     }
+    star_display_mainLayout->insertWidget(5, switchViewButton);
     tabWidget->hide();
+    qfont = this->font();
 }
 
 MainWindow::~MainWindow() {
@@ -72,19 +83,22 @@ MainWindow::~MainWindow() {
 void MainWindow::textUpdate() {
     bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
     bool romLoaded = isRomHackLoaded(global_detected_emulator);
+
     if (emulatorText) {
-        emulatorText->setPlainText(emulatorRunning ? "Emulator Running" : "Emulator Not Running");
-        emulatorText->setDefaultTextColor(emulatorRunning ? Qt::green : Qt::black);
+        emulatorText->setText(emulatorRunning ? "Parallel launcher Emulator Running" : "Parallel launcher Emulator Not Running");
+        emulatorText->setStyleSheet(emulatorRunning ? "color: green;" : "color: white;");
     } else {
-        qWarning() << "emulatorText is null!";
+        qWarning() << "emulatorLabel is null!";
     }
+
     if (b3313Text) {
-        b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
-        b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
+        b3313Text->setText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
+        b3313Text->setStyleSheet(romLoaded ? "color: green;" : "color: white;");
     } else {
-        qWarning() << "b3313Text is null!";
+        qWarning() << "b3313Label is null!";
     }
 }
+
 void MainWindow::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Shift && !shiftPressed) {
         shiftPressed = true;
@@ -231,11 +245,12 @@ void MainWindow::printWidgetOrder() {
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
     if (showStarDisplay) {
+        switchViewButton->hide();
         QRectF sceneBoundingRect = graphicsView->rect();
         graphicsScene->setSceneRect(sceneBoundingRect);
         QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
         if (tabWidget)
-            tabWidget->show();
+            tabWidget->hide();
         graphicsView->hide();
         saveButton->hide();
         if (emulatorText)
@@ -243,11 +258,11 @@ void MainWindow::toggleStarDisplay() {
         if (b3313Text)
             b3313Text->show();
         for (Node *node : nodes) {
-            if (node) {
+            if (node)
                 node->hide();
-            }
         }
-
+        b3313Text->hide();
+        emulatorText->hide();
     } else {
         QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
         if (tabWidget)
@@ -283,8 +298,9 @@ void MainWindow::toggleStarDisplay() {
         layout->addWidget(switchViewButton);
         saveButton->show();
         switchViewButton->show();
+        emulatorText->hide();
+        b3313Text->hide();
     }
-    printWidgetOrder();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -396,7 +412,7 @@ void MainWindow::updateDisplay() {
     if (showStarDisplay) {
         textUpdate();
         QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
-        displayStars(jsonData);
+        starDisplay.displayStars(jsonData);
     } else {
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
@@ -414,110 +430,6 @@ void MainWindow::updateDisplay() {
                 qWarning() << "Connection has invalid node index:" << conn;
             }
         }
-    }
-}
-void MainWindow::displayStars(const QJsonObject &jsonData) {
-    if (isRomHackLoaded(global_detected_emulator)) {
-        emulatorText->hide();
-        b3313Text->hide();
-        std::string saveLocation = GetParallelLauncherSaveLocation();
-        if (!jsonData.contains("format") || !jsonData["format"].toObject().contains("save_type") ||
-            !jsonData["format"].toObject().contains("slots_start") || !jsonData["format"].toObject().contains("slot_size") ||
-            !jsonData["format"].toObject().contains("active_bit") || !jsonData["format"].toObject().contains("checksum_offset")) {
-            std::cerr << "Erreur: Les paramètres de sauvegarde sont manquants dans le JSON." << std::endl;
-            return;
-        }
-        QJsonObject format = jsonData["format"].toObject();
-        SaveParams params;
-        params.saveFormat = parseSaveFormat(format["save_type"].toString().toStdString());
-        params.slotsStart = format["slots_start"].toInt();
-        params.slotSize = format["slot_size"].toInt();
-        params.activeBit = format["active_bit"].toInt();
-        params.numSlots = format["num_slots"].toInt();
-        params.checksumOffset = format["checksum_offset"].toInt();
-        auto saveData = ReadSrmFile(saveLocation, params);
-        if (saveData.empty()) {
-            std::cerr << "Erreur: Les données de sauvegarde sont vides." << std::endl;
-            return;
-        }
-        int numSlots = params.numSlots;
-        if (numSlots <= 0) {
-            std::cerr << "Erreur: Nombre de slots invalide." << std::endl;
-            return;
-        }
-        tabNames.clear();
-        for (int i = 1; i <= numSlots; ++i) {
-            tabNames.append("Mario " + QString::number(i));
-        }
-        int reservedHeight = 0;
-        int yOffset = 0;
-        for (int i = 0; i < numSlots; ++i) {
-            QString tabName = tabNames[i];
-            QWidget *tabContent = nullptr;
-            if (tabWidget->count() > i) {
-                tabContent = tabWidget->widget(i);
-                QLayoutItem *child;
-                while ((child = tabContent->layout()->takeAt(0)) != nullptr) {
-                    delete child->widget();
-                    delete child;
-                }
-            } else {
-                tabContent = new QWidget();
-                tabWidget->addTab(tabContent, tabName);
-            }
-            QVBoxLayout *layout = qobject_cast<QVBoxLayout *>(tabContent->layout());
-            if (!layout) {
-                layout = new QVBoxLayout(tabContent);
-                tabContent->setLayout(layout);
-            }
-            QLabel *tabLabel = new QLabel(tabName, tabContent);
-            QFont font = this->font();
-            tabLabel->setFont(font);
-            tabLabel->setStyleSheet("color: black;");
-            layout->addWidget(tabLabel);
-            for (const auto &groupValue : jsonData["groups"].toArray()) {
-                QJsonObject group = groupValue.toObject();
-                if (!group.contains("name") || !group.contains("courses")) {
-                    std::cerr << "Erreur: Le groupe dans JSON est mal formé." << std::endl;
-                    continue;
-                }
-                QString groupName = group["name"].toString();
-                QMap<QString, QVector<StarData>> courseStarsMap;
-                for (const auto &courseValue : group["courses"].toArray()) {
-                    QJsonObject course = courseValue.toObject();
-                    if (!course.contains("name") || !course.contains("data")) {
-                        std::cerr << "Erreur: Le cours dans JSON est mal formé." << std::endl;
-                        continue;
-                    }
-                    QString courseName = course["name"].toString();
-                    QVector<StarData> &courseStarList = courseStarsMap[courseName];
-                    for (const auto &dataValue : course["data"].toArray()) {
-                        QJsonObject data = dataValue.toObject();
-                        int offset = data["offset"].toInt();
-                        int mask = data["mask"].toInt();
-                        int numStars = 1;
-                        for (int bit = 0; bit < 32; ++bit) {
-                            if (mask & (1 << bit)) {
-                                bool star_collected = isStarCollected(saveData, offset, bit, i, params.slotSize);
-                                courseStarList.append({courseName, numStars, star_collected, offset, mask});
-                            }
-                        }
-                    }
-                }
-                QPixmap pixmap(graphicsView->size());
-                pixmap.fill(Qt::transparent);
-                QPainter painter(&pixmap);
-                painter.setRenderHint(QPainter::Antialiasing);
-                starDisplay.afficherEtoilesGroupeFusionne(groupName, courseStarsMap, painter, font, yOffset, reservedHeight, graphicsView->rect());
-                painter.end();
-                QLabel *pixmapLabel = new QLabel(tabContent);
-                pixmapLabel->setPixmap(pixmap);
-                layout->addWidget(pixmapLabel);
-            }
-        }
-    } else {
-        emulatorText->show();
-        b3313Text->show();
     }
 }
 

@@ -1,15 +1,18 @@
 #pragma once
-#include <romhack_b3313_cartography/utils/qt_includes.hpp>
-
 #include <iostream>
+#include <romhack_b3313_cartography/uis/Textures.h>
+#include <romhack_b3313_cartography/utils/qt_includes.hpp>
+#include <romhack_b3313_cartography/utils/rom_utils.h>
+
 #include <vector>
+
 
 struct StarData {
     QString courseName;
     int numStars;
     bool collected = false;
-    int offset; 
-    int mask;   
+    int offset;
+    int mask;
 
     StarData() : numStars(0), collected(false), offset(0), mask(0) {}
 
@@ -19,4 +22,5 @@ struct StarData {
 class StarDisplay {
   public:
     void afficherEtoilesGroupeFusionne(const QString &groupName, const QMap<QString, QVector<StarData>> &courseStarsMap, QPainter &painter, const QFont &font, int &yOffset, int &reservedHeight, const QRectF &windowRect);
+    void displayStars(const QJsonObject &jsonData);
 };

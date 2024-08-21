@@ -31,6 +31,15 @@ class MainWindow : public QMainWindow {
     MainWindow();
     ~MainWindow();
 
+    static std::wstring global_detected_emulator;
+    static QLabel *emulatorText, *b3313Text;
+    static QStringList tabNames;
+    static QGraphicsView *graphicsView;
+    static QTabWidget *tabWidget;
+    static QFont qfont;
+    static QVBoxLayout *star_display_mainLayout;
+    static QPushButton *switchViewButton;
+
   protected:
     void keyPressEvent(QKeyEvent *event) override;
 
@@ -42,7 +51,6 @@ class MainWindow : public QMainWindow {
 
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
-
   private slots:
     void removeConnections();
     void saveNodes();
@@ -54,44 +62,39 @@ class MainWindow : public QMainWindow {
     void textUpdate();
     bool isModified() const;
     void onTimerUpdate();
+    void updateScrollbarpos();
     void loadJsonData(const QString &filename);
     QJsonObject loadJsonData2(const QString &filePath);
     void parseJsonData(const QJsonArray &jsonArray);
     void updateDisplay();
-    void displayStars(const QJsonObject &jsonData);
     void printWidgetOrder();
 
     bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
-    QGraphicsView *graphicsView;
-    QGraphicsScene *graphicsScene;
+    QGraphicsScene *graphicsScene = nullptr;
     QVector<Node *> nodes;
     QVector<QPair<int, int>> connections;
     QPointF startPos;
     bool dragging = false;
     int startNodeIndex = -1;
-    QStringList tabNames;
     QJsonObject lastJsonData;
     bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles
     StarDisplay starDisplay;      // Instance de la classe StarDisplay
     QList<Node *> mind_map_nodes;
-    QGraphicsTextItem *emulatorText = nullptr;
-    QGraphicsTextItem *b3313Text = nullptr;
+
     QPushButton *saveButton = nullptr;
-    QPushButton *switchViewButton = nullptr;
     QTimer *updateTimer = nullptr;
     Node *startArrowNode = nullptr; // Node where the arrow starts
     bool shiftPressed = false;      // Indicates if Shift key is pressed
     QGraphicsLineItem *currentArrow = nullptr;
-    QMenu *contextMenu;
+    QMenu *contextMenu = nullptr;
     int rightClickedNodeIndex = -1;
     const int WIDTH = 1280;
     const int HEIGHT = 720;
-    std::wstring global_detected_emulator;
     std::unique_ptr<MainWindowUpdateThread> thread;
-    QWidget *star_display_centralWidget;
-    QVBoxLayout *star_display_mainLayout;
-    QStackedWidget *stackedWidget;
-    QWidget *centralWidgetZ;
-    QTabWidget *tabWidget;
+    QWidget *star_display_centralWidget = nullptr;
+    QStackedWidget *stackedWidget = nullptr;
+    QWidget *centralWidgetZ = nullptr;
+    QScrollArea *scrollArea_star_display = nullptr;
+    int stardisplayscrollPosition = 0;
 };
 #endif // MAIN_WINDOW_H

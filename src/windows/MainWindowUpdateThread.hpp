@@ -4,7 +4,8 @@
 class MainWindowUpdateThread : public QThread {
     Q_OBJECT
   public:
-    explicit MainWindowUpdateThread(QObject *parent = nullptr) : QThread(parent), running(true) {}
+    explicit MainWindowUpdateThread(QObject *parent = nullptr) 
+        : QThread(parent), running(true) {}
 
     void stop() {
         QMutexLocker locker(&mutex);
