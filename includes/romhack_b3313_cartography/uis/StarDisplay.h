@@ -18,5 +18,5 @@ struct StarData {
 };
 class StarDisplay {
   public:
-    void afficherEtoilesGroupeFusionne(const QString &groupName, const QMap<QString, QVector<StarData>> &courseStarsMap, QPainter &painter, const QFont &font, int &yOffset, float reservedHeight, const QRectF &windowRect);
+    void afficherEtoilesGroupeFusionne(const QString &groupName, const QMap<QString, QVector<StarData>> &courseStarsMap, QPainter &painter, const QFont &font, int &yOffset, int &reservedHeight, const QRectF &windowRect);
 };

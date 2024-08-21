@@ -2,7 +2,7 @@
 #include <romhack_b3313_cartography/uis/Textures.h>
 #include <romhack_b3313_cartography/utils/rom_utils.h>
 
-void StarDisplay::afficherEtoilesGroupeFusionne(const QString &groupName, const QMap<QString, QVector<StarData>> &courseStarsMap, QPainter &painter, const QFont &font, int &yOffset, float reservedHeight, const QRectF &windowRect) {
+void StarDisplay::afficherEtoilesGroupeFusionne(const QString &groupName, const QMap<QString, QVector<StarData>> &courseStarsMap, QPainter &painter, const QFont &font, int &yOffset, int &reservedHeight, const QRectF &windowRect) {
     // Définir les dimensions et la position du rectangle fixe
     const float rectWidth = 600;
     const float rectLeft = 50;

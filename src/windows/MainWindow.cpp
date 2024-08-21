@@ -49,7 +49,8 @@ MainWindow::MainWindow() {
     QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajoutez une marge autour des nœuds
     graphicsScene->setSceneRect(adjustedSceneRect);
     loadJsonData(b33_13_mind_map_str);
-
+    star_display_centralWidget = new QWidget(this);
+    star_display_mainLayout = new QVBoxLayout(centralWidget);
     // Initialiser et démarrer le thread après toutes les autres initialisations
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
@@ -387,7 +388,6 @@ void MainWindow::updateDisplay() {
         }
     }
 }
-
 void MainWindow::displayStars(const QJsonObject &jsonData) {
     if (isRomHackLoaded(global_detected_emulator)) {
         std::cerr << "RomHack is loaded." << std::endl;
@@ -420,7 +420,6 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         }
         std::cerr << "Save data read successfully." << std::endl;
 
-        int yOffset = 0;
         int numSlots = params.numSlots;
         if (numSlots <= 0) {
             std::cerr << "Erreur: Nombre de slots invalide." << std::endl;
@@ -435,82 +434,72 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         tabManager->initializeTabs(tabNames);
         std::cerr << "Tabs initialized." << std::endl;
 
-        QString currentTabName = tabManager->getCurrentTabName();
-        if (currentTabName.isEmpty()) {
-            std::cerr << "Erreur: Nom de l'onglet actuel est vide." << std::endl;
-            return;
-        }
-        std::cerr << "Current tab name: " << currentTabName.toStdString() << std::endl;
-
-        float reservedHeight = tabManager->getTabsHeight();
-        QRectF windowRect = graphicsView->rect();
-        QPainter painter;
+        QTabWidget *tabWidget = new QTabWidget(this);
+        int yOffset = 0;
+        int reservedHeight = 0; // Ajouté pour stocker la hauteur réservée
 
         for (int i = 0; i < numSlots; ++i) {
-            if (i >= tabNames.size()) {
-                std::cerr << "Erreur: Index de tabName hors limites." << std::endl;
-                continue;
-            }
             QString tabName = tabNames[i];
-            if (tabName == currentTabName) {
-                std::cerr << "Processing tab: " << tabName.toStdString() << std::endl;
+            QWidget *tabContent = new QWidget();
+            QVBoxLayout *layout = new QVBoxLayout(tabContent);
 
-                QGraphicsTextItem *tabText = new QGraphicsTextItem(tabName);
-                QFont font = this->font();
-                tabText->setFont(font);
-                tabText->setDefaultTextColor(Qt::black);
-                tabText->setPos(100, 100 + yOffset);
-                graphicsScene->addItem(tabText);
-                yOffset += 30;
+            QLabel *tabLabel = new QLabel(tabName, tabContent);
+            QFont font = this->font();
+            tabLabel->setFont(font);
+            tabLabel->setStyleSheet("color: black;");
+            layout->addWidget(tabLabel);
 
-                for (const auto &groupValue : jsonData["groups"].toArray()) {
-                    QJsonObject group = groupValue.toObject();
-                    if (!group.contains("name") || !group.contains("courses")) {
-                        std::cerr << "Erreur: Le groupe dans JSON est mal formé." << std::endl;
+            for (const auto &groupValue : jsonData["groups"].toArray()) {
+                QJsonObject group = groupValue.toObject();
+                if (!group.contains("name") || !group.contains("courses")) {
+                    std::cerr << "Erreur: Le groupe dans JSON est mal formé." << std::endl;
+                    continue;
+                }
+                QString groupName = group["name"].toString();
+
+                QMap<QString, QVector<StarData>> courseStarsMap;
+
+                for (const auto &courseValue : group["courses"].toArray()) {
+                    QJsonObject course = courseValue.toObject();
+                    if (!course.contains("name") || !course.contains("data")) {
+                        std::cerr << "Erreur: Le cours dans JSON est mal formé." << std::endl;
                         continue;
                     }
-                    QString groupName = group["name"].toString();
-                    std::cerr << "Processing group: " << groupName.toStdString() << std::endl;
+                    QString courseName = course["name"].toString();
 
-                    QMap<QString, QVector<StarData>> courseStarsMap;
-                    yOffset += 30;
+                    QVector<StarData> &courseStarList = courseStarsMap[courseName];
+                    for (const auto &dataValue : course["data"].toArray()) {
+                        QJsonObject data = dataValue.toObject();
+                        int offset = data["offset"].toInt();
+                        int mask = data["mask"].toInt();
+                        int numStars = 1;
 
-                    for (const auto &courseValue : group["courses"].toArray()) {
-                        QJsonObject course = courseValue.toObject();
-                        if (!course.contains("name") || !course.contains("data")) {
-                            std::cerr << "Erreur: Le cours dans JSON est mal formé." << std::endl;
-                            continue;
-                        }
-                        QString courseName = course["name"].toString();
-                        std::cerr << "Processing course: " << courseName.toStdString() << std::endl;
-
-                        QVector<StarData> &courseStarList = courseStarsMap[courseName];
-                        for (const auto &dataValue : course["data"].toArray()) {
-                            QJsonObject data = dataValue.toObject();
-                            int offset = data["offset"].toInt();
-                            int mask = data["mask"].toInt();
-                            int numStars = 1;
-
-                            for (int bit = 0; bit < 32; ++bit) {
-                                if (mask & (1 << bit)) {
-                                    bool star_collected = isStarCollected(saveData, offset, bit, i, params.slotSize);
-                                    courseStarList.append({courseName, numStars, star_collected, offset, mask});
-                                }
+                        for (int bit = 0; bit < 32; ++bit) {
+                            if (mask & (1 << bit)) {
+                                bool star_collected = isStarCollected(saveData, offset, bit, i, params.slotSize);
+                                courseStarList.append({courseName, numStars, star_collected, offset, mask});
                             }
                         }
                     }
-                    QPixmap pixmap(graphicsView->size());
-                    pixmap.fill(Qt::transparent);
-                    QPainter painter(&pixmap);
-                    painter.setRenderHint(QPainter::Antialiasing);
-                    starDisplay.afficherEtoilesGroupeFusionne(groupName, courseStarsMap, painter, font, yOffset, reservedHeight, windowRect);
-                    painter.end();
-                    graphicsScene->addPixmap(pixmap);
-                    graphicsView->setScene(graphicsScene);
                 }
-                graphicsView->setScene(graphicsScene);
-                break;
+                QPixmap pixmap(graphicsView->size());
+                pixmap.fill(Qt::transparent);
+                QPainter painter(&pixmap);
+                painter.setRenderHint(QPainter::Antialiasing);
+                starDisplay.afficherEtoilesGroupeFusionne(groupName, courseStarsMap, painter, font, yOffset, reservedHeight, graphicsView->rect());
+                painter.end();
+                QLabel *pixmapLabel = new QLabel(tabContent);
+                pixmapLabel->setPixmap(pixmap);
+                layout->addWidget(pixmapLabel);
             }
+            tabContent->setLayout(layout);
+            tabWidget->addTab(tabContent, tabName);
+        }
+        QWidget *currentCentralWidget = this->findChild<QWidget *>("centralWidget");
+        if (currentCentralWidget != star_display_centralWidget) {
+            star_display_mainLayout->addWidget(tabWidget);
+            star_display_centralWidget->setLayout(star_display_mainLayout);
+            setCentralWidget(star_display_centralWidget);
         }
     } else {
         emulatorText->show();

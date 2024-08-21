@@ -1,6 +1,9 @@
+#include <QMainWindow>
+
 #include <QComboBox>
 #include <QDebug>
 #include <QFile>
+#include <QFont>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsScene>
@@ -9,25 +12,23 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLabel>
 #include <QList>
-#include <QMainWindow>
 #include <QMenu>
 #include <QMessageBox>
 #include <QMouseEvent>
+#include <QMutex>
+#include <QPainter>
 #include <QPair>
+#include <QPointF>
 #include <QPushButton>
+#include <QRectF>
+#include <QString>
+#include <QStringList>
 #include <QTextEdit>
 #include <QThread>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QVector>
-#include <QFont>
-#include <QMouseEvent>
-#include <QPainter>
-#include <QPointF>
-#include <QRectF>
-#include <QString>
-#include <QStringList>
-#include <QVector>
 #include <QWidget>
-#include <QMutex>
+

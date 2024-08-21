@@ -93,5 +93,7 @@ class MainWindow : public QMainWindow {
     const int HEIGHT = 720;
     std::wstring global_detected_emulator;
     std::unique_ptr<MainWindowUpdateThread> thread;
+    QWidget *star_display_centralWidget;
+    QVBoxLayout *star_display_mainLayout;
 };
 #endif // MAIN_WINDOW_H
