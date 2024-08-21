@@ -30,3 +30,4 @@
 #include <QStringList>
 #include <QVector>
 #include <QWidget>
+#include <QMutex>

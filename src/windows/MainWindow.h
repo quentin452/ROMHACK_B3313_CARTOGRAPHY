@@ -17,14 +17,16 @@
 #include <romhack_b3313_cartography/utils/rom_utils.h>
 
 #include <romhack_b3313_cartography/uis/Textures.h>
+#include <romhack_b3313_cartography/utils/window_utils.h>
 
 #include "../uis/TabManager.h"
 #include <romhack_b3313_cartography/uis/Node.h>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
 
+#include "MainWindowUpdateThread.hpp"
 #include <memory>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
-#include "MainWindowUpdateThread.hpp"
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -52,7 +54,7 @@ class MainWindow : public QMainWindow {
 
   private:
     void closeEvent(QCloseEvent *event) override;
-
+    void textUpdate();
     bool isModified() const;
     void onTimerUpdate();
     void loadJsonData(const QString &filename);

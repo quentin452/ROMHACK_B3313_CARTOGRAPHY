@@ -54,11 +54,36 @@ MainWindow::MainWindow() {
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
     thread->start();
+
+    graphicsScene->addItem(emulatorText);
+    graphicsScene->addItem(b3313Text);
+    b3313Text->hide();
+    emulatorText->hide();
+    textUpdate();
 }
+
 MainWindow::~MainWindow() {
     if (thread) {
-        thread->quit(); // Demander au thread de terminer
+        thread->stop(); // Demander au thread de s'arrêter
         thread->wait(); // Attendre la fin du thread
+    }
+}
+void MainWindow::textUpdate() {
+    bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
+    bool romLoaded = isRomHackLoaded(global_detected_emulator);
+
+    if (emulatorText) {
+        emulatorText->setPlainText(emulatorRunning ? "Emulator Running" : "Emulator Not Running");
+        emulatorText->setDefaultTextColor(emulatorRunning ? Qt::green : Qt::black);
+    } else {
+        qWarning() << "emulatorText is null!";
+    }
+
+    if (b3313Text) {
+        b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
+        b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
+    } else {
+        qWarning() << "b3313Text is null!";
     }
 }
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -205,7 +230,35 @@ void MainWindow::saveNodes() {
 
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
-    updateDisplay();
+    if (showStarDisplay) {
+        QRectF sceneBoundingRect = graphicsView->rect();
+        graphicsScene->setSceneRect(sceneBoundingRect);
+        if (emulatorText) {
+
+            if (!emulatorText->isVisible())
+                emulatorText->show();
+        }
+        if (b3313Text) {
+            if (!b3313Text->isVisible())
+                b3313Text->show();
+        }
+        for (Node *node : nodes) {
+            if (node) {
+                node->hide();
+            }
+        }
+    } else {
+        QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
+        QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000);
+        graphicsScene->setSceneRect(adjustedSceneRect);
+        b3313Text->hide();
+        emulatorText->hide();
+        for (Node *node : nodes) {
+            if (node) {
+                node->show();
+            }
+        }
+    }
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -231,15 +284,6 @@ bool MainWindow::isModified() const {
             return true;
     }
     return false;
-}
-void MainWindow::onTimerUpdate() {
-    bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
-    bool romLoaded = isRomHackLoaded(global_detected_emulator);
-    emulatorText->setPlainText(emulatorRunning ? "Emulator Running" : "Emulator Not Running");
-    emulatorText->setDefaultTextColor(emulatorRunning ? Qt::green : Qt::black);
-    b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
-    b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
-    updateDisplay();
 }
 
 QJsonObject MainWindow::loadJsonData2(const QString &filePath) {
@@ -312,46 +356,18 @@ void MainWindow::parseJsonData(const QJsonArray &jsonArray) {
         }
     }
 }
+void MainWindow::onTimerUpdate() {
+    updateDisplay();
+}
 
 void MainWindow::updateDisplay() {
-    // Check emulator status and update text color
-    bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
-    bool romLoaded = isRomHackLoaded(global_detected_emulator);
-    if (emulatorText) {
-        emulatorText->setPlainText(emulatorRunning ? "Emulator Running" : "Emulator Not Running");
-        emulatorText->setDefaultTextColor(emulatorRunning ? Qt::green : Qt::black);
-    } else {
-        qWarning() << "emulatorText is null!";
-    }
-    if (b3313Text) {
-        b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
-        b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
-    } else {
-        qWarning() << "b3313Text is null!";
-    }
-    // Draw connections
-    for (const QPair<int, int> &conn : connections) {
-        if (conn.first >= 0 && conn.first < nodes.size() &&
-            conn.second >= 0 && conn.second < nodes.size()) {
-            Node *startNode = nodes[conn.first];
-            Node *endNode = nodes[conn.second];
-            if (!startNode || !endNode) {
-                qWarning() << "Invalid node pointers for connection:" << conn;
-                continue;
-            }
-            qDebug() << "Drawing line from node" << conn.first << "to node" << conn.second;
-            QGraphicsLineItem *lineItem = new QGraphicsLineItem(startNode->x(), startNode->y(), endNode->x(), endNode->y());
-            lineItem->setPen(QPen(Qt::black));
-            graphicsScene->addItem(lineItem);
-        } else {
-            qWarning() << "Connection has invalid node index:" << conn;
-        }
-    }
     // Add nodes and texts
     if (showStarDisplay) {
+        textUpdate();
         QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
         displayStars(jsonData);
     } else {
+        // Draw connections
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
                 conn.second >= 0 && conn.second < nodes.size()) {
@@ -366,18 +382,16 @@ void MainWindow::updateDisplay() {
                 lineItem->setPen(QPen(Qt::black));
                 graphicsScene->addItem(lineItem);
             } else {
-                qWarning() << "Invalid connection indices:" << conn;
+                qWarning() << "Connection has invalid node index:" << conn;
             }
         }
-
-        if (emulatorText)
-            graphicsScene->addItem(emulatorText);
-        if (b3313Text)
-            graphicsScene->addItem(b3313Text);
     }
 }
+
 void MainWindow::displayStars(const QJsonObject &jsonData) {
     if (isRomHackLoaded(global_detected_emulator)) {
+        emulatorText->hide();
+        b3313Text->hide();
         std::string saveLocation = GetParallelLauncherSaveLocation();
         if (!jsonData.contains("format") || !jsonData["format"].toObject().contains("save_type") ||
             !jsonData["format"].toObject().contains("slots_start") || !jsonData["format"].toObject().contains("slot_size") ||
@@ -473,8 +487,8 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
             }
         }
     } else {
-        graphicsScene->addItem(emulatorText);
-        graphicsScene->addItem(b3313Text);
+        emulatorText->show();
+        b3313Text->show();
     }
 }
 
