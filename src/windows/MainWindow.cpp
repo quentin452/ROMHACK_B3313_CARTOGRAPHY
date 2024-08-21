@@ -210,19 +210,27 @@ void MainWindow::saveNodes() {
         qWarning() << "Failed to open file for writing:" << file.errorString();
     }
 }
+void MainWindow::printWidgetOrder() {
+    QVBoxLayout *layout = star_display_mainLayout;
+    qDebug() << "Current widget order in layout:";
+    for (int i = 0; i < layout->count(); ++i) {
+        QWidget *widget = layout->itemAt(i)->widget();
+        if (widget) {
+            qDebug() << "Widget:" << widget->objectName();
+        }
+    }
+}
 
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
     if (showStarDisplay) {
-        QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
-        if (tabWidget) 
-            tabWidget->show();
-        // Masquer les éléments de la vue graphique principale
-        graphicsView->hide();
-        saveButton->hide();
-        // Afficher les textes et les éléments du layout des étoiles
         QRectF sceneBoundingRect = graphicsView->rect();
         graphicsScene->setSceneRect(sceneBoundingRect);
+        QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
+        if (tabWidget)
+            tabWidget->show();
+        graphicsView->hide();
+        saveButton->hide();
         if (emulatorText)
             emulatorText->show();
         if (b3313Text)
@@ -232,15 +240,11 @@ void MainWindow::toggleStarDisplay() {
                 node->hide();
             }
         }
-        // Appel pour afficher les étoiles
-        QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
-        displayStars(jsonData);
+
     } else {
-        // Masquez le tabWidget s'il existe
         QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
         if (tabWidget)
             tabWidget->hide();
-        // Vous pouvez aussi supprimer tous les onglets si nécessaire
         if (tabWidget) {
             while (tabWidget->count() > 0) {
                 QWidget *tabContent = tabWidget->widget(0);
@@ -248,29 +252,32 @@ void MainWindow::toggleStarDisplay() {
                 delete tabContent;
             }
         }
-        // Réafficher les éléments de la vue graphique principale
         graphicsView->show();
-        // Masquer les textes et les éléments du layout des étoiles
         b3313Text->hide();
         emulatorText->hide();
         for (Node *node : nodes) {
-            if (node) {
+            if (node)
                 node->show();
-            }
         }
         QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
         QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000);
         graphicsScene->setSceneRect(adjustedSceneRect);
         QVBoxLayout *layout = star_display_mainLayout;
-        // Retirer les boutons de leur position actuelle
-        layout->removeWidget(switchViewButton);
-        layout->removeWidget(saveButton);
+        // Retirer saveButton s'il est présent
+        if (layout->indexOf(saveButton) != -1) {
+            layout->removeWidget(saveButton);
+        }
         // Ajouter saveButton avant switchViewButton
         layout->addWidget(saveButton);
+        // Retirer switchViewButton s'il est présent
+        if (layout->indexOf(switchViewButton) != -1) {
+            layout->removeWidget(switchViewButton);
+        }
         layout->addWidget(switchViewButton);
         saveButton->show();
         switchViewButton->show();
     }
+    printWidgetOrder();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -350,7 +357,7 @@ void MainWindow::parseJsonData(const QJsonArray &jsonArray) {
         QString label = nodeObj["text"].toString();
         // Get font size from JSON, default to defaultFont size if not present
         int fontSize = defaultFont.pointSize(); // Default size
-        if (nodeObj.contains("font_size") && nodeObj["font_size"].isDouble()) 
+        if (nodeObj.contains("font_size") && nodeObj["font_size"].isDouble())
             fontSize = nodeObj["font_size"].toInt();
         QFont font = defaultFont;
         font.setPointSize(fontSize);
@@ -407,8 +414,8 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
         if (!tabWidget) {
             tabWidget = new QTabWidget(this);
-            tabWidget->setObjectName("tabWidget"); // Donnez un nom au widget pour le retrouver plus tard
-            if (star_display_mainLayout->indexOf(tabWidget) == -1) 
+            tabWidget->setObjectName("tabWidget");
+            if (star_display_mainLayout->indexOf(tabWidget) == -1)
                 star_display_mainLayout->addWidget(tabWidget);
         }
         emulatorText->hide();
@@ -442,7 +449,8 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         for (int i = 1; i <= numSlots; ++i) {
             tabNames.append("Mario " + QString::number(i));
         }
-        int yOffset = reservedHeight = 0;
+        int reservedHeight = 0;
+        int yOffset = 0;
         for (int i = 0; i < numSlots; ++i) {
             QString tabName = tabNames[i];
             QWidget *tabContent = nullptr;

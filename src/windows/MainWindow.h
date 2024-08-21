@@ -59,6 +59,7 @@ class MainWindow : public QMainWindow {
     void parseJsonData(const QJsonArray &jsonArray);
     void updateDisplay();
     void displayStars(const QJsonObject &jsonData);
+    void printWidgetOrder();
 
     bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
     QGraphicsView *graphicsView;
