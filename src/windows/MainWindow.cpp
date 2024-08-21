@@ -54,6 +54,13 @@ MainWindow::MainWindow() {
     layout->setSpacing(10);
     layout->setContentsMargins(10, 10, 10, 10);
     textUpdate();
+    tabWidget = findChild<QTabWidget *>("tabWidget");
+    if (!tabWidget) {
+        tabWidget = new QTabWidget(this);
+        tabWidget->setObjectName("tabWidget");
+        star_display_mainLayout->insertWidget(1, tabWidget);
+    }
+    tabWidget->hide();
 }
 
 MainWindow::~MainWindow() {
@@ -411,13 +418,6 @@ void MainWindow::updateDisplay() {
 }
 void MainWindow::displayStars(const QJsonObject &jsonData) {
     if (isRomHackLoaded(global_detected_emulator)) {
-        QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
-        if (!tabWidget) {
-            tabWidget = new QTabWidget(this);
-            tabWidget->setObjectName("tabWidget");
-            if (star_display_mainLayout->indexOf(tabWidget) == -1)
-                star_display_mainLayout->addWidget(tabWidget);
-        }
         emulatorText->hide();
         b3313Text->hide();
         std::string saveLocation = GetParallelLauncherSaveLocation();

@@ -92,5 +92,6 @@ class MainWindow : public QMainWindow {
     QVBoxLayout *star_display_mainLayout;
     QStackedWidget *stackedWidget;
     QWidget *centralWidgetZ;
+    QTabWidget *tabWidget;
 };
 #endif // MAIN_WINDOW_H
