@@ -51,16 +51,15 @@ Node Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
     return Node(x, y, text, font);
 }
 void Node::addConnection(int nodeIndex) {
-    if (!connections.contains(nodeIndex)) {
+    if (!connections.contains(nodeIndex)) 
         connections.append(nodeIndex);
-    }
 }
 
 void Node::removeConnection(int nodeIndex) {
     connections.removeAll(nodeIndex);
 }
 QRectF Node::boundingRect() const {
-    return QGraphicsEllipseItem::boundingRect(); // Utilise le rectangle de l'ellipse
+    return QGraphicsEllipseItem::boundingRect();
 }
 
 void Node::updateStar() {
