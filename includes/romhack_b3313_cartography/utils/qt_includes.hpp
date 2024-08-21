@@ -1,5 +1,6 @@
 #include <QMainWindow>
 
+#include <QApplication>
 #include <QComboBox>
 #include <QDebug>
 #include <QFile>
@@ -7,6 +8,7 @@
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsScene>
+#include <QGraphicsSceneMouseEvent>
 #include <QGraphicsTextItem>
 #include <QGraphicsView>
 #include <QJsonArray>
@@ -34,3 +36,4 @@
 #include <QVBoxLayout>
 #include <QVector>
 #include <QWidget>
+

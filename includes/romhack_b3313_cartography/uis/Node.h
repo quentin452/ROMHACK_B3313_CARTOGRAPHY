@@ -31,7 +31,6 @@ class Node : public QGraphicsEllipseItem {
     bool modified;
 
     float radius;
-    QRectF boundingBox;
     QGraphicsTextItem *labelItem;
     QGraphicsPixmapItem *starItem;
 };

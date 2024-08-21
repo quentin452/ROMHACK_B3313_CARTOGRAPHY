@@ -12,7 +12,12 @@ QTabWidget *MainWindow::tabWidget = nullptr;
 QFont MainWindow::qfont;
 QVBoxLayout *MainWindow::star_display_mainLayout = nullptr;
 QPushButton *MainWindow::switchViewButton = nullptr;
-
+QVector<Node *> MainWindow::nodes;
+bool MainWindow::shiftPressed = false;
+int MainWindow::startNodeIndex = -1;
+QVector<QPair<int, int>> MainWindow::connections;
+QGraphicsScene *MainWindow::graphicsScene = nullptr;
+bool MainWindow::dragging = false;
 MainWindow::MainWindow() {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
@@ -21,7 +26,7 @@ MainWindow::MainWindow() {
     b3313Text = new QLabel("B3313 V1.0.2 Status", this);
     // Initialisation de la vue graphique et de la scène
     graphicsView = new QGraphicsView(this);
-    graphicsScene = new QGraphicsScene(this);
+    graphicsScene = new MouseFixGraphicScene(this);
     graphicsView->setScene(graphicsScene);
     // Initialisation du widget central et du layout
     centralWidgetZ = new QWidget(this);
@@ -58,8 +63,21 @@ MainWindow::MainWindow() {
     graphicsScene->setSceneRect(adjustedSceneRect);
     // Initialisation du widget de l'affichage des étoiles
     star_display_mainLayout = layout; // Use the existing layout
+
+    // Set focus policy
+    setFocusPolicy(Qt::StrongFocus);
+    graphicsView->setFocusPolicy(Qt::StrongFocus);
+    // graphicsScene->setFocusPolicy(Qt::StrongFocus);
+    // Install event filter
+    installEventFilter(this);
+    graphicsView->installEventFilter(this);
+    // graphicsScene->installEventFilter(this);
+
+    // Enable mouse tracking
     setMouseTracking(true);
-    graphicsView->setMouseTracking(true);
+    graphicsView->setMouseTracking(true); 
+    // graphicsScene->setMouseTracking(this);
+
     layout->setSpacing(10);
     layout->setContentsMargins(10, 10, 10, 10);
     textUpdate();
@@ -216,6 +234,30 @@ void MainWindow::removeConnections() {
         }
     }
 }
+void MainWindow::addConnectionToScene(int startNodeIndex, int endNodeIndex) {
+    if (startNodeIndex >= 0 && startNodeIndex < nodes.size() &&
+        endNodeIndex >= 0 && endNodeIndex < nodes.size()) {
+        Node *startNode = nodes[startNodeIndex];
+        Node *endNode = nodes[endNodeIndex];
+
+        if (!startNode || !endNode) {
+            qWarning() << "Invalid node pointers for connection. Start Node Index:" << startNodeIndex << "End Node Index:" << endNodeIndex;
+            return;
+        }
+
+        qDebug() << "Adding connection to scene:";
+        qDebug() << "Start Node Position:" << startNode->pos();
+        qDebug() << "End Node Position:" << endNode->pos();
+
+        QGraphicsLineItem *lineItem = new QGraphicsLineItem(QLineF(startNode->pos(), endNode->pos()));
+        lineItem->setPen(QPen(Qt::black));
+        graphicsScene->addItem(lineItem);
+
+        qDebug() << "Connection added from node" << startNodeIndex << "to node" << endNodeIndex;
+    } else {
+        qWarning() << "Connection has invalid node index. Start Node Index:" << startNodeIndex << "End Node Index:" << endNodeIndex;
+    }
+}
 
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;
@@ -286,12 +328,12 @@ void MainWindow::toggleStarDisplay() {
         graphicsScene->setSceneRect(adjustedSceneRect);
         QVBoxLayout *layout = star_display_mainLayout;
         // Retirer saveButton s'il est présent
-        if (layout->indexOf(saveButton) != -1) 
+        if (layout->indexOf(saveButton) != -1)
             layout->removeWidget(saveButton);
         // Ajouter saveButton avant switchViewButton
         layout->addWidget(saveButton);
         // Retirer switchViewButton s'il est présent
-        if (layout->indexOf(switchViewButton) != -1) 
+        if (layout->indexOf(switchViewButton) != -1)
             layout->removeWidget(switchViewButton);
         layout->addWidget(switchViewButton);
         saveButton->show();
@@ -412,6 +454,16 @@ void MainWindow::updateDisplay() {
         QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
         starDisplay.displayStars(jsonData);
     } else {
+        // Clear existing arrows before redrawing
+        QList<QGraphicsItem *> items = graphicsScene->items();
+        for (QGraphicsItem *item : items) {
+            if (QGraphicsLineItem *lineItem = dynamic_cast<QGraphicsLineItem *>(item)) {
+                graphicsScene->removeItem(lineItem);
+                delete lineItem;
+            }
+        }
+
+        // Redraw the arrows
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
                 conn.second >= 0 && conn.second < nodes.size()) {
