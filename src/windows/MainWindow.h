@@ -16,11 +16,10 @@
 
 #include <romhack_b3313_cartography/utils/rom_utils.h>
 
-#include <romhack_b3313_cartography/uis/Textures.h>
-
-#include "../uis/TabManager.h"
 #include <romhack_b3313_cartography/uis/Node.h>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
+#include <romhack_b3313_cartography/uis/Textures.h>
+
 
 #include "MainWindowUpdateThread.hpp"
 #include <memory>
@@ -72,7 +71,6 @@ class MainWindow : public QMainWindow {
     QPointF startPos;
     bool dragging = false;
     int startNodeIndex = -1;
-    TabManager *tabManager;
     QStringList tabNames;
     QJsonObject lastJsonData;
     bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles

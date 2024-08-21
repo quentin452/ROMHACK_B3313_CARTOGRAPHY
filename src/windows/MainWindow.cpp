@@ -12,7 +12,6 @@ MainWindow::MainWindow() {
     // Initialisation des objets graphiques
     emulatorText = new QGraphicsTextItem("Emulator Status");
     b3313Text = new QGraphicsTextItem("B3313 V1.0.2 Status");
-    tabManager = new TabManager(tabNames, this);
     graphicsView = new QGraphicsView(this);
     graphicsScene = new QGraphicsScene(this);
     graphicsView->setScene(graphicsScene);
@@ -431,8 +430,6 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         for (int i = 1; i <= numSlots; ++i) {
             tabNames.append("Mario " + QString::number(i));
         }
-        tabManager->initializeTabs(tabNames);
-        std::cerr << "Tabs initialized." << std::endl;
 
         QTabWidget *tabWidget = new QTabWidget(this);
         int yOffset = 0;
