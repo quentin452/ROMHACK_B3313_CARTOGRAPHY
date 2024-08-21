@@ -23,6 +23,7 @@
 #include <QPointF>
 #include <QPushButton>
 #include <QRectF>
+#include <QStackedWidget>
 #include <QString>
 #include <QStringList>
 #include <QTextEdit>

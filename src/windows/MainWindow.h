@@ -20,7 +20,6 @@
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
 #include <romhack_b3313_cartography/uis/Textures.h>
 
-
 #include "MainWindowUpdateThread.hpp"
 #include <memory>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
@@ -59,7 +58,8 @@ class MainWindow : public QMainWindow {
     QJsonObject loadJsonData2(const QString &filePath);
     void parseJsonData(const QJsonArray &jsonArray);
     void updateDisplay();
-
+    void setupStarDisplay();
+    void setupMainView();
     void displayStars(const QJsonObject &jsonData);
 
     bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
@@ -93,5 +93,6 @@ class MainWindow : public QMainWindow {
     std::unique_ptr<MainWindowUpdateThread> thread;
     QWidget *star_display_centralWidget;
     QVBoxLayout *star_display_mainLayout;
+    QStackedWidget *stackedWidget;
 };
 #endif // MAIN_WINDOW_H

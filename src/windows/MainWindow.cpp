@@ -12,26 +12,39 @@ MainWindow::MainWindow() {
     // Initialisation des objets graphiques
     emulatorText = new QGraphicsTextItem("Emulator Status");
     b3313Text = new QGraphicsTextItem("B3313 V1.0.2 Status");
+
+    // Initialisation de la vue graphique et de la scène
     graphicsView = new QGraphicsView(this);
     graphicsScene = new QGraphicsScene(this);
     graphicsView->setScene(graphicsScene);
+
+    // Initialisation du widget central et du layout
     QWidget *centralWidget = new QWidget(this);
-    setCentralWidget(centralWidget);
     QVBoxLayout *layout = new QVBoxLayout(centralWidget);
+    setCentralWidget(centralWidget);
+
+    // Ajout de la vue graphique et des boutons au layout
     layout->addWidget(graphicsView);
     saveButton = new QPushButton("Save", this);
     switchViewButton = new QPushButton("Switch View", this);
     layout->addWidget(saveButton);
     layout->addWidget(switchViewButton);
+
+    // Connexion des boutons aux slots correspondants
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveNodes);
     connect(switchViewButton, &QPushButton::clicked, this, &MainWindow::toggleStarDisplay);
+
+    // Initialisation du menu déroulant et du menu contextuel
     dropdownMenu = new QComboBox(this);
     dropdownMenu->addItems({"b3313-v1.0.2.json"});
     layout->addWidget(dropdownMenu);
+
     contextMenu = new QMenu(this);
     QAction *removeConnectionsAction = new QAction("Remove Connections", this);
     connect(removeConnectionsAction, &QAction::triggered, this, &MainWindow::removeConnections);
     contextMenu->addAction(removeConnectionsAction);
+
+    // Connexion du menu déroulant pour charger les nœuds
     connect(dropdownMenu, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index) {
         QString selectedFile = dropdownMenu->itemText(index);
         if (!selectedFile.isEmpty()) {
@@ -40,25 +53,49 @@ MainWindow::MainWindow() {
         }
     });
 
-    setMouseTracking(true);
-    graphicsView->setMouseTracking(true);
-    layout->setSpacing(10);
-    layout->setContentsMargins(10, 10, 10, 10);
-    QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
-    QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajoutez une marge autour des nœuds
-    graphicsScene->setSceneRect(adjustedSceneRect);
-    loadJsonData(b33_13_mind_map_str);
-    star_display_centralWidget = new QWidget(this);
-    star_display_mainLayout = new QVBoxLayout(centralWidget);
-    // Initialiser et démarrer le thread après toutes les autres initialisations
-    thread = std::make_unique<MainWindowUpdateThread>(this);
-    connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
-    thread->start();
-
+    // Initialisation des objets graphiques
     graphicsScene->addItem(emulatorText);
     graphicsScene->addItem(b3313Text);
     b3313Text->hide();
     emulatorText->hide();
+
+    // Initialisation et démarrage du thread de mise à jour
+    thread = std::make_unique<MainWindowUpdateThread>(this);
+    connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
+    thread->start();
+
+    // Chargement des données JSON
+    loadJsonData(b33_13_mind_map_str);
+
+    // Configuration des propriétés de la scène
+    QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
+    QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajout d'une marge
+    graphicsScene->setSceneRect(adjustedSceneRect);
+
+    // Initialisation du widget de l'affichage des étoiles
+    star_display_centralWidget = new QWidget(this);
+    star_display_mainLayout = new QVBoxLayout(star_display_centralWidget);
+    star_display_centralWidget->setLayout(star_display_mainLayout);
+
+    setMouseTracking(true);
+    graphicsView->setMouseTracking(true);
+
+    layout->setSpacing(10);
+    layout->setContentsMargins(10, 10, 10, 10);
+    stackedWidget = new QStackedWidget(this);
+
+    // Initialisation du widget central avec QStackedWidget
+    QWidget *mainWidget = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(mainWidget);
+    mainLayout->addWidget(graphicsView);
+    mainLayout->addWidget(saveButton);
+    mainLayout->addWidget(switchViewButton);
+    mainLayout->addWidget(dropdownMenu);
+
+    stackedWidget->addWidget(mainWidget);                 // Ajouter la vue principale
+    stackedWidget->addWidget(star_display_centralWidget); // Ajouter la vue des étoiles
+
+    setCentralWidget(stackedWidget);
     textUpdate();
 }
 
@@ -231,28 +268,18 @@ void MainWindow::saveNodes() {
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
     if (showStarDisplay) {
-        QRectF sceneBoundingRect = graphicsView->rect();
-        graphicsScene->setSceneRect(sceneBoundingRect);
-        if (emulatorText) {
-
-            if (!emulatorText->isVisible())
-                emulatorText->show();
-        }
-        if (b3313Text) {
-            if (!b3313Text->isVisible())
-                b3313Text->show();
-        }
+        stackedWidget->setCurrentWidget(star_display_centralWidget);
+        emulatorText->hide();
+        b3313Text->hide();
         for (Node *node : nodes) {
             if (node) {
                 node->hide();
             }
         }
     } else {
-        QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
-        QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000);
-        graphicsScene->setSceneRect(adjustedSceneRect);
-        b3313Text->hide();
-        emulatorText->hide();
+        stackedWidget->setCurrentWidget(graphicsView->parentWidget());
+        b3313Text->show();
+        emulatorText->show();
         for (Node *node : nodes) {
             if (node) {
                 node->show();
@@ -260,7 +287,15 @@ void MainWindow::toggleStarDisplay() {
         }
     }
 }
+void MainWindow::setupStarDisplay() {
+    stackedWidget->setCurrentWidget(star_display_centralWidget);
+    updateDisplay();
+}
 
+void MainWindow::setupMainView() {
+    stackedWidget->setCurrentWidget(graphicsView->parentWidget());
+    textUpdate();
+}
 void MainWindow::closeEvent(QCloseEvent *event) {
     if (isModified()) {
         auto resBtn = QMessageBox::question(this, "Mind Map Example",
@@ -402,7 +437,16 @@ void MainWindow::updateDisplay() {
 }
 void MainWindow::displayStars(const QJsonObject &jsonData) {
     if (isRomHackLoaded(global_detected_emulator)) {
-        std::cerr << "RomHack is loaded." << std::endl;
+        QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
+        if (!tabWidget) {
+            tabWidget = new QTabWidget(this);
+            tabWidget->setObjectName("tabWidget"); // Donnez un nom au widget pour le retrouver plus tard
+
+            if (star_display_mainLayout->indexOf(tabWidget) == -1) {
+                star_display_mainLayout->addWidget(tabWidget);
+            }
+        }
+
         emulatorText->hide();
         b3313Text->hide();
         std::string saveLocation = GetParallelLauncherSaveLocation();
@@ -440,14 +484,32 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
             tabNames.append("Mario " + QString::number(i));
         }
 
-        QTabWidget *tabWidget = new QTabWidget(this);
         int yOffset = 0;
         int reservedHeight = 0; // Ajouté pour stocker la hauteur réservée
 
         for (int i = 0; i < numSlots; ++i) {
             QString tabName = tabNames[i];
-            QWidget *tabContent = new QWidget();
-            QVBoxLayout *layout = new QVBoxLayout(tabContent);
+            QWidget *tabContent = nullptr;
+
+            // Vérifiez si l'onglet existe déjà
+            if (tabWidget->count() > i) {
+                tabContent = tabWidget->widget(i);
+                // Supprimez les anciens widgets de l'onglet
+                QLayoutItem *child;
+                while ((child = tabContent->layout()->takeAt(0)) != nullptr) {
+                    delete child->widget();
+                    delete child;
+                }
+            } else {
+                tabContent = new QWidget();
+                tabWidget->addTab(tabContent, tabName);
+            }
+
+            QVBoxLayout *layout = qobject_cast<QVBoxLayout *>(tabContent->layout());
+            if (!layout) {
+                layout = new QVBoxLayout(tabContent);
+                tabContent->setLayout(layout);
+            }
 
             QLabel *tabLabel = new QLabel(tabName, tabContent);
             QFont font = this->font();
@@ -498,15 +560,11 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                 pixmapLabel->setPixmap(pixmap);
                 layout->addWidget(pixmapLabel);
             }
-            tabContent->setLayout(layout);
-            tabWidget->addTab(tabContent, tabName);
         }
-        QWidget *currentCentralWidget = this->findChild<QWidget *>("centralWidget");
-        if (currentCentralWidget != star_display_centralWidget) {
-            star_display_mainLayout->addWidget(tabWidget);
+        if (!star_display_centralWidget->layout())
             star_display_centralWidget->setLayout(star_display_mainLayout);
-            setCentralWidget(star_display_centralWidget);
-        }
+        //if (centralWidget() != star_display_centralWidget)
+        //    setCentralWidget(star_display_centralWidget);
     } else {
         emulatorText->show();
         b3313Text->show();
