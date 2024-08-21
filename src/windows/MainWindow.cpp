@@ -423,22 +423,18 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         params.activeBit = format["active_bit"].toInt();
         params.numSlots = format["num_slots"].toInt();
         params.checksumOffset = format["checksum_offset"].toInt();
-        std::cerr << "Save parameters parsed." << std::endl;
 
         auto saveData = ReadSrmFile(saveLocation, params);
         if (saveData.empty()) {
             std::cerr << "Erreur: Les données de sauvegarde sont vides." << std::endl;
             return;
         }
-        std::cerr << "Save data read successfully." << std::endl;
 
         int numSlots = params.numSlots;
         if (numSlots <= 0) {
             std::cerr << "Erreur: Nombre de slots invalide." << std::endl;
             return;
         }
-        std::cerr << "Number of slots: " << numSlots << std::endl;
-
         tabNames.clear();
         for (int i = 1; i <= numSlots; ++i) {
             tabNames.append("Mario " + QString::number(i));
