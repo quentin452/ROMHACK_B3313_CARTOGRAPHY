@@ -12,47 +12,34 @@ QTabWidget *MainWindow::tabWidget = nullptr;
 QFont MainWindow::qfont;
 QVBoxLayout *MainWindow::star_display_mainLayout = nullptr;
 QPushButton *MainWindow::switchViewButton = nullptr;
-QVector<Node *> MainWindow::nodes;
-bool MainWindow::shiftPressed = false;
-int MainWindow::startNodeIndex = -1;
-QVector<QPair<int, int>> MainWindow::connections;
-QGraphicsScene *MainWindow::graphicsScene = nullptr;
-bool MainWindow::dragging = false;
 
 MainWindow::MainWindow() {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
-
     // Initialisation des objets graphiques
     emulatorText = new QLabel("Emulator Status", this);
     b3313Text = new QLabel("B3313 V1.0.2 Status", this);
-
     // Initialisation de la vue graphique et de la scène
     graphicsView = new QGraphicsView(this);
-    graphicsScene = new MouseFixGraphicScene(this);
+    graphicsScene = new QGraphicsScene(this);
     graphicsView->setScene(graphicsScene);
-
     // Initialisation du widget central et du layout
     centralWidgetZ = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(centralWidgetZ);
     setCentralWidget(centralWidgetZ);
-
     // Ajout de la vue graphique et des boutons au layout
     layout->addWidget(graphicsView);
     saveButton = new QPushButton("Save", this);
     switchViewButton = new QPushButton("Switch View", this);
     layout->addWidget(saveButton);
     layout->addWidget(switchViewButton);
-
     // Connexion des boutons aux slots correspondants
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveNodes);
     connect(switchViewButton, &QPushButton::clicked, this, &MainWindow::toggleStarDisplay);
-
     contextMenu = new QMenu(this);
     QAction *removeConnectionsAction = new QAction("Remove Connections", this);
     connect(removeConnectionsAction, &QAction::triggered, this, &MainWindow::removeConnections);
     contextMenu->addAction(removeConnectionsAction);
-
     // Initialisation des objets graphiques
     layout->addWidget(emulatorText);
     layout->addWidget(b3313Text);
@@ -63,36 +50,19 @@ MainWindow::MainWindow() {
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
     thread->start();
-
     // Chargement des données JSON
     loadJsonData(b33_13_mind_map_str);
-
     // Configuration des propriétés de la scène
     QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
     QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajout d'une marge
     graphicsScene->setSceneRect(adjustedSceneRect);
-
     // Initialisation du widget de l'affichage des étoiles
     star_display_mainLayout = layout; // Use the existing layout
-
-    // Set focus policy
-    setFocusPolicy(Qt::StrongFocus);
-    graphicsView->setFocusPolicy(Qt::StrongFocus);
-    // graphicsScene->setFocusPolicy(Qt::StrongFocus);
-    // Install event filter
-    installEventFilter(this);
-    graphicsView->installEventFilter(this);
-    // graphicsScene->installEventFilter(this);
-
-    // Enable mouse tracking
     setMouseTracking(true);
     graphicsView->setMouseTracking(true);
-    // graphicsScene->setMouseTracking(this);
-
     layout->setSpacing(10);
     layout->setContentsMargins(10, 10, 10, 10);
     textUpdate();
-
     tabWidget = findChild<QTabWidget *>("tabWidget");
     if (!tabWidget) {
         tabWidget = new QTabWidget(this);
@@ -169,54 +139,57 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
 #ifdef DEBUG
     if (!shiftPressed && event->button() == Qt::RightButton) {
         QPoint viewPos = event->pos();
+        // Obtenir les coordonnées de la scène en tenant compte des transformations de la vue
         QPointF scenePos = graphicsView->mapToScene(viewPos);
-
         // Vérifiez que les coordonnées de la scène sont valides
         if (scenePos.x() < 0 || scenePos.y() < 0) {
             qDebug() << "Invalid scene coordinates, skipping node creation.";
             return;
         }
-
-        // Vérifiez s'il existe déjà un nœud à cette position
-        int nodeIndex;
-        if (isMouseOverNode(scenePos, nodeIndex)) {
-            return;
-        }
-
         // Crée un nouveau nœud à la position de la souris
         Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font());
+        // Vérifiez la position du nœud après sa création
+        QPointF nodePos = newNode->pos();
+        // Vérifiez les dimensions et la position du nœud
+        QRectF nodeRect = newNode->boundingRect();
+        // Ajoutez le nœud à la scène
         newNode->setModified(true);
         graphicsScene->addItem(newNode);
         nodes.append(newNode);
     }
 #endif
 }
-
-void MainWindow::addConnectionToScene(int startNodeIndex, int endNodeIndex) {
-    if (startNodeIndex >= 0 && startNodeIndex < nodes.size() &&
-        endNodeIndex >= 0 && endNodeIndex < nodes.size()) {
+void MainWindow::mouseMoveEvent(QMouseEvent *event) {
+    if (shiftPressed && dragging && startNodeIndex != -1) {
+        QPointF mousePos = graphicsView->mapToScene(event->pos());
         Node *startNode = nodes[startNodeIndex];
-        Node *endNode = nodes[endNodeIndex];
-
-        if (!startNode || !endNode) {
-            qWarning() << "Invalid node pointers for connection. Start Node Index:" << startNodeIndex << "End Node Index:" << endNodeIndex;
-            return;
-        }
-
-        qDebug() << "Adding connection to scene:";
-        qDebug() << "Start Node Position:" << startNode->pos();
-        qDebug() << "End Node Position:" << endNode->pos();
-
-        QGraphicsLineItem *lineItem = new QGraphicsLineItem(QLineF(startNode->pos(), endNode->pos()));
-        lineItem->setPen(QPen(Qt::black));
-        graphicsScene->addItem(lineItem);
-
-        qDebug() << "Connection added from node" << startNodeIndex << "to node" << endNodeIndex;
-    } else {
-        qWarning() << "Connection has invalid node index. Start Node Index:" << startNodeIndex << "End Node Index:" << endNodeIndex;
+        QLineF line(startNode->pos(), mousePos);
+        currentArrow = new QGraphicsLineItem(line);
+        currentArrow->setPen(QPen(Qt::black, 2, Qt::SolidLine, Qt::RoundCap));
+        graphicsScene->addItem(currentArrow);
     }
 }
-
+void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
+    if (shiftPressed && event->button() == Qt::LeftButton && dragging) {
+        QPointF mousePos = graphicsView->mapToScene(event->pos());
+        int endNodeIndex;
+        if (isMouseOverNode(mousePos, endNodeIndex) && endNodeIndex != startNodeIndex) {
+            qDebug() << "End Node Index:" << endNodeIndex;
+            if (startNodeIndex >= 0 && startNodeIndex < nodes.size() &&
+                endNodeIndex >= 0 && endNodeIndex < nodes.size()) {
+                connections.push_back(QPair<int, int>(startNodeIndex, endNodeIndex));
+                nodes[startNodeIndex]->addConnection(endNodeIndex);
+                nodes[endNodeIndex]->addConnection(startNodeIndex);
+                updateDisplay();
+            } else {
+                qDebug() << "Invalid node index in connections.";
+            }
+        } else {
+            qDebug() << "No valid end node detected.";
+        }
+        dragging = false;
+    }
+}
 void MainWindow::removeConnections() {
     if (rightClickedNodeIndex != -1) {
         if (rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {
@@ -313,12 +286,12 @@ void MainWindow::toggleStarDisplay() {
         graphicsScene->setSceneRect(adjustedSceneRect);
         QVBoxLayout *layout = star_display_mainLayout;
         // Retirer saveButton s'il est présent
-        if (layout->indexOf(saveButton) != -1)
+        if (layout->indexOf(saveButton) != -1) 
             layout->removeWidget(saveButton);
         // Ajouter saveButton avant switchViewButton
         layout->addWidget(saveButton);
         // Retirer switchViewButton s'il est présent
-        if (layout->indexOf(switchViewButton) != -1)
+        if (layout->indexOf(switchViewButton) != -1) 
             layout->removeWidget(switchViewButton);
         layout->addWidget(switchViewButton);
         saveButton->show();
@@ -439,16 +412,6 @@ void MainWindow::updateDisplay() {
         QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
         starDisplay.displayStars(jsonData);
     } else {
-        // Clear existing arrows before redrawing
-        QList<QGraphicsItem *> items = graphicsScene->items();
-        for (QGraphicsItem *item : items) {
-            if (QGraphicsLineItem *lineItem = dynamic_cast<QGraphicsLineItem *>(item)) {
-                graphicsScene->removeItem(lineItem);
-                delete lineItem;
-            }
-        }
-
-        // Redraw the arrows
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
                 conn.second >= 0 && conn.second < nodes.size()) {
@@ -468,17 +431,13 @@ void MainWindow::updateDisplay() {
     }
 }
 bool MainWindow::isMouseOverNode(const QPointF &mousePos, int &nodeIndex) {
-    qDebug() << "Checking mouse position:" << mousePos;
     for (int i = 0; i < nodes.size(); ++i) {
         Node *node = nodes[i];
-        QPointF localPos = node->mapFromScene(mousePos);
-        qDebug() << "Node index:" << i << "Local position:" << localPos << "Contains:" << node->contains(localPos);
-        if (node->contains(localPos)) {
+        if (node->contains(mousePos)) {
             nodeIndex = i;
             return true;
         }
     }
     return false;
 }
-
 #include "MainWindow.moc"

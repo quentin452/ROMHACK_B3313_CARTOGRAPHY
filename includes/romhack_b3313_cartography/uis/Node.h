@@ -4,6 +4,7 @@
 
 #include <vector>
 
+
 class Node : public QGraphicsEllipseItem {
   public:
     Node(float x, float y, const QString &text, const QFont &font);
@@ -30,6 +31,7 @@ class Node : public QGraphicsEllipseItem {
     bool modified;
 
     float radius;
+    QRectF boundingBox;
     QGraphicsTextItem *labelItem;
     QGraphicsPixmapItem *starItem;
 };

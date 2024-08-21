@@ -24,17 +24,12 @@
 #include <memory>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
 
-#include "../uis/MouseFixGraphicScene.h"
-
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
   public:
     MainWindow();
     ~MainWindow();
-
-    static void addConnectionToScene(int startNodeIndex, int endNodeIndex);
-    static bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
 
     static std::wstring global_detected_emulator;
     static QLabel *emulatorText, *b3313Text;
@@ -44,12 +39,6 @@ class MainWindow : public QMainWindow {
     static QFont qfont;
     static QVBoxLayout *star_display_mainLayout;
     static QPushButton *switchViewButton;
-    static bool shiftPressed;
-    static int startNodeIndex;
-    static QVector<Node *> nodes;
-    static QVector<QPair<int, int>> connections;
-    static QGraphicsScene *graphicsScene;
-    static bool dragging;
 
   protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -60,6 +49,8 @@ class MainWindow : public QMainWindow {
 
     void mousePressEvent(QMouseEvent *event) override;
 
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
   private slots:
     void removeConnections();
     void saveNodes();
@@ -77,7 +68,14 @@ class MainWindow : public QMainWindow {
     void parseJsonData(const QJsonArray &jsonArray);
     void updateDisplay();
     void printWidgetOrder();
+
+    bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
+    QGraphicsScene *graphicsScene = nullptr;
+    QVector<Node *> nodes;
+    QVector<QPair<int, int>> connections;
     QPointF startPos;
+    bool dragging = false;
+    int startNodeIndex = -1;
     QJsonObject lastJsonData;
     bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles
     StarDisplay starDisplay;      // Instance de la classe StarDisplay
@@ -86,6 +84,8 @@ class MainWindow : public QMainWindow {
     QPushButton *saveButton = nullptr;
     QTimer *updateTimer = nullptr;
     Node *startArrowNode = nullptr; // Node where the arrow starts
+    bool shiftPressed = false;      // Indicates if Shift key is pressed
+    QGraphicsLineItem *currentArrow = nullptr;
     QMenu *contextMenu = nullptr;
     int rightClickedNodeIndex = -1;
     const int WIDTH = 1280;
