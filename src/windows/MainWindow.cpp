@@ -390,15 +390,19 @@ void MainWindow::updateDisplay() {
 
 void MainWindow::displayStars(const QJsonObject &jsonData) {
     if (isRomHackLoaded(global_detected_emulator)) {
+        std::cerr << "RomHack is loaded." << std::endl;
         emulatorText->hide();
         b3313Text->hide();
         std::string saveLocation = GetParallelLauncherSaveLocation();
+        std::cerr << "Save location: " << saveLocation << std::endl;
+
         if (!jsonData.contains("format") || !jsonData["format"].toObject().contains("save_type") ||
             !jsonData["format"].toObject().contains("slots_start") || !jsonData["format"].toObject().contains("slot_size") ||
             !jsonData["format"].toObject().contains("active_bit") || !jsonData["format"].toObject().contains("checksum_offset")) {
             std::cerr << "Erreur: Les paramètres de sauvegarde sont manquants dans le JSON." << std::endl;
             return;
         }
+
         QJsonObject format = jsonData["format"].toObject();
         SaveParams params;
         params.saveFormat = parseSaveFormat(format["save_type"].toString().toStdString());
@@ -407,30 +411,41 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         params.activeBit = format["active_bit"].toInt();
         params.numSlots = format["num_slots"].toInt();
         params.checksumOffset = format["checksum_offset"].toInt();
+        std::cerr << "Save parameters parsed." << std::endl;
+
         auto saveData = ReadSrmFile(saveLocation, params);
         if (saveData.empty()) {
             std::cerr << "Erreur: Les données de sauvegarde sont vides." << std::endl;
             return;
         }
+        std::cerr << "Save data read successfully." << std::endl;
+
         int yOffset = 0;
         int numSlots = params.numSlots;
         if (numSlots <= 0) {
             std::cerr << "Erreur: Nombre de slots invalide." << std::endl;
             return;
         }
+        std::cerr << "Number of slots: " << numSlots << std::endl;
+
         tabNames.clear();
         for (int i = 1; i <= numSlots; ++i) {
             tabNames.append("Mario " + QString::number(i));
         }
         tabManager->initializeTabs(tabNames);
+        std::cerr << "Tabs initialized." << std::endl;
+
         QString currentTabName = tabManager->getCurrentTabName();
         if (currentTabName.isEmpty()) {
             std::cerr << "Erreur: Nom de l'onglet actuel est vide." << std::endl;
             return;
         }
+        std::cerr << "Current tab name: " << currentTabName.toStdString() << std::endl;
+
         float reservedHeight = tabManager->getTabsHeight();
         QRectF windowRect = graphicsView->rect();
         QPainter painter;
+
         for (int i = 0; i < numSlots; ++i) {
             if (i >= tabNames.size()) {
                 std::cerr << "Erreur: Index de tabName hors limites." << std::endl;
@@ -438,6 +453,8 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
             }
             QString tabName = tabNames[i];
             if (tabName == currentTabName) {
+                std::cerr << "Processing tab: " << tabName.toStdString() << std::endl;
+
                 QGraphicsTextItem *tabText = new QGraphicsTextItem(tabName);
                 QFont font = this->font();
                 tabText->setFont(font);
@@ -445,6 +462,7 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                 tabText->setPos(100, 100 + yOffset);
                 graphicsScene->addItem(tabText);
                 yOffset += 30;
+
                 for (const auto &groupValue : jsonData["groups"].toArray()) {
                     QJsonObject group = groupValue.toObject();
                     if (!group.contains("name") || !group.contains("courses")) {
@@ -452,8 +470,11 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                         continue;
                     }
                     QString groupName = group["name"].toString();
+                    std::cerr << "Processing group: " << groupName.toStdString() << std::endl;
+
                     QMap<QString, QVector<StarData>> courseStarsMap;
                     yOffset += 30;
+
                     for (const auto &courseValue : group["courses"].toArray()) {
                         QJsonObject course = courseValue.toObject();
                         if (!course.contains("name") || !course.contains("data")) {
@@ -461,12 +482,15 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                             continue;
                         }
                         QString courseName = course["name"].toString();
+                        std::cerr << "Processing course: " << courseName.toStdString() << std::endl;
+
                         QVector<StarData> &courseStarList = courseStarsMap[courseName];
                         for (const auto &dataValue : course["data"].toArray()) {
                             QJsonObject data = dataValue.toObject();
                             int offset = data["offset"].toInt();
                             int mask = data["mask"].toInt();
                             int numStars = 1;
+
                             for (int bit = 0; bit < 32; ++bit) {
                                 if (mask & (1 << bit)) {
                                     bool star_collected = isStarCollected(saveData, offset, bit, i, params.slotSize);
@@ -476,11 +500,13 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                         }
                     }
                     QPixmap pixmap(graphicsView->size());
-                    pixmap.fill(Qt::white);
-                    painter.begin(&pixmap);
+                    pixmap.fill(Qt::transparent);
+                    QPainter painter(&pixmap);
+                    painter.setRenderHint(QPainter::Antialiasing);
                     starDisplay.afficherEtoilesGroupeFusionne(groupName, courseStarsMap, painter, font, yOffset, reservedHeight, windowRect);
                     painter.end();
                     graphicsScene->addPixmap(pixmap);
+                    graphicsView->setScene(graphicsScene);
                 }
                 graphicsView->setScene(graphicsScene);
                 break;

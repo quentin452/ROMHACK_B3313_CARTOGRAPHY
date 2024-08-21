@@ -7,7 +7,7 @@ void StarDisplay::afficherEtoilesGroupeFusionne(const QString &groupName, const 
     const float rectWidth = 600;
     const float rectLeft = 50;
     const float rectTop = 50;
-    const float rectHeight = windowRect.height() - rectTop; // Ajuste la hauteur du rectangle pour qu'il s'étende jusqu'en bas de la fenêtre
+    const float rectHeight = windowRect.height() - rectTop; // Ajuste la hauteur du rectangle
 
     // Dessiner le rectangle fixe
     QRectF rectangle(rectLeft, rectTop, rectWidth, rectHeight);
@@ -31,9 +31,14 @@ void StarDisplay::afficherEtoilesGroupeFusionne(const QString &groupName, const 
 
     std::sort(courseNames.begin(), courseNames.end());
 
-    // Charger les textures des étoiles (Qt utilise QImage au lieu de sf::Texture)
+    // Charger les textures des étoiles
     QImage starCollectedTexture("resources/textures/star-collected.png");
     QImage starMissingTexture("resources/textures/star-missing.png");
+
+    if (starCollectedTexture.isNull() || starMissingTexture.isNull()) {
+        qWarning() << "One or both star textures failed to load.";
+        return;
+    }
 
     // Calculer la hauteur de la texture des étoiles
     float collectedHeight = static_cast<float>(starCollectedTexture.height());
@@ -42,7 +47,7 @@ void StarDisplay::afficherEtoilesGroupeFusionne(const QString &groupName, const 
 
     // Dessiner les éléments pour chaque cours
     for (const auto &courseName : courseNames) {
-        const QVector<StarData> &stars = courseStarsMap.value(courseName); 
+        const QVector<StarData> &stars = courseStarsMap.value(courseName);
         QRectF courseTextRect(rectLeft + 100, rectTop + 130 + yOffset + reservedHeight, rectWidth, 30);
         painter.drawText(courseTextRect, courseName);
 
@@ -52,11 +57,10 @@ void StarDisplay::afficherEtoilesGroupeFusionne(const QString &groupName, const 
         for (const auto &star : stars) {
             for (int i = 0; i < star.numStars; ++i) {
                 QRectF starRect(
-                    startX + i * starSpacing, 
-                    rectTop + 130 + yOffset + (30 - starTextureHeight) / 2 + reservedHeight, 
-                    starCollectedTexture.width(), 
-                    starCollectedTexture.height()
-                );
+                    startX + i * starSpacing,
+                    rectTop + 130 + yOffset + (30 - starTextureHeight) / 2 + reservedHeight,
+                    starCollectedTexture.width(),
+                    starCollectedTexture.height());
 
                 if (rectangle.contains(starRect)) {
                     // Choisir la texture selon que l'étoile est collectée ou non
