@@ -60,30 +60,17 @@ void MouseFixGraphicScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
 }
 
 bool MouseFixGraphicScene::isMouseOverNode(const QPointF &mousePosScene, int &nodeIndex) {
-    qDebug() << "Checking mouse position:" << mousePosScene;
-
     for (int i = 0; i < MainWindow::nodes.size(); ++i) {
         Node *node = MainWindow::nodes[i];
-
-        // Vérifiez la transformation appliquée au nœud
         QTransform transform = node->transform();
         QPointF mousePosLocal = transform.inverted().map(mousePosScene);
-
         QRectF nodeRect = node->boundingRect();
         QPointF nodePos = node->pos();
         QRectF nodeRectInScene = nodeRect.translated(nodePos);
-
-        qDebug() << "Checking node at position:" << nodePos;
-        qDebug() << "Node bounding rect:" << nodeRect;
-        qDebug() << "Node rect in scene:" << nodeRectInScene;
-        qDebug() << "Mouse position in node's local coordinates:" << mousePosLocal;
-
         if (nodeRect.contains(mousePosLocal)) {
             nodeIndex = i;
-            qDebug() << "Mouse is over node at index:" << i;
             return true;
         }
     }
-    qDebug() << "Mouse is not over any node.";
     return false;
 }
