@@ -1,12 +1,6 @@
 #pragma once
-#include <QColor>
-#include <QFont>
-#include <QMouseEvent>
-#include <QPainter>
-#include <QRectF>
-#include <QString>
-#include <QVector>
-#include <QWidget>
+#include <romhack_b3313_cartography/utils/qt_includes.hpp>
+
 
 class Tab {
   public:

@@ -1,16 +1,7 @@
 #pragma once
 #include <romhack_b3313_cartography/uis/Tab.hpp>
-#include <QFont>
-#include <QMouseEvent>
-#include <QPainter>
-#include <QPointF>
-#include <QRectF>
-#include <QString>
-#include <QStringList>
-#include <QVector>
-#include <QWidget>
-#include <string>
-#include <vector>
+#include <romhack_b3313_cartography/utils/qt_includes.hpp>
+
 
 
 class TabManager : public QWidget {

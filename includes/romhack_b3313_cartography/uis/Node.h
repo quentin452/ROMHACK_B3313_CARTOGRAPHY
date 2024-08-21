@@ -1,16 +1,7 @@
 #pragma once
 
-#include <QBrush>
-#include <QColor>
-#include <QFont>
-#include <QGraphicsEllipseItem>
-#include <QGraphicsTextItem>
-#include <QJsonObject>
-#include <QPainter>
-#include <QPen>
-#include <QPointF>
-#include <QRectF>
-#include <QString>
+#include <romhack_b3313_cartography/utils/qt_includes.hpp>
+
 #include <vector>
 
 

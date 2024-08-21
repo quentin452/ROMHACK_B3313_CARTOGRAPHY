@@ -15,7 +15,6 @@
 #include <string>
 
 
-#include <QString>
 std::vector<std::wstring> parallelLauncher = {L"parallel-launcher.exe"};
 std::vector<std::wstring> retroarch = {L"retroarch.exe"};
 SaveFormat saveFormat;

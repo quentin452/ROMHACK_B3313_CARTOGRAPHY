@@ -1,13 +1,14 @@
 #ifndef ROM_UTILS_H
 #define ROM_UTILS_H
 
-#include <QString>
 #include <codecvt>
 #include <cstdint>
 #include <romhack_b3313_cartography/utils/byteswap.hpp>
+#include <romhack_b3313_cartography/utils/qt_includes.hpp>
 #include <romhack_b3313_cartography/utils/types.hpp>
 #include <string>
 #include <vector>
+
 
 enum class SaveFormat : ubyte {
     EEPROM = 0,

@@ -1,11 +1,6 @@
 #pragma once
-#include <QFont>
-#include <QImage>
-#include <QMap>
-#include <QPainter>
-#include <QPen>
-#include <QRectF>
-#include <QString>
+#include <romhack_b3313_cartography/utils/qt_includes.hpp>
+
 #include <iostream>
 #include <vector>
 

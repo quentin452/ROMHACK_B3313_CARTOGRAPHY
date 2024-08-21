@@ -22,34 +22,15 @@
 #include <romhack_b3313_cartography/uis/Node.h>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
 
-#include <QComboBox>
-#include <QDebug>
-#include <QFile>
-#include <QGraphicsEllipseItem>
-#include <QGraphicsLineItem>
-#include <QGraphicsScene>
-#include <QGraphicsTextItem>
-#include <QGraphicsView>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QList>
-#include <QMainWindow>
-#include <QMenu>
-#include <QMessageBox>
-#include <QMouseEvent>
-#include <QPair>
-#include <QPushButton>
-#include <QTextEdit>
-#include <QTimer>
-#include <QVBoxLayout>
-#include <QVector>
-
+#include <memory>
+#include <romhack_b3313_cartography/utils/qt_includes.hpp>
+#include "MainWindowUpdateThread.hpp"
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
   public:
     MainWindow();
+    ~MainWindow();
 
   protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -110,5 +91,6 @@ class MainWindow : public QMainWindow {
     const int WIDTH = 1280;
     const int HEIGHT = 720;
     std::wstring global_detected_emulator;
+    std::unique_ptr<MainWindowUpdateThread> thread;
 };
 #endif // MAIN_WINDOW_H
