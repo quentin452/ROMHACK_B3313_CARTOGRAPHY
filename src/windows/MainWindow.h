@@ -32,7 +32,6 @@ class MainWindow : public QMainWindow {
     MainWindow();
     ~MainWindow();
 
-    static bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
     static void addConnectionToScene(int startNodeIndex, int endNodeIndex);
     static std::wstring global_detected_emulator;
     static QLabel *emulatorText, *b3313Text;
@@ -48,7 +47,6 @@ class MainWindow : public QMainWindow {
     static QVector<Node *> nodes;
     static QVector<QPair<int, int>> connections;
     static QGraphicsScene *graphicsScene;
-    static bool dragging;
 
   protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -59,8 +57,6 @@ class MainWindow : public QMainWindow {
 
     void mousePressEvent(QMouseEvent *event) override;
 
-    void mouseMoveEvent(QMouseEvent *event) override;
-    void mouseReleaseEvent(QMouseEvent *event) override;
   private slots:
     void removeConnections();
     void saveNodes();
@@ -78,6 +74,7 @@ class MainWindow : public QMainWindow {
     void parseJsonData(const QJsonArray &jsonArray);
     void updateDisplay();
     void printWidgetOrder();
+    bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
 
     QPointF startPos;
     QJsonObject lastJsonData;

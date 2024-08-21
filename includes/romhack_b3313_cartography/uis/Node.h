@@ -19,7 +19,6 @@ class Node : public QGraphicsEllipseItem {
     void removeConnection(int nodeIndex);
     const QVector<int> &getConnections() const { return connections; }
     QVector<int> connections;
-    QRectF boundingRect() const override;
     void updateStar();
     void setPosition(float x, float y);
 

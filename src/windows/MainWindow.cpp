@@ -17,7 +17,6 @@ bool MainWindow::shiftPressed = false;
 int MainWindow::startNodeIndex = -1;
 QVector<QPair<int, int>> MainWindow::connections;
 QGraphicsScene *MainWindow::graphicsScene = nullptr;
-bool MainWindow::dragging = false;
 MainWindow::MainWindow() {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
@@ -55,14 +54,15 @@ MainWindow::MainWindow() {
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
     thread->start();
-    // Chargement des données JSON
-    loadJsonData(b33_13_mind_map_str);
     // Configuration des propriétés de la scène
     QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
     QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajout d'une marge
     graphicsScene->setSceneRect(adjustedSceneRect);
     // Initialisation du widget de l'affichage des étoiles
     star_display_mainLayout = layout; // Use the existing layout
+
+    // Chargement des données JSON
+    loadJsonData(b33_13_mind_map_str);
 
     // Set focus policy
     setFocusPolicy(Qt::StrongFocus);
@@ -75,7 +75,7 @@ MainWindow::MainWindow() {
 
     // Enable mouse tracking
     setMouseTracking(true);
-    graphicsView->setMouseTracking(true); 
+    graphicsView->setMouseTracking(true);
     // graphicsScene->setMouseTracking(this);
 
     layout->setSpacing(10);
@@ -120,7 +120,6 @@ void MainWindow::textUpdate() {
 void MainWindow::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Shift && !shiftPressed) {
         shiftPressed = true;
-        dragging = false;
         setNodesMovable(false); // Désactive le déplacement des nœuds
     }
 }
@@ -151,7 +150,6 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         int nodeIndex;
         if (isMouseOverNode(startPos, nodeIndex)) {
             startNodeIndex = nodeIndex;
-            dragging = true;
         }
     }
 #ifdef DEBUG
@@ -177,37 +175,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     }
 #endif
 }
-void MainWindow::mouseMoveEvent(QMouseEvent *event) {
-    if (shiftPressed && dragging && startNodeIndex != -1) {
-        QPointF mousePos = graphicsView->mapToScene(event->pos());
-        Node *startNode = nodes[startNodeIndex];
-        QLineF line(startNode->pos(), mousePos);
-        currentArrow = new QGraphicsLineItem(line);
-        currentArrow->setPen(QPen(Qt::black, 2, Qt::SolidLine, Qt::RoundCap));
-        graphicsScene->addItem(currentArrow);
-    }
-}
-void MainWindow::mouseReleaseEvent(QMouseEvent *event) {
-    if (shiftPressed && event->button() == Qt::LeftButton && dragging) {
-        QPointF mousePos = graphicsView->mapToScene(event->pos());
-        int endNodeIndex;
-        if (isMouseOverNode(mousePos, endNodeIndex) && endNodeIndex != startNodeIndex) {
-            qDebug() << "End Node Index:" << endNodeIndex;
-            if (startNodeIndex >= 0 && startNodeIndex < nodes.size() &&
-                endNodeIndex >= 0 && endNodeIndex < nodes.size()) {
-                connections.push_back(QPair<int, int>(startNodeIndex, endNodeIndex));
-                nodes[startNodeIndex]->addConnection(endNodeIndex);
-                nodes[endNodeIndex]->addConnection(startNodeIndex);
-                updateDisplay();
-            } else {
-                qDebug() << "Invalid node index in connections.";
-            }
-        } else {
-            qDebug() << "No valid end node detected.";
-        }
-        dragging = false;
-    }
-}
+
 void MainWindow::removeConnections() {
     if (rightClickedNodeIndex != -1) {
         if (rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {

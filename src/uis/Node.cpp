@@ -58,9 +58,6 @@ void Node::addConnection(int nodeIndex) {
 void Node::removeConnection(int nodeIndex) {
     connections.removeAll(nodeIndex);
 }
-QRectF Node::boundingRect() const {
-    return QGraphicsEllipseItem::boundingRect(); // Utilise le rectangle de l'ellipse
-}
 
 void Node::updateStar() {
     if (starItem) {
