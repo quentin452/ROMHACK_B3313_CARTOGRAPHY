@@ -17,6 +17,7 @@ bool MainWindow::shiftPressed = false;
 int MainWindow::startNodeIndex = -1;
 QVector<QPair<int, int>> MainWindow::connections;
 QGraphicsScene *MainWindow::graphicsScene = nullptr;
+QGraphicsLineItem *MainWindow::preDrawLineItem = nullptr;
 MainWindow::MainWindow() {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
@@ -142,36 +143,36 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         int nodeIndex;
         if (isMouseOverNode(mousePos, nodeIndex)) {
             rightClickedNodeIndex = nodeIndex;
+            qDebug() << "Right click on node index:" << nodeIndex;
             contextMenu->exec(QCursor::pos());
         }
     }
     if (shiftPressed && event->button() == Qt::LeftButton) {
         startPos = graphicsView->mapToScene(event->pos());
+        qDebug() << "Left click with shift at scene position:" << startPos;
         int nodeIndex;
         if (isMouseOverNode(startPos, nodeIndex)) {
             startNodeIndex = nodeIndex;
+            qDebug() << "Start node index set to:" << startNodeIndex;
         }
     }
 #ifdef DEBUG
     if (!shiftPressed && event->button() == Qt::RightButton) {
         QPoint viewPos = event->pos();
-        // Obtenir les coordonnées de la scène en tenant compte des transformations de la vue
         QPointF scenePos = graphicsView->mapToScene(viewPos);
-        // Vérifiez que les coordonnées de la scène sont valides
+        qDebug() << "Creating new node at scene position:" << scenePos;
         if (scenePos.x() < 0 || scenePos.y() < 0) {
             qDebug() << "Invalid scene coordinates, skipping node creation.";
             return;
         }
-        // Crée un nouveau nœud à la position de la souris
         Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font());
-        // Vérifiez la position du nœud après sa création
         QPointF nodePos = newNode->pos();
-        // Vérifiez les dimensions et la position du nœud
         QRectF nodeRect = newNode->boundingRect();
-        // Ajoutez le nœud à la scène
         newNode->setModified(true);
         graphicsScene->addItem(newNode);
         nodes.append(newNode);
+
+        qDebug() << "New node created at position:" << nodePos << "with rect:" << nodeRect;
     }
 #endif
 }

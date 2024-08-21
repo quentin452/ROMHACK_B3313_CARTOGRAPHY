@@ -47,6 +47,7 @@ class MainWindow : public QMainWindow {
     static QVector<Node *> nodes;
     static QVector<QPair<int, int>> connections;
     static QGraphicsScene *graphicsScene;
+    static QGraphicsLineItem *preDrawLineItem;
 
   protected:
     void keyPressEvent(QKeyEvent *event) override;
