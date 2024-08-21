@@ -8,94 +8,51 @@ QString b33_13_mind_map_str = "stars_layout/b3313-V1.0.2/b3313-v1.0.2-Mind_map.j
 MainWindow::MainWindow() {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
-
     // Initialisation des objets graphiques
     emulatorText = new QGraphicsTextItem("Emulator Status");
     b3313Text = new QGraphicsTextItem("B3313 V1.0.2 Status");
-
     // Initialisation de la vue graphique et de la scène
     graphicsView = new QGraphicsView(this);
     graphicsScene = new QGraphicsScene(this);
     graphicsView->setScene(graphicsScene);
-
     // Initialisation du widget central et du layout
-    QWidget *centralWidget = new QWidget(this);
-    QVBoxLayout *layout = new QVBoxLayout(centralWidget);
-    setCentralWidget(centralWidget);
-
+    centralWidgetZ = new QWidget(this);
+    QVBoxLayout *layout = new QVBoxLayout(centralWidgetZ);
+    setCentralWidget(centralWidgetZ);
     // Ajout de la vue graphique et des boutons au layout
     layout->addWidget(graphicsView);
     saveButton = new QPushButton("Save", this);
     switchViewButton = new QPushButton("Switch View", this);
     layout->addWidget(saveButton);
     layout->addWidget(switchViewButton);
-
     // Connexion des boutons aux slots correspondants
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveNodes);
     connect(switchViewButton, &QPushButton::clicked, this, &MainWindow::toggleStarDisplay);
-
-    // Initialisation du menu déroulant et du menu contextuel
-    dropdownMenu = new QComboBox(this);
-    dropdownMenu->addItems({"b3313-v1.0.2.json"});
-    layout->addWidget(dropdownMenu);
-
     contextMenu = new QMenu(this);
     QAction *removeConnectionsAction = new QAction("Remove Connections", this);
     connect(removeConnectionsAction, &QAction::triggered, this, &MainWindow::removeConnections);
     contextMenu->addAction(removeConnectionsAction);
-
-    // Connexion du menu déroulant pour charger les nœuds
-    connect(dropdownMenu, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index) {
-        QString selectedFile = dropdownMenu->itemText(index);
-        if (!selectedFile.isEmpty()) {
-            QFont font = this->font();
-            mind_map_nodes = loadNodes(b33_13_mind_map_str, font);
-        }
-    });
-
     // Initialisation des objets graphiques
     graphicsScene->addItem(emulatorText);
     graphicsScene->addItem(b3313Text);
     b3313Text->hide();
     emulatorText->hide();
-
     // Initialisation et démarrage du thread de mise à jour
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
     thread->start();
-
     // Chargement des données JSON
     loadJsonData(b33_13_mind_map_str);
-
     // Configuration des propriétés de la scène
     QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
     QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajout d'une marge
     graphicsScene->setSceneRect(adjustedSceneRect);
-
     // Initialisation du widget de l'affichage des étoiles
-    star_display_centralWidget = new QWidget(this);
-    star_display_mainLayout = new QVBoxLayout(star_display_centralWidget);
-    star_display_centralWidget->setLayout(star_display_mainLayout);
-
+    star_display_mainLayout = layout; // Use the existing layout
     setMouseTracking(true);
     graphicsView->setMouseTracking(true);
-
     layout->setSpacing(10);
     layout->setContentsMargins(10, 10, 10, 10);
-    stackedWidget = new QStackedWidget(this);
-
-    // Initialisation du widget central avec QStackedWidget
-    QWidget *mainWidget = new QWidget(this);
-    QVBoxLayout *mainLayout = new QVBoxLayout(mainWidget);
-    mainLayout->addWidget(graphicsView);
-    mainLayout->addWidget(saveButton);
-    mainLayout->addWidget(switchViewButton);
-    mainLayout->addWidget(dropdownMenu);
-
-    stackedWidget->addWidget(mainWidget);                 // Ajouter la vue principale
-    stackedWidget->addWidget(star_display_centralWidget); // Ajouter la vue des étoiles
-
-    setCentralWidget(stackedWidget);
     textUpdate();
 }
 
@@ -108,14 +65,12 @@ MainWindow::~MainWindow() {
 void MainWindow::textUpdate() {
     bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
     bool romLoaded = isRomHackLoaded(global_detected_emulator);
-
     if (emulatorText) {
         emulatorText->setPlainText(emulatorRunning ? "Emulator Running" : "Emulator Not Running");
         emulatorText->setDefaultTextColor(emulatorRunning ? Qt::green : Qt::black);
     } else {
         qWarning() << "emulatorText is null!";
     }
-
     if (b3313Text) {
         b3313Text->setPlainText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
         b3313Text->setDefaultTextColor(romLoaded ? Qt::green : Qt::black);
@@ -146,7 +101,6 @@ void MainWindow::setNodesMovable(bool movable) {
 void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (event->button() == Qt::RightButton) {
         QPointF mousePos = graphicsView->mapToScene(event->pos());
-        qDebug() << "Right Button Clicked at Scene Position:" << mousePos; // Afficher la position de la souris
         int nodeIndex;
         if (isMouseOverNode(mousePos, nodeIndex)) {
             rightClickedNodeIndex = nodeIndex;
@@ -155,36 +109,28 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     }
     if (shiftPressed && event->button() == Qt::LeftButton) {
         startPos = graphicsView->mapToScene(event->pos());
-        qDebug() << "Shift + Left Button Clicked at Scene Position:" << startPos; // Afficher la position de la souris
         int nodeIndex;
         if (isMouseOverNode(startPos, nodeIndex)) {
             startNodeIndex = nodeIndex;
             dragging = true;
-            qDebug() << "Start Node Index:" << startNodeIndex; // Débogage
         }
     }
 #ifdef DEBUG
     if (!shiftPressed && event->button() == Qt::RightButton) {
         QPoint viewPos = event->pos();
-
         // Obtenir les coordonnées de la scène en tenant compte des transformations de la vue
         QPointF scenePos = graphicsView->mapToScene(viewPos);
-
         // Vérifiez que les coordonnées de la scène sont valides
         if (scenePos.x() < 0 || scenePos.y() < 0) {
             qDebug() << "Invalid scene coordinates, skipping node creation.";
             return;
         }
-
         // Crée un nouveau nœud à la position de la souris
         Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font());
-
         // Vérifiez la position du nœud après sa création
         QPointF nodePos = newNode->pos();
-
         // Vérifiez les dimensions et la position du nœud
         QRectF nodeRect = newNode->boundingRect();
-
         // Ajoutez le nœud à la scène
         newNode->setModified(true);
         graphicsScene->addItem(newNode);
@@ -268,34 +214,65 @@ void MainWindow::saveNodes() {
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
     if (showStarDisplay) {
-        stackedWidget->setCurrentWidget(star_display_centralWidget);
-        emulatorText->hide();
-        b3313Text->hide();
+        QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
+        if (tabWidget) 
+            tabWidget->show();
+        // Masquer les éléments de la vue graphique principale
+        graphicsView->hide();
+        saveButton->hide();
+        // Afficher les textes et les éléments du layout des étoiles
+        QRectF sceneBoundingRect = graphicsView->rect();
+        graphicsScene->setSceneRect(sceneBoundingRect);
+        if (emulatorText)
+            emulatorText->show();
+        if (b3313Text)
+            b3313Text->show();
         for (Node *node : nodes) {
             if (node) {
                 node->hide();
             }
         }
+        // Appel pour afficher les étoiles
+        QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
+        displayStars(jsonData);
     } else {
-        stackedWidget->setCurrentWidget(graphicsView->parentWidget());
-        b3313Text->show();
-        emulatorText->show();
+        // Masquez le tabWidget s'il existe
+        QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
+        if (tabWidget)
+            tabWidget->hide();
+        // Vous pouvez aussi supprimer tous les onglets si nécessaire
+        if (tabWidget) {
+            while (tabWidget->count() > 0) {
+                QWidget *tabContent = tabWidget->widget(0);
+                tabWidget->removeTab(0);
+                delete tabContent;
+            }
+        }
+        // Réafficher les éléments de la vue graphique principale
+        graphicsView->show();
+        // Masquer les textes et les éléments du layout des étoiles
+        b3313Text->hide();
+        emulatorText->hide();
         for (Node *node : nodes) {
             if (node) {
                 node->show();
             }
         }
+        QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
+        QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000);
+        graphicsScene->setSceneRect(adjustedSceneRect);
+        QVBoxLayout *layout = star_display_mainLayout;
+        // Retirer les boutons de leur position actuelle
+        layout->removeWidget(switchViewButton);
+        layout->removeWidget(saveButton);
+        // Ajouter saveButton avant switchViewButton
+        layout->addWidget(saveButton);
+        layout->addWidget(switchViewButton);
+        saveButton->show();
+        switchViewButton->show();
     }
 }
-void MainWindow::setupStarDisplay() {
-    stackedWidget->setCurrentWidget(star_display_centralWidget);
-    updateDisplay();
-}
 
-void MainWindow::setupMainView() {
-    stackedWidget->setCurrentWidget(graphicsView->parentWidget());
-    textUpdate();
-}
 void MainWindow::closeEvent(QCloseEvent *event) {
     if (isModified()) {
         auto resBtn = QMessageBox::question(this, "Mind Map Example",
@@ -356,7 +333,6 @@ void MainWindow::parseJsonData(const QJsonArray &jsonArray) {
     nodes.clear();
     connections.clear();
     QFont defaultFont("Arial", 12, QFont::Bold); // Default font settings
-
     for (const QJsonValue &value : jsonArray) {
         if (!value.isObject()) {
             qWarning() << "Invalid node format.";
@@ -369,25 +345,19 @@ void MainWindow::parseJsonData(const QJsonArray &jsonArray) {
             qWarning() << "Node data is incomplete or invalid.";
             continue;
         }
-
         qreal x = nodeObj["x"].toDouble();
         qreal y = nodeObj["y"].toDouble();
         QString label = nodeObj["text"].toString();
-
         // Get font size from JSON, default to defaultFont size if not present
         int fontSize = defaultFont.pointSize(); // Default size
-        if (nodeObj.contains("font_size") && nodeObj["font_size"].isDouble()) {
+        if (nodeObj.contains("font_size") && nodeObj["font_size"].isDouble()) 
             fontSize = nodeObj["font_size"].toInt();
-        }
-
         QFont font = defaultFont;
         font.setPointSize(fontSize);
-
         Node *node = new Node(x, y, label, font);
         graphicsScene->addItem(node);
         nodes.append(node);
     }
-
     if (jsonArray.size() > 1) {                         // Ensure jsonArray contains the connections
         QJsonObject jsonData = jsonArray[1].toObject(); // Assuming connections are in the second element
         QJsonArray connectionArray = jsonData["connections"].toArray();
@@ -409,13 +379,11 @@ void MainWindow::onTimerUpdate() {
 }
 
 void MainWindow::updateDisplay() {
-    // Add nodes and texts
     if (showStarDisplay) {
         textUpdate();
         QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
         displayStars(jsonData);
     } else {
-        // Draw connections
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
                 conn.second >= 0 && conn.second < nodes.size()) {
@@ -425,7 +393,6 @@ void MainWindow::updateDisplay() {
                     qWarning() << "Invalid node pointers for connection:" << conn;
                     continue;
                 }
-                qDebug() << "Drawing line from node" << conn.first << "to node" << conn.second;
                 QGraphicsLineItem *lineItem = new QGraphicsLineItem(startNode->x(), startNode->y(), endNode->x(), endNode->y());
                 lineItem->setPen(QPen(Qt::black));
                 graphicsScene->addItem(lineItem);
@@ -441,24 +408,18 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         if (!tabWidget) {
             tabWidget = new QTabWidget(this);
             tabWidget->setObjectName("tabWidget"); // Donnez un nom au widget pour le retrouver plus tard
-
-            if (star_display_mainLayout->indexOf(tabWidget) == -1) {
+            if (star_display_mainLayout->indexOf(tabWidget) == -1) 
                 star_display_mainLayout->addWidget(tabWidget);
-            }
         }
-
         emulatorText->hide();
         b3313Text->hide();
         std::string saveLocation = GetParallelLauncherSaveLocation();
-        std::cerr << "Save location: " << saveLocation << std::endl;
-
         if (!jsonData.contains("format") || !jsonData["format"].toObject().contains("save_type") ||
             !jsonData["format"].toObject().contains("slots_start") || !jsonData["format"].toObject().contains("slot_size") ||
             !jsonData["format"].toObject().contains("active_bit") || !jsonData["format"].toObject().contains("checksum_offset")) {
             std::cerr << "Erreur: Les paramètres de sauvegarde sont manquants dans le JSON." << std::endl;
             return;
         }
-
         QJsonObject format = jsonData["format"].toObject();
         SaveParams params;
         params.saveFormat = parseSaveFormat(format["save_type"].toString().toStdString());
@@ -467,13 +428,11 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         params.activeBit = format["active_bit"].toInt();
         params.numSlots = format["num_slots"].toInt();
         params.checksumOffset = format["checksum_offset"].toInt();
-
         auto saveData = ReadSrmFile(saveLocation, params);
         if (saveData.empty()) {
             std::cerr << "Erreur: Les données de sauvegarde sont vides." << std::endl;
             return;
         }
-
         int numSlots = params.numSlots;
         if (numSlots <= 0) {
             std::cerr << "Erreur: Nombre de slots invalide." << std::endl;
@@ -483,18 +442,12 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         for (int i = 1; i <= numSlots; ++i) {
             tabNames.append("Mario " + QString::number(i));
         }
-
-        int yOffset = 0;
-        int reservedHeight = 0; // Ajouté pour stocker la hauteur réservée
-
+        int yOffset = reservedHeight = 0;
         for (int i = 0; i < numSlots; ++i) {
             QString tabName = tabNames[i];
             QWidget *tabContent = nullptr;
-
-            // Vérifiez si l'onglet existe déjà
             if (tabWidget->count() > i) {
                 tabContent = tabWidget->widget(i);
-                // Supprimez les anciens widgets de l'onglet
                 QLayoutItem *child;
                 while ((child = tabContent->layout()->takeAt(0)) != nullptr) {
                     delete child->widget();
@@ -504,19 +457,16 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                 tabContent = new QWidget();
                 tabWidget->addTab(tabContent, tabName);
             }
-
             QVBoxLayout *layout = qobject_cast<QVBoxLayout *>(tabContent->layout());
             if (!layout) {
                 layout = new QVBoxLayout(tabContent);
                 tabContent->setLayout(layout);
             }
-
             QLabel *tabLabel = new QLabel(tabName, tabContent);
             QFont font = this->font();
             tabLabel->setFont(font);
             tabLabel->setStyleSheet("color: black;");
             layout->addWidget(tabLabel);
-
             for (const auto &groupValue : jsonData["groups"].toArray()) {
                 QJsonObject group = groupValue.toObject();
                 if (!group.contains("name") || !group.contains("courses")) {
@@ -524,9 +474,7 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                     continue;
                 }
                 QString groupName = group["name"].toString();
-
                 QMap<QString, QVector<StarData>> courseStarsMap;
-
                 for (const auto &courseValue : group["courses"].toArray()) {
                     QJsonObject course = courseValue.toObject();
                     if (!course.contains("name") || !course.contains("data")) {
@@ -534,14 +482,12 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                         continue;
                     }
                     QString courseName = course["name"].toString();
-
                     QVector<StarData> &courseStarList = courseStarsMap[courseName];
                     for (const auto &dataValue : course["data"].toArray()) {
                         QJsonObject data = dataValue.toObject();
                         int offset = data["offset"].toInt();
                         int mask = data["mask"].toInt();
                         int numStars = 1;
-
                         for (int bit = 0; bit < 32; ++bit) {
                             if (mask & (1 << bit)) {
                                 bool star_collected = isStarCollected(saveData, offset, bit, i, params.slotSize);
@@ -561,10 +507,6 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                 layout->addWidget(pixmapLabel);
             }
         }
-        if (!star_display_centralWidget->layout())
-            star_display_centralWidget->setLayout(star_display_mainLayout);
-        //if (centralWidget() != star_display_centralWidget)
-        //    setCentralWidget(star_display_centralWidget);
     } else {
         emulatorText->show();
         b3313Text->show();
@@ -580,22 +522,5 @@ bool MainWindow::isMouseOverNode(const QPointF &mousePos, int &nodeIndex) {
         }
     }
     return false;
-}
-QVector<Node *> MainWindow::loadNodes(const QString &filename, QFont &font) {
-    QVector<Node *> nodes;
-    QFile file(filename);
-    if (!file.open(QIODevice::ReadOnly))
-        return nodes;
-    QByteArray fileData = file.readAll();
-    QJsonDocument jsonDoc(QJsonDocument::fromJson(fileData));
-    QJsonArray jsonArray = jsonDoc.array();
-    for (const QJsonValue &value : jsonArray) {
-        if (value.isObject()) {
-            QJsonObject jsonObject = value.toObject();
-            Node *node = new Node(Node::fromJson(jsonObject, font)); // Create a new Node object
-            nodes.push_back(node);                                   // Add pointer to vector
-        }
-    }
-    return nodes;
 }
 #include "MainWindow.moc"

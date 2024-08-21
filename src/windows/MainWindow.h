@@ -58,12 +58,9 @@ class MainWindow : public QMainWindow {
     QJsonObject loadJsonData2(const QString &filePath);
     void parseJsonData(const QJsonArray &jsonArray);
     void updateDisplay();
-    void setupStarDisplay();
-    void setupMainView();
     void displayStars(const QJsonObject &jsonData);
 
     bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
-    QVector<Node *> loadNodes(const QString &filename, QFont &font);
     QGraphicsView *graphicsView;
     QGraphicsScene *graphicsScene;
     QVector<Node *> nodes;
@@ -78,7 +75,6 @@ class MainWindow : public QMainWindow {
     QList<Node *> mind_map_nodes;
     QGraphicsTextItem *emulatorText = nullptr;
     QGraphicsTextItem *b3313Text = nullptr;
-    QComboBox *dropdownMenu = nullptr;
     QPushButton *saveButton = nullptr;
     QPushButton *switchViewButton = nullptr;
     QTimer *updateTimer = nullptr;
@@ -94,5 +90,6 @@ class MainWindow : public QMainWindow {
     QWidget *star_display_centralWidget;
     QVBoxLayout *star_display_mainLayout;
     QStackedWidget *stackedWidget;
+    QWidget *centralWidgetZ;
 };
 #endif // MAIN_WINDOW_H
