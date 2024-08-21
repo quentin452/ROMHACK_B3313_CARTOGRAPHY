@@ -286,15 +286,13 @@ void MainWindow::toggleStarDisplay() {
         graphicsScene->setSceneRect(adjustedSceneRect);
         QVBoxLayout *layout = star_display_mainLayout;
         // Retirer saveButton s'il est présent
-        if (layout->indexOf(saveButton) != -1) {
+        if (layout->indexOf(saveButton) != -1) 
             layout->removeWidget(saveButton);
-        }
         // Ajouter saveButton avant switchViewButton
         layout->addWidget(saveButton);
         // Retirer switchViewButton s'il est présent
-        if (layout->indexOf(switchViewButton) != -1) {
+        if (layout->indexOf(switchViewButton) != -1) 
             layout->removeWidget(switchViewButton);
-        }
         layout->addWidget(switchViewButton);
         saveButton->show();
         switchViewButton->show();
