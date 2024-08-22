@@ -42,7 +42,7 @@ MainWindow::MainWindow(QWidget *parent)
     thread->start();
     QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
     QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000);
-    graphicsScene->setSceneRect(adjustedSceneRect); 
+    graphicsScene->setSceneRect(adjustedSceneRect);
     QPointF sceneCenter = adjustedSceneRect.center();
     graphicsView->centerOn(sceneCenter);
     star_display_mainLayout = layout;
@@ -215,10 +215,8 @@ void MainWindow::renameSelectedNode() {
     } else {
         qDebug() << "Invalid node index in renameSelectedNode.";
     }
-    if (isShiftPressed()) {
-        simulateKeyPress(Qt::Key_Shift);
-        simulateKeyRelease(Qt::Key_Shift);
-    }
+    simulateKeyPress(Qt::Key_Shift);
+    simulateKeyRelease(Qt::Key_Shift);
 }
 
 void MainWindow::changeNodeShape() {
@@ -237,11 +235,8 @@ void MainWindow::changeNodeShape() {
         };
         showDialog(tr("Shape:"), comboBox, onAccept);
     }
-
-    if (isShiftPressed()) {
-        simulateKeyPress(Qt::Key_Shift);
-        simulateKeyRelease(Qt::Key_Shift);
-    }
+    simulateKeyPress(Qt::Key_Shift);
+    simulateKeyRelease(Qt::Key_Shift);
 }
 
 void MainWindow::saveNodes() {
@@ -346,10 +341,10 @@ void MainWindow::updateDisplay() {
                 graphicsScene->addItem(lineItem);
                 QLineF line(startEdgePoint, endEdgePoint);
                 double angle = std::atan2(-line.dy(), line.dx());
-                QPointF arrowP1 = line.p2() - QPointF(std::sin(angle + M_PI / 3) * 10, std::cos(angle + M_PI / 3) * 10);
-                QPointF arrowP2 = line.p2() - QPointF(std::sin(angle + M_PI - M_PI / 3) * 10, std::cos(angle + M_PI - M_PI / 3) * 10);
+                QPointF arrowP1 = endEdgePoint - QPointF(std::sin(angle + M_PI / 3) * 10, std::cos(angle + M_PI / 3) * 10);
+                QPointF arrowP2 = endEdgePoint - QPointF(std::sin(angle + M_PI - M_PI / 3) * 10, std::cos(angle + M_PI - M_PI / 3) * 10);
                 QPolygonF arrowHead;
-                arrowHead << line.p2() << arrowP1 << arrowP2;
+                arrowHead << endEdgePoint << arrowP1 << arrowP2;
                 QGraphicsPolygonItem *arrowItem = new QGraphicsPolygonItem(arrowHead);
                 arrowItem->setBrush(Qt::black);
                 graphicsScene->addItem(arrowItem);

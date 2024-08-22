@@ -33,14 +33,20 @@ void Node::setName(const QString &name) {
 void Node::adjustNodeSize() {
     if (labelItem) {
         QRectF textRect = labelItem->boundingRect();
-        float padding = 10.0;
-        float width = textRect.width() + padding;
-        float height = textRect.height() + padding;
+        float padding = 10.0, width = textRect.width() + padding, height = textRect.height() + padding;
         prepareGeometryChange();
-        setRect(-width / 2, -height / 2, width, height);
-        labelItem->setPos(-textRect.width() / 2, -textRect.height() / 2);
+        if (shape == Triangle) {
+            float triangleHeight = height * sqrt(3) / 2;
+            float triangleWidth = width * sqrt(3);
+            setRect(-triangleWidth / 2, -triangleHeight / 2, triangleWidth, triangleHeight);
+            labelItem->setPos(-textRect.width() / 2, -textRect.height() / 2 + 5);
+        } else {
+            setRect(-width / 2, -height / 2, width, height);
+            labelItem->setPos(-textRect.width() / 2, -textRect.height() / 2);
+        }
     }
 }
+
 void Node::setColor(const QColor &color) {
     this->color = color;
     setBrush(color);
@@ -74,8 +80,6 @@ void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWid
         break;
     }
     }
-    if (labelItem)
-        labelItem->setPos(-labelItem->boundingRect().width() / 2, -labelItem->boundingRect().height() / 2);
 }
 QString Node::shapeToString(NodeShapes shape) const {
     switch (shape) {

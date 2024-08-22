@@ -25,6 +25,7 @@ class Node : public QGraphicsEllipseItem {
 
     QList<int> connections;
     NodeShapes shape;
+    QGraphicsTextItem *labelItem;
 
   protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
@@ -38,6 +39,5 @@ class Node : public QGraphicsEllipseItem {
     QColor color;
     QString m_name;
     bool modified;
-    QGraphicsTextItem *labelItem;
     QList<QGraphicsPixmapItem *> starItems;
 };
