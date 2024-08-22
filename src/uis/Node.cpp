@@ -6,56 +6,50 @@ Node::Node(float x, float y, const QString &text, const QFont &font)
     setBrush(color);
     setPen(QPen(Qt::cyan));
     setFlag(ItemIsMovable);
-
-    // Positionne le nœud au centre de la position souhaitée
     setPos(x, y);
-
-    // Initialisation du texte
     labelItem = new QGraphicsTextItem(label, this);
     labelItem->setFont(font);
-    // Positionne le texte pour qu'il soit centré par rapport à l'ellipse
     labelItem->setPos(-labelItem->boundingRect().width() / 2, -labelItem->boundingRect().height() / 2);
 }
 
-void Node::setPosition(float x, float y) {
-    modified = true;
-    setPos(x, y);
+void Node::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
+    QGraphicsEllipseItem::mouseReleaseEvent(event);
+    if (flags() & ItemIsMovable)
+        setModified(true);
 }
 
 void Node::setMovable(bool movable) {
-    setFlag(ItemIsMovable, movable); // Définit le drapeau ItemIsMovable en fonction du paramètre
+    setFlag(ItemIsMovable, movable);
 }
+
 void Node::setColor(const QColor &color) {
     this->color = color;
-    setBrush(color); // Met à jour la brosse avec la nouvelle couleur
-    update();        // Repeint l'élément graphique
+    setBrush(color);
+    update();
 }
+
 QJsonObject Node::toJson() const {
     QJsonObject json;
     json["x"] = pos().x();
     json["y"] = pos().y();
     json["text"] = label;
-    json["font_size"] = font.pointSize(); // Sauvegarder la taille de la police
+    json["font_size"] = font.pointSize();
     QJsonArray connectionsArray;
     for (int conn : connections) {
         connectionsArray.append(conn);
     }
-    json["connections"] = connectionsArray; // Sauvegarder les connexions
+    json["connections"] = connectionsArray;
     return json;
 }
-Node* Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
+
+Node *Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
     float x = json["x"].toDouble();
     float y = json["y"].toDouble();
     QString text = json["text"].toString();
-
     QFont font = defaultFont;
     int fontSize = json["font_size"].toInt(font.pointSize());
     font.setPointSize(fontSize);
-
-    // Créez une nouvelle instance de Node
-    Node* node = new Node(x, y, text, font);
-
-    // Charger les connexions
+    Node *node = new Node(x, y, text, font);
     if (json.contains("connections") && json["connections"].isArray()) {
         QJsonArray connectionsArray = json["connections"].toArray();
         for (const QJsonValue &value : connectionsArray) {
@@ -64,7 +58,6 @@ Node* Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
             }
         }
     }
-
     return node;
 }
 
@@ -77,22 +70,30 @@ void Node::removeConnection(int nodeIndex) {
     connections.removeAll(nodeIndex);
 }
 
-void Node::updateStar() {
-    if (starItem) {
-        delete starItem;
-        starItem = nullptr;
+void Node::setModified(bool modified) {
+    this->modified = modified;
+    updateIsModified();
+}
+
+void Node::updateIsModified() {
+    for (QGraphicsPixmapItem *starItem : starItems) {
+        if (scene() && scene()->items().contains(starItem)) {
+            delete starItem;
+        }
     }
+    starItems.clear();
     if (modified) {
         QPixmap starPixmap("resources/textures/star-collected.png");
         if (starPixmap.isNull()) {
             qDebug() << "Failed to load star image.";
             return;
         }
-        starItem = new QGraphicsPixmapItem(starPixmap, this);
+        QGraphicsPixmapItem *starItem = new QGraphicsPixmapItem(starPixmap, this);
         if (starItem) {
-            QPointF starPos = boundingRect().topRight() - QPointF(starPixmap.width(), 0);
+            starItem->setScale(1.0 / 2.0);
+            QPointF starPos = boundingRect().topRight() - QPointF(starPixmap.width() / 3.0, 0);
             starItem->setPos(starPos);
-            qDebug() << "Star position:" << starPos;
+            starItems.append(starItem);
         } else {
             qDebug() << "Failed to create QGraphicsPixmapItem.";
         }

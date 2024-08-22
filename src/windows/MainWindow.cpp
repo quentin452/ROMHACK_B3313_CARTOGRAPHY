@@ -163,7 +163,6 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (!shiftPressed && event->button() == Qt::RightButton) {
         QPoint viewPos = event->pos();
         QPointF scenePos = graphicsView->mapToScene(viewPos);
-        qDebug() << "Creating new node at scene position:" << scenePos;
         if (scenePos.x() < 0 || scenePos.y() < 0) {
             qDebug() << "Invalid scene coordinates, skipping node creation.";
             return;
@@ -174,8 +173,6 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         newNode->setModified(true);
         graphicsScene->addItem(newNode);
         nodes.append(newNode);
-
-        qDebug() << "New node created at position:" << nodePos << "with rect:" << nodeRect;
     }
 #endif
 }
@@ -211,6 +208,7 @@ void MainWindow::saveNodes() {
     QJsonArray jsonArray;
     for (const auto &nodePtr : nodes) {
         jsonArray.append(nodePtr->toJson());
+        nodePtr->setModified(false);
     }
 
     // Ajouter les connexions en tant que tableau JSON
@@ -328,8 +326,10 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 
 bool MainWindow::isModified() const {
     for (const auto &node : nodes) {
-        if (node->isModified())
+        if (node->isModified()) {
+            node->updateIsModified();
             return true;
+        }
     }
     return false;
 }
@@ -417,6 +417,7 @@ void MainWindow::onTimerUpdate() {
 }
 
 void MainWindow::updateDisplay() {
+    isModified();
     if (showStarDisplay) {
         textUpdate();
         QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
@@ -428,6 +429,9 @@ void MainWindow::updateDisplay() {
             if (QGraphicsLineItem *lineItem = dynamic_cast<QGraphicsLineItem *>(item)) {
                 graphicsScene->removeItem(lineItem);
                 delete lineItem;
+            } else if (QGraphicsPolygonItem *polygonItem = dynamic_cast<QGraphicsPolygonItem *>(item)) {
+                graphicsScene->removeItem(polygonItem);
+                delete polygonItem;
             }
         }
 
@@ -466,6 +470,7 @@ void MainWindow::updateDisplay() {
             }
         }
     }
+    isModified();
 }
 
 bool MainWindow::isMouseOverNode(const QPointF &mousePos, int &nodeIndex) {
@@ -478,7 +483,6 @@ bool MainWindow::isMouseOverNode(const QPointF &mousePos, int &nodeIndex) {
             return true;
         }
     }
-    qDebug() << "Mouse is not over any node.";
     return false;
 }
 #include "MainWindow.moc"

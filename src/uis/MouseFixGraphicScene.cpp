@@ -54,6 +54,8 @@ void MouseFixGraphicScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
                     MainWindow::connections.push_back(QPair<int, int>(MainWindow::startNodeIndex, endNodeIndex));
                     MainWindow::nodes[MainWindow::startNodeIndex]->addConnection(endNodeIndex);
                     MainWindow::nodes[endNodeIndex]->addConnection(MainWindow::startNodeIndex);
+                    MainWindow::nodes[MainWindow::startNodeIndex]->setModified(true);
+                    MainWindow::nodes[endNodeIndex]->setModified(true);
                 }
             }
             MainWindow::startNodeIndex = -1;
