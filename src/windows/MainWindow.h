@@ -74,6 +74,7 @@ class MainWindow : public QMainWindow {
     void onTimerUpdate();
     void updateDisplay();
     void renameSelectedNode();
+    void changeNodeColor();
     void setWindowResizable(bool resizable);
     SettingsWindow *settingsWindow = nullptr;
     QPointF startPos;

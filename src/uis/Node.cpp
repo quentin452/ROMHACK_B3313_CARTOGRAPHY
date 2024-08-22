@@ -93,15 +93,14 @@ QString Node::shapeToString(NodeShapes shape) const {
         return "Unknown";
     }
 }
-
 QJsonObject Node::toJson() const {
     QJsonObject json;
     json["x"] = pos().x();
     json["y"] = pos().y();
     json["text"] = m_name;
     json["font_size"] = font.pointSize();
-
     json["shape"] = shapeToString(shape);
+    json["color"] = color.name();
 
     QJsonArray connectionsArray;
     for (int conn : connections) {
@@ -119,14 +118,20 @@ Node *Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
     int fontSize = json["font_size"].toInt(font.pointSize());
     font.setPointSize(fontSize);
 
-    NodeShapes shape = Circle; // Default value
+    NodeShapes shape = Circle; 
 
     if (json.contains("shape")) {
         QString shapeString = json["shape"].toString();
         shape = stringToShape(shapeString);
     }
 
+    QColor color = Qt::cyan;
+    if (json.contains("color")) {
+        color = QColor(json["color"].toString());
+    }
+
     Node *node = new Node(x, y, text, font, shape);
+    node->setColor(color); 
 
     if (json.contains("connections") && json["connections"].isArray()) {
         QJsonArray connectionsArray = json["connections"].toArray();

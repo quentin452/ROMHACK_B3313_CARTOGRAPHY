@@ -36,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     ADD_ACTION(contextMenu, renameNodeAction, renameSelectedNode)
     ADD_ACTION(contextMenu, removeConnectionsAction, removeConnections)
     ADD_ACTION(contextMenu, changeShapeAction, changeNodeShape)
+    ADD_ACTION(contextMenu, changeColorAction, changeNodeColor)
     HIDE_WIDGETS(emulatorText, b3313Text);
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
@@ -99,8 +100,8 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         shiftPressed = true;
         REPA(Node, nodes, setMovable(false))
     }
-    if (event->key() == Qt::Key_S && event->modifiers() & Qt::ControlModifier) 
-        saveNodes(); 
+    if (event->key() == Qt::Key_S && event->modifiers() & Qt::ControlModifier)
+        saveNodes();
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
@@ -240,7 +241,26 @@ void MainWindow::changeNodeShape() {
     simulateKeyPress(Qt::Key_Shift);
     simulateKeyRelease(Qt::Key_Shift);
 }
+void MainWindow::changeNodeColor() {
+    if (rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {
+        Node *node = nodes[rightClickedNodeIndex];
+        QColorDialog colorDialog(node->getColor(), this);
+        colorDialog.setOption(QColorDialog::DontUseNativeDialog);
+        colorDialog.setWindowTitle(tr("Select Color"));
+        colorDialog.setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
 
+        if (colorDialog.exec() == QColorDialog::Accepted) {
+            QColor selectedColor = colorDialog.currentColor();
+            if (selectedColor.isValid()) {
+                node->setColor(selectedColor);
+                node->setModified(true);
+                updateDisplay();
+            }
+        }
+    }
+    simulateKeyPress(Qt::Key_Shift);
+    simulateKeyRelease(Qt::Key_Shift);
+}
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;
     for (const auto &nodePtr : nodes) {

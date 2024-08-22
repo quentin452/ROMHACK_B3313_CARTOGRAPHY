@@ -1,11 +1,22 @@
 #include "windows/MainWindow.h"
 
 #include <QApplication>
+#include <QDebug>
+#include <QFile>
 #include <QInputDialog>
 #include <QStringList>
+#include <QTextStream>
+static QtMessageHandler defaultMessageHandler = nullptr;
+void myMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg) {
+    if (msg.contains("Unable to set geometry")) 
+        return;
+    if (defaultMessageHandler) 
+        defaultMessageHandler(type, context, msg);
+}
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
+    defaultMessageHandler = qInstallMessageHandler(myMessageHandler);
     QStringList backends;
     backends << "d3d11"
              << "opengl"

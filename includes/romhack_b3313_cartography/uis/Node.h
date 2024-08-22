@@ -1,9 +1,10 @@
 #pragma once
 
+#include <romhack_b3313_cartography/utils/TextureCache.h>
 #include <romhack_b3313_cartography/utils/enums.h>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
-#include <romhack_b3313_cartography/utils/TextureCache.h>
 #include <vector>
+
 
 class Node : public QGraphicsEllipseItem {
   public:
@@ -22,6 +23,9 @@ class Node : public QGraphicsEllipseItem {
     void updateIsModified();
     bool isModified() const { return modified; }
     QString getName() const { return m_name; }
+    QColor getColor() const {
+        return color;
+    }
     void adjustNodeSize();
 
     QList<int> connections;

@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QColorDialog>
 #include <QComboBox>
 #include <QDebug>
 #include <QDialog>
@@ -50,4 +51,3 @@
 #include <QVector>
 #include <QWidget>
 #include <QtConcurrent/QtConcurrent>
-
