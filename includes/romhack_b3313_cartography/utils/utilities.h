@@ -7,3 +7,4 @@ void addWidgets(Layout &layout, Widgets &&...widgets) {
 
 void simulateKeyPress(Qt::Key key);
 void simulateKeyRelease(Qt::Key key);
+bool isShiftPressed();

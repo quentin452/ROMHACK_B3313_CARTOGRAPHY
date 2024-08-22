@@ -9,8 +9,8 @@ Node::Node(float x, float y, const QString &text, const QFont &font, NodeShapes 
     setPos(x, y);
     labelItem = new QGraphicsTextItem(label, this);
     labelItem->setFont(font);
-    labelItem->setPos(-labelItem->boundingRect().width() / 2, -labelItem->boundingRect().height() / 2);
     m_name = labelItem->toPlainText();
+    adjustNodeSize();
 }
 
 void Node::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
@@ -27,10 +27,20 @@ void Node::setName(const QString &name) {
     m_name = name;
     if (labelItem) {
         labelItem->setPlainText(m_name);
-        labelItem->setPos(-labelItem->boundingRect().width() / 2, -labelItem->boundingRect().height() / 2);
+        adjustNodeSize();
     }
 }
-
+void Node::adjustNodeSize() {
+    if (labelItem) {
+        QRectF textRect = labelItem->boundingRect();
+        float padding = 10.0;
+        float width = textRect.width() + padding;
+        float height = textRect.height() + padding;
+        prepareGeometryChange();
+        setRect(-width / 2, -height / 2, width, height);
+        labelItem->setPos(-textRect.width() / 2, -textRect.height() / 2);
+    }
+}
 void Node::setColor(const QColor &color) {
     this->color = color;
     setBrush(color);
@@ -46,7 +56,7 @@ void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWid
     painter->setPen(Qt::NoPen);
     painter->setBrush(color);
 
-    QRectF rect = boundingRect().adjusted(1, 1, -1, -1); 
+    QRectF rect = boundingRect().adjusted(1, 1, -1, -1);
 
     switch (shape) {
     case Circle:
@@ -64,10 +74,9 @@ void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWid
         break;
     }
     }
-    if (labelItem) 
+    if (labelItem)
         labelItem->setPos(-labelItem->boundingRect().width() / 2, -labelItem->boundingRect().height() / 2);
 }
-
 QString Node::shapeToString(NodeShapes shape) const {
     switch (shape) {
     case Circle:

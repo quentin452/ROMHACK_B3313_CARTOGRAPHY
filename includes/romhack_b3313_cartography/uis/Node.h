@@ -21,7 +21,10 @@ class Node : public QGraphicsEllipseItem {
     void updateIsModified();
     bool isModified() const { return modified; }
     QString getName() const { return m_name; }
+    void adjustNodeSize();
+
     QList<int> connections;
+    NodeShapes shape;
 
   protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
@@ -34,7 +37,6 @@ class Node : public QGraphicsEllipseItem {
     QFont font;
     QColor color;
     QString m_name;
-    NodeShapes shape;
     bool modified;
     QGraphicsTextItem *labelItem;
     QList<QGraphicsPixmapItem *> starItems;

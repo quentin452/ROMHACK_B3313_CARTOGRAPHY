@@ -42,7 +42,9 @@ MainWindow::MainWindow(QWidget *parent)
     thread->start();
     QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
     QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000);
-    graphicsScene->setSceneRect(adjustedSceneRect);
+    graphicsScene->setSceneRect(adjustedSceneRect); 
+    QPointF sceneCenter = adjustedSceneRect.center();
+    graphicsView->centerOn(sceneCenter);
     star_display_mainLayout = layout;
     JsonLoading::loadNodesJsonData(b33_13_mind_map_str);
     setFocusPolicy(Qt::StrongFocus);
@@ -108,6 +110,13 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
 }
 
 void MainWindow::mousePressEvent(QMouseEvent *event) {
+    QPointF mousePosScene = graphicsView->mapToScene(event->pos());
+    qreal margin = 333.0;
+
+    QRectF sceneRect = graphicsScene->sceneRect().adjusted(margin, margin, -margin, -margin);
+    if (!sceneRect.contains(mousePosScene)) {
+        return;
+    }
     if (shiftPressed && event->button() == Qt::RightButton) {
         startNodeIndex = -1;
         QPointF mousePos = graphicsView->mapToScene(event->pos());
@@ -116,18 +125,15 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
             rightClickedNodeIndex = nodeIndex;
             contextMenuOpened = true;
             contextMenu->exec(QCursor::pos());
-            shiftPressed = false;
         }
-    }
-
-    if (!contextMenuOpened && event->button() == Qt::LeftButton) {
+    } else if (!contextMenuOpened && event->button() == Qt::LeftButton) {
         startPos = graphicsView->mapToScene(event->pos());
         int nodeIndex;
         if (isMouseOverNode(startPos, nodeIndex))
             startNodeIndex = nodeIndex;
     }
 #ifdef DEBUG
-    if (!contextMenuOpened && !shiftPressed && event->button() == Qt::RightButton) {
+    else if (!contextMenuOpened && !shiftPressed && event->button() == Qt::RightButton) {
         QPointF scenePos = graphicsView->mapToScene(event->pos());
 
         int nodeIndex;
@@ -149,6 +155,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (contextMenuOpened)
         contextMenuOpened = false;
 }
+
 void MainWindow::removeConnections() {
     if (rightClickedNodeIndex != -1 && IS_VALID_INDEX(rightClickedNodeIndex, nodes)) {
         Node *nodeToRemove = nodes[rightClickedNodeIndex];
@@ -194,6 +201,10 @@ void MainWindow::renameSelectedNode() {
         QLineEdit *lineEdit = new QLineEdit(node->getName());
         auto onAccept = [this, node, lineEdit]() {
             QString newName = lineEdit->text();
+            if (newName.length() > 100) {
+                QMessageBox::warning(this, tr("Invalid Name"), tr("The name cannot exceed 100 characters."));
+                return;
+            }
             if (!newName.isEmpty()) {
                 node->setName(newName);
                 node->setModified(true); // Mark the node as modified
@@ -204,8 +215,10 @@ void MainWindow::renameSelectedNode() {
     } else {
         qDebug() << "Invalid node index in renameSelectedNode.";
     }
-    simulateKeyPress(Qt::Key_Shift);
-    simulateKeyRelease(Qt::Key_Shift);
+    if (isShiftPressed()) {
+        simulateKeyPress(Qt::Key_Shift);
+        simulateKeyRelease(Qt::Key_Shift);
+    }
 }
 
 void MainWindow::changeNodeShape() {
@@ -224,8 +237,11 @@ void MainWindow::changeNodeShape() {
         };
         showDialog(tr("Shape:"), comboBox, onAccept);
     }
-    simulateKeyPress(Qt::Key_Shift);
-    simulateKeyRelease(Qt::Key_Shift);
+
+    if (isShiftPressed()) {
+        simulateKeyPress(Qt::Key_Shift);
+        simulateKeyRelease(Qt::Key_Shift);
+    }
 }
 
 void MainWindow::saveNodes() {

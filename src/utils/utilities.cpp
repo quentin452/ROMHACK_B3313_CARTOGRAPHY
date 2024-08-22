@@ -9,3 +9,6 @@ void simulateKeyRelease(Qt::Key key) {
     QKeyEvent keyReleaseEvent(QEvent::KeyRelease, key, Qt::NoModifier);
     QTest::keyRelease(QApplication::focusWidget(), key, Qt::NoModifier);
 }
+bool isShiftPressed() {
+    return QApplication::keyboardModifiers() & Qt::ShiftModifier;
+}
