@@ -143,22 +143,15 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         int nodeIndex;
         if (isMouseOverNode(mousePos, nodeIndex)) {
             rightClickedNodeIndex = nodeIndex;
-            qDebug() << "Right click on node index:" << nodeIndex;
             contextMenu->exec(QCursor::pos());
         }
     }
     if (shiftPressed && event->button() == Qt::LeftButton) {
         startPos = graphicsView->mapToScene(event->pos());
-        qDebug() << "Left click with shift at scene position:" << startPos;
         int nodeIndex;
-        if (isMouseOverNode(startPos, nodeIndex)) {
+        if (isMouseOverNode(startPos, nodeIndex)) 
             startNodeIndex = nodeIndex;
-            qDebug() << "Start node index set to:" << startNodeIndex;
-        } else {
-            qDebug() << "No node under mouse position.";
-        }
     }
-
 #ifdef DEBUG
     if (!shiftPressed && event->button() == Qt::RightButton) {
         QPoint viewPos = event->pos();

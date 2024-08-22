@@ -18,13 +18,11 @@
 
 #include <romhack_b3313_cartography/uis/Node.h>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
-#include <romhack_b3313_cartography/uis/Textures.h>
 
 #include "../uis/MouseFixGraphicScene.h"
 #include "MainWindowUpdateThread.hpp"
 #include <memory>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
-
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
