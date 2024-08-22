@@ -162,7 +162,7 @@ void Node::updateIsModified() {
     }
     starItems.clear();
     if (modified) {
-        QPixmap starPixmap("resources/textures/star-collected.png");
+        QPixmap starPixmap = TextureCache::getTexture("resources/textures/star-collected.png");
         if (starPixmap.isNull()) {
             qDebug() << "Failed to load star image.";
             return;

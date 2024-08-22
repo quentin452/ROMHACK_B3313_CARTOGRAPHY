@@ -2,6 +2,7 @@
 
 #include <romhack_b3313_cartography/utils/enums.h>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
+#include <romhack_b3313_cartography/utils/TextureCache.h>
 #include <vector>
 
 class Node : public QGraphicsEllipseItem {
