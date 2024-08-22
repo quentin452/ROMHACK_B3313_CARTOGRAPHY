@@ -7,6 +7,7 @@
 #include <QDialog>
 #include <QFile>
 #include <QFont>
+#include <QFuture>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsLineItem>
 #include <QGraphicsPolygonItem>
@@ -48,3 +49,5 @@
 #include <QVector2D>
 #include <QVector>
 #include <QWidget>
+#include <QtConcurrent/QtConcurrent>
+

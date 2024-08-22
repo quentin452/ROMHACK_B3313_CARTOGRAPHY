@@ -12,8 +12,11 @@ class MouseFixGraphicScene : public QGraphicsScene {
     QTimer *updateTimer = nullptr;
     QPointF lastMousePos;
     QGraphicsLineItem *previousLineItem = nullptr;
+    QFuture<void> updateFuture;
+    void updateLineItemComputations(); // New method for computations
+
   private slots:
-    void updateLineItem();
+    void onUpdateLineItem();
 
   protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;

@@ -1,10 +1,5 @@
 #include "MouseFixGraphicScene.h"
 
-MouseFixGraphicScene::MouseFixGraphicScene(QObject *parent)
-    : QGraphicsScene(parent), updateTimer(new QTimer(this)) {
-    connect(updateTimer, &QTimer::timeout, this, &MouseFixGraphicScene::updateLineItem);
-    updateTimer->start(100); // Mettre à jour toutes les 100 ms
-}
 QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint) {
     QPointF nodeCenter = node->pos();
     QLineF line(nodeCenter, endPoint);
@@ -80,13 +75,7 @@ QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint) {
 
     return edgePoint;
 }
-
-void MouseFixGraphicScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
-    lastMousePos = event->scenePos();
-    QGraphicsScene::mouseMoveEvent(event);
-}
-
-void MouseFixGraphicScene::updateLineItem() {
+void MouseFixGraphicScene::updateLineItemComputations() {
     QPointF mousePosScene = lastMousePos;
     qreal margin = 333.0;
     QRectF sceneRect = MainWindow::graphicsScene->sceneRect().adjusted(margin, margin, -margin, -margin);
@@ -102,9 +91,8 @@ void MouseFixGraphicScene::updateLineItem() {
 
             bool mouseInBoundingBox = boundingBox.contains(mousePosScene);
             if (mouseInBoundingBox) {
-                // La souris est dans la bounding box du nœud, seulement supprimer previousLineItem si c'est le startNodeIndex
+                // Remove previous line item if needed
                 if (previousLineItem && MainWindow::graphicsScene->items().contains(previousLineItem)) {
-                    // Si la souris est dans la bounding box du startNodeIndex, supprime previousLineItem
                     if (boundingBox.contains(mousePosScene)) {
                         MainWindow::graphicsScene->removeItem(previousLineItem);
                         previousLineItem = nullptr;
@@ -113,26 +101,46 @@ void MouseFixGraphicScene::updateLineItem() {
                 return;
             }
 
-            // Sinon, dessiner la ligne comme prévu
+            // Draw the line as expected
             QPointF startEdgePoint = getNodeEdgePoint(startNode, mousePosScene);
             QLineF line(startEdgePoint, mousePosScene);
+
+            // Save line details to update later in the GUI
+            QMetaObject::invokeMethod(this, [this, line]() {
+                if (previousLineItem) {
+                    if (MainWindow::graphicsScene->items().contains(previousLineItem)) {
+                        MainWindow::graphicsScene->removeItem(previousLineItem);
+                    }
+                    previousLineItem = nullptr;
+                }
+                previousLineItem = MainWindow::graphicsScene->addLine(line, QPen(Qt::DashLine)); }, Qt::QueuedConnection);
+        }
+    } else {
+        // Remove previous line item if Shift key is not pressed
+        QMetaObject::invokeMethod(this, [this]() {
             if (previousLineItem) {
                 if (MainWindow::graphicsScene->items().contains(previousLineItem)) {
                     MainWindow::graphicsScene->removeItem(previousLineItem);
                 }
                 previousLineItem = nullptr;
-            }
-            previousLineItem = MainWindow::graphicsScene->addLine(line, QPen(Qt::DashLine));
-        }
-    } else {
-        // Assurez-vous de supprimer la ligne précédente si la touche Shift n'est pas pressée
-        if (previousLineItem) {
-            if (MainWindow::graphicsScene->items().contains(previousLineItem)) {
-                MainWindow::graphicsScene->removeItem(previousLineItem);
-            }
-            previousLineItem = nullptr;
-        }
+            } }, Qt::QueuedConnection);
     }
+}
+
+void MouseFixGraphicScene::onUpdateLineItem() {
+    updateFuture = QtConcurrent::run([this]() {
+        updateLineItemComputations();
+    });
+}
+
+MouseFixGraphicScene::MouseFixGraphicScene(QObject *parent)
+    : QGraphicsScene(parent), updateTimer(new QTimer(this)) {
+    connect(updateTimer, &QTimer::timeout, this, &MouseFixGraphicScene::onUpdateLineItem);
+    updateTimer->start(100); // Update every 100 ms
+}
+void MouseFixGraphicScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
+    lastMousePos = event->scenePos();
+    QGraphicsScene::mouseMoveEvent(event);
 }
 
 void MouseFixGraphicScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
