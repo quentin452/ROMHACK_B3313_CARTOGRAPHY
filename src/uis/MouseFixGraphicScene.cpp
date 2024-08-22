@@ -9,13 +9,13 @@ QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint) {
     float radius = 0.0;
 
     switch (node->shape) {
-    case Circle: // INCORECT CALCULATION
-        radius = nodeRect.width() / 2;
+    case Circle:
+        radius = qMin(nodeRect.width(), nodeRect.height()) / 2;
         break;
-    case Square: // INCORECT CALCULATION
-        radius = nodeRect.width() / sqrt(2);
+    case Square:
+        radius = qMin(nodeRect.width(), nodeRect.height()) / 2;
         break;
-    case Triangle: { // CORECT CALCULATION
+    case Triangle: {
         float height = nodeRect.height();
         radius = height / sqrt(3);
         break;
