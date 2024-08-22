@@ -149,7 +149,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (shiftPressed && event->button() == Qt::LeftButton) {
         startPos = graphicsView->mapToScene(event->pos());
         int nodeIndex;
-        if (isMouseOverNode(startPos, nodeIndex)) 
+        if (isMouseOverNode(startPos, nodeIndex))
             startNodeIndex = nodeIndex;
     }
 #ifdef DEBUG
@@ -245,8 +245,6 @@ void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
     if (showStarDisplay) {
         switchViewButton->hide();
-        QRectF sceneBoundingRect = graphicsView->rect();
-        graphicsScene->setSceneRect(sceneBoundingRect);
         QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
         if (tabWidget)
             tabWidget->hide();
@@ -280,9 +278,6 @@ void MainWindow::toggleStarDisplay() {
             if (node)
                 node->show();
         }
-        QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
-        QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000);
-        graphicsScene->setSceneRect(adjustedSceneRect);
         QVBoxLayout *layout = star_display_mainLayout;
         // Retirer saveButton s'il est présent
         if (layout->indexOf(saveButton) != -1)
@@ -361,22 +356,17 @@ void MainWindow::loadJsonData(const QString &filename) {
 void MainWindow::parseJsonData(const QJsonObject &jsonObj) {
     nodes.clear();
     connections.clear();
-    graphicsScene->clear(); // Nettoyer la scène
-
-    // Charger les nœuds
+    graphicsScene->clear();
     if (jsonObj.contains("nodes") && jsonObj["nodes"].isArray()) {
         QJsonArray nodesArray = jsonObj["nodes"].toArray();
         QHash<int, Node *> nodeIndexMap;
-
         for (int i = 0; i < nodesArray.size(); ++i) {
             QJsonObject nodeObj = nodesArray[i].toObject();
             Node *node = Node::fromJson(nodeObj, QFont("Arial", 12, QFont::Bold));
             graphicsScene->addItem(node);
             nodes.append(node);
-            nodeIndexMap.insert(i, node); // Utiliser l'index comme clé
+            nodeIndexMap.insert(i, node);
         }
-
-        // Charger les connexions
         if (jsonObj.contains("connections") && jsonObj["connections"].isObject()) {
             QJsonObject connectionsObj = jsonObj["connections"].toObject();
             if (connectionsObj.contains("connections") && connectionsObj["connections"].isArray()) {
@@ -385,18 +375,15 @@ void MainWindow::parseJsonData(const QJsonObject &jsonObj) {
                     QJsonObject connectionObj = value.toObject();
                     int startIndex = connectionObj["start"].toInt();
                     int endIndex = connectionObj["end"].toInt();
-
                     if (nodeIndexMap.contains(startIndex) && nodeIndexMap.contains(endIndex)) {
                         Node *startNode = nodeIndexMap[startIndex];
                         Node *endNode = nodeIndexMap[endIndex];
-
                         if (startNode && endNode) {
                             connections.push_back(QPair<int, int>(startIndex, endIndex));
                             nodes[startIndex]->addConnection(endIndex);
                             nodes[endIndex]->addConnection(startIndex);
                         }
                     } else {
-
                         qWarning() << "Invalid node index in connection.";
                     }
                 }
