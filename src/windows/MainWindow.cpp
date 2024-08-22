@@ -34,6 +34,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveNodes);
     connect(switchViewButton, &QPushButton::clicked, this, &MainWindow::toggleStarDisplay);
     contextMenu = new QMenu(this);
+    QAction *renameNodeAction = new QAction("Rename Node", this);
+    connect(renameNodeAction, &QAction::triggered, this, &MainWindow::renameSelectedNode);
+    contextMenu->addAction(renameNodeAction);
     QAction *removeConnectionsAction = new QAction("Remove Connections", this);
     connect(removeConnectionsAction, &QAction::triggered, this, &MainWindow::removeConnections);
     contextMenu->addAction(removeConnectionsAction);
@@ -57,7 +60,6 @@ MainWindow::MainWindow(QWidget *parent)
     graphicsView->setMouseTracking(true);
     layout->setSpacing(10);
     layout->setContentsMargins(10, 10, 10, 10);
-    textUpdate();
     tabWidget = findChild<QTabWidget *>("tabWidget");
     if (!tabWidget) {
         tabWidget = new QTabWidget(this);
@@ -207,7 +209,26 @@ void MainWindow::removeConnections() {
         }
     }
 }
+void MainWindow::renameSelectedNode() {
+    if (rightClickedNodeIndex != -1) {
+        if (rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {
+            Node *node = nodes[rightClickedNodeIndex];
 
+            // Ouvrir un QInputDialog pour entrer le nouveau nom
+            bool ok;
+            QString newName = QInputDialog::getText(this, tr("Rename Node"),
+                                                    tr("New name:"), QLineEdit::Normal,
+                                                    node->getName(), &ok);
+            if (ok && !newName.isEmpty()) {
+                node->setName(newName);
+                node->setModified(true); // Marquer le nœud comme modifié
+                updateDisplay();         // Mettre à jour l'affichage si nécessaire
+            }
+        } else {
+            qDebug() << "Invalid node index in renameSelectedNode.";
+        }
+    }
+}
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;
     for (const auto &nodePtr : nodes) {
@@ -239,6 +260,7 @@ void MainWindow::saveNodes() {
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
     if (showStarDisplay) {
+        textUpdate();
         switchViewButton->hide();
         QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
         if (tabWidget)

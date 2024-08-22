@@ -10,6 +10,7 @@ Node::Node(float x, float y, const QString &text, const QFont &font)
     labelItem = new QGraphicsTextItem(label, this);
     labelItem->setFont(font);
     labelItem->setPos(-labelItem->boundingRect().width() / 2, -labelItem->boundingRect().height() / 2);
+    m_name = labelItem->toPlainText();
 }
 
 void Node::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
@@ -21,7 +22,13 @@ void Node::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
 void Node::setMovable(bool movable) {
     setFlag(ItemIsMovable, movable);
 }
-
+void Node::setName(const QString &name) {
+    m_name = name;
+    if (labelItem) {
+        labelItem->setPlainText(m_name);
+        labelItem->setPos(-labelItem->boundingRect().width() / 2, -labelItem->boundingRect().height() / 2);
+    }
+}
 void Node::setColor(const QColor &color) {
     this->color = color;
     setBrush(color);
@@ -32,7 +39,7 @@ QJsonObject Node::toJson() const {
     QJsonObject json;
     json["x"] = pos().x();
     json["y"] = pos().y();
-    json["text"] = label;
+    json["text"] = m_name;
     json["font_size"] = font.pointSize();
     QJsonArray connectionsArray;
     for (int conn : connections) {
@@ -78,7 +85,7 @@ void Node::setModified(bool modified) {
 void Node::updateIsModified() {
     for (QGraphicsPixmapItem *starItem : starItems) {
         if (scene() && scene()->items().contains(starItem)) {
-            scene()->removeItem(starItem); 
+            scene()->removeItem(starItem);
             delete starItem;
         }
     }

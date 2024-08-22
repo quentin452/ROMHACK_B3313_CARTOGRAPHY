@@ -20,6 +20,8 @@ class Node : public QGraphicsEllipseItem {
     QVector<int> connections;
     void updateIsModified();
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+    QString getName() const { return m_name; }
+    void setName(const QString &name);
 
   private:
     QString label;
@@ -30,4 +32,5 @@ class Node : public QGraphicsEllipseItem {
     float radius;
     QGraphicsTextItem *labelItem;
     QVector<QGraphicsPixmapItem *> starItems;
+    QString m_name;
 };

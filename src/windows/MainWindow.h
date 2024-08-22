@@ -51,7 +51,7 @@ class MainWindow : public QMainWindow {
     static QVector<Node *> nodes;
     static QVector<QPair<int, int>> connections;
     static QGraphicsScene *graphicsScene;
-    //QLabel *fpsLabel;
+    // QLabel *fpsLabel;
 
   protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -76,6 +76,7 @@ class MainWindow : public QMainWindow {
     bool isModified() const;
     void onTimerUpdate();
     void updateDisplay();
+    void renameSelectedNode();
     SettingsWindow *settingsWindow = nullptr;
     QPointF startPos;
     bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles
