@@ -27,11 +27,9 @@ MainWindow::MainWindow(QWidget *parent)
     centralWidgetZ = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(centralWidgetZ);
     setCentralWidget(centralWidgetZ);
-    layout->addWidget(graphicsView);
     saveButton = new QPushButton("Save", this);
     switchViewButton = new QPushButton("Switch View", this);
-    layout->addWidget(saveButton);
-    layout->addWidget(switchViewButton);
+    ADD_WIDGETS(layout, emulatorText, b3313Text, graphicsView, saveButton, switchViewButton);
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveNodes);
     connect(switchViewButton, &QPushButton::clicked, this, &MainWindow::toggleStarDisplay);
     contextMenu = new QMenu(this);
@@ -41,10 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
     QAction *removeConnectionsAction = new QAction("Remove Connections", this);
     connect(removeConnectionsAction, &QAction::triggered, this, &MainWindow::removeConnections);
     contextMenu->addAction(removeConnectionsAction);
-    layout->addWidget(emulatorText);
-    layout->addWidget(b3313Text);
-    b3313Text->hide();
-    emulatorText->hide();
+    HIDE_WIDGETS(emulatorText, b3313Text);
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
     thread->start();
@@ -98,42 +93,25 @@ void MainWindow::openSettingsWindow() {
 void MainWindow::textUpdate() {
     bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
     bool romLoaded = isRomHackLoaded(global_detected_emulator);
-
-    if (emulatorText) {
-        emulatorText->setText(emulatorRunning ? "Parallel launcher Emulator Running" : "Parallel launcher Emulator Not Running");
-        emulatorText->setStyleSheet(emulatorRunning ? "color: green;" : "color: white;");
-    } else {
-        qWarning() << "emulatorLabel is null!";
-    }
-
-    if (b3313Text) {
-        b3313Text->setText(romLoaded ? "B3313 V1.0.2 ROM Loaded" : "B3313 V1.0.2 ROM Not Loaded");
-        b3313Text->setStyleSheet(romLoaded ? "color: green;" : "color: white;");
-    } else {
-        qWarning() << "b3313Label is null!";
-    }
+    UPDATE_LABEL(emulatorText, emulatorRunning, "Parallel launcher Emulator Running", "Parallel launcher Emulator Not Running");
+    UPDATE_LABEL(b3313Text, romLoaded, "B3313 V1.0.2 ROM Loaded", "B3313 V1.0.2 ROM Not Loaded");
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Shift) {
         shiftPressed = true;
-        setNodesMovable(false);
+        REPA(Node, nodes, setMovable(false))
     }
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Shift) {
         shiftPressed = false;
-        setNodesMovable(true);
+        REPA(Node, nodes, setMovable(true))
         startNodeIndex = -1;
     }
 }
 
-void MainWindow::setNodesMovable(bool movable) {
-    for (Node *node : nodes) {
-        node->setMovable(movable);
-    }
-}
 void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (shiftPressed && event->button() == Qt::RightButton) {
         startNodeIndex = -1;
@@ -176,39 +154,27 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (contextMenuOpened)
         contextMenuOpened = false;
 }
-
 void MainWindow::removeConnections() {
-    if (rightClickedNodeIndex != -1) {
-        if (rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {
-            Node *nodeToRemove = nodes[rightClickedNodeIndex];
-            QVector<int> indicesToRemove, connectedNodes;
-            for (int i = 0; i < connections.size(); ++i) {
-                QPair<int, int> conn = connections[i];
-                if (conn.first == rightClickedNodeIndex || conn.second == rightClickedNodeIndex) {
-                    indicesToRemove.push_back(i);
-                    int connectedNodeIndex = (conn.first == rightClickedNodeIndex) ? conn.second : conn.first;
-                    if (connectedNodeIndex >= 0 && connectedNodeIndex < nodes.size()) {
-                        connectedNodes.push_back(connectedNodeIndex);
-                    }
-                }
-            }
-            for (int i = indicesToRemove.size() - 1; i >= 0; --i) {
-                connections.removeAt(indicesToRemove[i]);
-            }
-            for (int i : connectedNodes) {
-                if (i >= 0 && i < nodes.size()) {
-                    nodes[i]->removeConnection(rightClickedNodeIndex);
-                    nodes[i]->setModified(true);
-                } else {
-                    qDebug() << "Invalid node index in removeConnections.";
-                }
-            }
-            nodeToRemove->connections.clear();
-            nodeToRemove->setModified(true);
-            updateDisplay();
-        } else {
-            qDebug() << "Invalid node index in removeConnections.";
+    if (rightClickedNodeIndex != -1 && IS_VALID_INDEX(rightClickedNodeIndex, nodes)) {
+        Node *nodeToRemove = nodes[rightClickedNodeIndex];
+        QVector<int> indicesToRemove, connectedNodes;
+        REMOVE_NODES_CONNECTIONS(rightClickedNodeIndex, connections, indicesToRemove, connectedNodes);
+        for (int i = indicesToRemove.size() - 1; i >= 0; --i) {
+            connections.removeAt(indicesToRemove[i]);
         }
+        for (int i : connectedNodes) {
+            if (IS_VALID_INDEX(i, nodes)) {
+                nodes[i]->removeConnection(rightClickedNodeIndex);
+                nodes[i]->setModified(true);
+            } else {
+                qDebug() << "Invalid node index in removeConnections.";
+            }
+        }
+        nodeToRemove->connections.clear();
+        nodeToRemove->setModified(true);
+        updateDisplay();
+    } else {
+        qDebug() << "Invalid node index in removeConnections.";
     }
 }
 void MainWindow::renameSelectedNode() {
@@ -258,56 +224,23 @@ void MainWindow::saveNodes() {
         qWarning() << "Failed to open file for writing:" << file.errorString();
     }
 }
-
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
+    QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
     if (showStarDisplay) {
         textUpdate();
-        settingsButton->hide();
-        switchViewButton->hide();
-        QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
-        if (tabWidget)
-            tabWidget->hide();
-        graphicsView->hide();
-        saveButton->hide();
-        if (emulatorText)
-            emulatorText->show();
-        if (b3313Text)
-            b3313Text->show();
-        for (Node *node : nodes) {
-            if (node)
-                node->hide();
-        }
-        b3313Text->hide();
-        emulatorText->hide();
+        HIDE_WIDGETS(settingsButton, switchViewButton, tabWidget, graphicsView, saveButton);
+        SHOW_WIDGETS(emulatorText, b3313Text);
+        REPA(Node, nodes, hide());
+        HIDE_WIDGETS(emulatorText, b3313Text); // Hide again for some condition
     } else {
-        settingsButton->hide();
-        QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
-        if (tabWidget)
-            tabWidget->hide();
-        if (tabWidget) {
-            while (tabWidget->count() > 0) {
-                QWidget *tabContent = tabWidget->widget(0);
-                tabWidget->removeTab(0);
-                delete tabContent;
-            }
-        }
-        graphicsView->show();
-        b3313Text->hide();
-        emulatorText->hide();
-        for (Node *node : nodes) {
-            if (node)
-                node->show();
-        }
-        QVBoxLayout *layout = star_display_mainLayout;
-        saveButton->show();
-        switchViewButton->show();
-        settingsButton->show();
-        emulatorText->hide();
-        b3313Text->hide();
+        HIDE_WIDGETS(settingsButton, tabWidget);
+        REMOVE_ALL_TABS(tabWidget);
+        SHOW_WIDGETS(graphicsView, saveButton, switchViewButton, settingsButton);
+        HIDE_WIDGETS(emulatorText, b3313Text);
+        REPA(Node, nodes, show());
     }
 }
-
 void MainWindow::closeEvent(QCloseEvent *event) {
     if (isModified()) {
         auto resBtn = QMessageBox::question(this, "Mind Map Example",
@@ -347,16 +280,9 @@ void MainWindow::updateDisplay() {
         starDisplay.displayStars(jsonData);
         switchViewButton->show();
     } else {
-        QList<QGraphicsItem *> items = graphicsScene->items();
-        for (QGraphicsItem *item : items) {
-            if (QGraphicsLineItem *lineItem = dynamic_cast<QGraphicsLineItem *>(item)) {
-                graphicsScene->removeItem(lineItem);
-                delete lineItem;
-            } else if (QGraphicsPolygonItem *polygonItem = dynamic_cast<QGraphicsPolygonItem *>(item)) {
-                graphicsScene->removeItem(polygonItem);
-                delete polygonItem;
-            }
-        }
+        REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsLineItem);
+        REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPolygonItem);
+
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
                 conn.second >= 0 && conn.second < nodes.size()) {

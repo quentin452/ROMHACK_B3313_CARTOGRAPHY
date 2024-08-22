@@ -55,11 +55,7 @@ class MainWindow : public QMainWindow {
 
   protected:
     void keyPressEvent(QKeyEvent *event) override;
-
     void keyReleaseEvent(QKeyEvent *event) override;
-
-    void setNodesMovable(bool movable);
-
     void mousePressEvent(QMouseEvent *event) override;
 
   private slots:
