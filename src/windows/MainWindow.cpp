@@ -20,64 +20,43 @@ QGraphicsScene *MainWindow::graphicsScene = nullptr;
 MainWindow::MainWindow() {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
-    // Initialisation des objets graphiques
     emulatorText = new QLabel("Emulator Status", this);
     b3313Text = new QLabel("B3313 V1.0.2 Status", this);
-    // Initialisation de la vue graphique et de la scène
     graphicsView = new QGraphicsView(this);
     graphicsScene = new MouseFixGraphicScene(this);
     graphicsView->setScene(graphicsScene);
-    // Initialisation du widget central et du layout
     centralWidgetZ = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(centralWidgetZ);
     setCentralWidget(centralWidgetZ);
-    // Ajout de la vue graphique et des boutons au layout
     layout->addWidget(graphicsView);
     saveButton = new QPushButton("Save", this);
     switchViewButton = new QPushButton("Switch View", this);
     layout->addWidget(saveButton);
     layout->addWidget(switchViewButton);
-    // Connexion des boutons aux slots correspondants
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveNodes);
     connect(switchViewButton, &QPushButton::clicked, this, &MainWindow::toggleStarDisplay);
     contextMenu = new QMenu(this);
     QAction *removeConnectionsAction = new QAction("Remove Connections", this);
     connect(removeConnectionsAction, &QAction::triggered, this, &MainWindow::removeConnections);
     contextMenu->addAction(removeConnectionsAction);
-    // Initialisation des objets graphiques
     layout->addWidget(emulatorText);
     layout->addWidget(b3313Text);
     b3313Text->hide();
     emulatorText->hide();
-
-    // Initialisation et démarrage du thread de mise à jour
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
     thread->start();
-    // Configuration des propriétés de la scène
     QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
     QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajout d'une marge
     graphicsScene->setSceneRect(adjustedSceneRect);
-    // Initialisation du widget de l'affichage des étoiles
-    star_display_mainLayout = layout; // Use the existing layout
-
-    // Chargement des données JSON
+    star_display_mainLayout = layout;
     loadJsonData(b33_13_mind_map_str);
-
-    // Set focus policy
     setFocusPolicy(Qt::StrongFocus);
     graphicsView->setFocusPolicy(Qt::StrongFocus);
-    // graphicsScene->setFocusPolicy(Qt::StrongFocus);
-    // Install event filter
     installEventFilter(this);
     graphicsView->installEventFilter(this);
-    // graphicsScene->installEventFilter(this);
-
-    // Enable mouse tracking
     setMouseTracking(true);
     graphicsView->setMouseTracking(true);
-    // graphicsScene->setMouseTracking(this);
-
     layout->setSpacing(10);
     layout->setContentsMargins(10, 10, 10, 10);
     textUpdate();
@@ -94,8 +73,8 @@ MainWindow::MainWindow() {
 
 MainWindow::~MainWindow() {
     if (thread) {
-        thread->stop(); // Demander au thread de s'arrêter
-        thread->wait(); // Attendre la fin du thread
+        thread->stop();
+        thread->wait();
     }
 }
 void MainWindow::textUpdate() {
@@ -120,21 +99,21 @@ void MainWindow::textUpdate() {
 void MainWindow::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Shift && !shiftPressed) {
         shiftPressed = true;
-        setNodesMovable(false); // Désactive le déplacement des nœuds
+        setNodesMovable(false); 
     }
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Shift && shiftPressed) {
         shiftPressed = false;
-        setNodesMovable(true); // Réactive le déplacement des nœuds
+        setNodesMovable(true); 
         startNodeIndex = -1;
     }
 }
 
 void MainWindow::setNodesMovable(bool movable) {
     for (Node *node : nodes) {
-        node->setMovable(movable); // Met à jour la propriété de mobilité des nœuds
+        node->setMovable(movable); 
     }
 }
 void MainWindow::mousePressEvent(QMouseEvent *event) {
@@ -203,8 +182,6 @@ void MainWindow::saveNodes() {
         jsonArray.append(nodePtr->toJson());
         nodePtr->setModified(false);
     }
-
-    // Ajouter les connexions en tant que tableau JSON
     QJsonObject connectionsJson;
     QJsonArray connectionsArray;
     for (const auto &connection : connections) {
@@ -214,12 +191,9 @@ void MainWindow::saveNodes() {
         connectionsArray.append(connectionObj);
     }
     connectionsJson["connections"] = connectionsArray;
-
-    // Ajouter les connexions au JSON principal
     QJsonObject mainJson;
     mainJson["nodes"] = jsonArray;
     mainJson["connections"] = connectionsJson;
-
     QJsonDocument jsonDoc(mainJson);
     QFile file(b33_13_mind_map_str);
     if (file.open(QIODevice::WriteOnly)) {
@@ -279,12 +253,9 @@ void MainWindow::toggleStarDisplay() {
                 node->show();
         }
         QVBoxLayout *layout = star_display_mainLayout;
-        // Retirer saveButton s'il est présent
         if (layout->indexOf(saveButton) != -1)
             layout->removeWidget(saveButton);
-        // Ajouter saveButton avant switchViewButton
         layout->addWidget(saveButton);
-        // Retirer switchViewButton s'il est présent
         if (layout->indexOf(switchViewButton) != -1)
             layout->removeWidget(switchViewButton);
         layout->addWidget(switchViewButton);
@@ -403,7 +374,6 @@ void MainWindow::updateDisplay() {
         QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
         starDisplay.displayStars(jsonData);
     } else {
-        // Clear existing arrows before redrawing
         QList<QGraphicsItem *> items = graphicsScene->items();
         for (QGraphicsItem *item : items) {
             if (QGraphicsLineItem *lineItem = dynamic_cast<QGraphicsLineItem *>(item)) {
@@ -414,8 +384,6 @@ void MainWindow::updateDisplay() {
                 delete polygonItem;
             }
         }
-
-        // Redraw the arrows
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
                 conn.second >= 0 && conn.second < nodes.size()) {
@@ -427,21 +395,15 @@ void MainWindow::updateDisplay() {
                 }
                 QPointF startEdgePoint = getNodeEdgePoint(startNode, endNode->pos());
                 QPointF endEdgePoint = getNodeEdgePoint(endNode, startNode->pos());
-
                 QGraphicsLineItem *lineItem = new QGraphicsLineItem(startEdgePoint.x(), startEdgePoint.y(), endEdgePoint.x(), endEdgePoint.y());
                 lineItem->setPen(QPen(Qt::black));
                 graphicsScene->addItem(lineItem);
-
-                // Ajoutez la flèche
                 QLineF line(startEdgePoint, endEdgePoint);
                 double angle = std::atan2(-line.dy(), line.dx());
-
                 QPointF arrowP1 = line.p2() - QPointF(std::sin(angle + M_PI / 3) * 10, std::cos(angle + M_PI / 3) * 10);
                 QPointF arrowP2 = line.p2() - QPointF(std::sin(angle + M_PI - M_PI / 3) * 10, std::cos(angle + M_PI - M_PI / 3) * 10);
-
                 QPolygonF arrowHead;
                 arrowHead << line.p2() << arrowP1 << arrowP2;
-
                 QGraphicsPolygonItem *arrowItem = new QGraphicsPolygonItem(arrowHead);
                 arrowItem->setBrush(Qt::black);
                 graphicsScene->addItem(arrowItem);
