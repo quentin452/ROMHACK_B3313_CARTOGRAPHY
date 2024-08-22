@@ -1,6 +1,10 @@
 #include "MouseFixGraphicScene.h"
 
-QGraphicsLineItem *previousLineItem = nullptr;
+MouseFixGraphicScene::MouseFixGraphicScene(QObject *parent)
+    : QGraphicsScene(parent), updateTimer(new QTimer(this)) {
+    connect(updateTimer, &QTimer::timeout, this, &MouseFixGraphicScene::updateLineItem);
+    updateTimer->start(100); // Mettre à jour toutes les 100 ms
+}
 QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint) {
     QPointF nodeCenter = node->pos();
     QLineF line(nodeCenter, endPoint);
@@ -23,8 +27,6 @@ QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint) {
             // Calculer les points d'intersection avec l'ellipse
             float t = std::sqrt((radiusX * radiusX * radiusY * radiusY) / (radiusY * radiusY * unitDirection.x() * unitDirection.x() + radiusX * radiusX * unitDirection.y() * unitDirection.y()));
             edgePoint = nodeCenter + unitDirection * t;
-
-            qDebug() << "Ellipse Edge Point:" << edgePoint;
         }
         break;
     }
@@ -80,23 +82,55 @@ QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint) {
 }
 
 void MouseFixGraphicScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
-    QPointF mousePosScene = event->scenePos();
+    lastMousePos = event->scenePos();
+    QGraphicsScene::mouseMoveEvent(event);
+}
+
+void MouseFixGraphicScene::updateLineItem() {
+    QPointF mousePosScene = lastMousePos;
     qreal margin = 333.0;
     QRectF sceneRect = MainWindow::graphicsScene->sceneRect().adjusted(margin, margin, -margin, -margin);
-    if (!sceneRect.contains(mousePosScene))
+    if (!sceneRect.contains(mousePosScene)) {
         return;
-    QGraphicsScene::mouseMoveEvent(event);
+    }
+
     if (MainWindow::shiftPressed && MainWindow::startNodeIndex != -1) {
         Node *startNode = MainWindow::nodes[MainWindow::startNodeIndex];
         if (startNode) {
+            QRectF boundingBox = startNode->boundingRect();
+            boundingBox = startNode->mapRectToScene(boundingBox); // Map to scene coordinates
+
+            bool mouseInBoundingBox = boundingBox.contains(mousePosScene);
+            if (mouseInBoundingBox) {
+                // La souris est dans la bounding box du nœud, seulement supprimer previousLineItem si c'est le startNodeIndex
+                if (previousLineItem && MainWindow::graphicsScene->items().contains(previousLineItem)) {
+                    // Si la souris est dans la bounding box du startNodeIndex, supprime previousLineItem
+                    if (boundingBox.contains(mousePosScene)) {
+                        MainWindow::graphicsScene->removeItem(previousLineItem);
+                        previousLineItem = nullptr;
+                    }
+                }
+                return;
+            }
+
+            // Sinon, dessiner la ligne comme prévu
             QPointF startEdgePoint = getNodeEdgePoint(startNode, mousePosScene);
             QLineF line(startEdgePoint, mousePosScene);
             if (previousLineItem) {
-                if (MainWindow::graphicsScene->items().contains(previousLineItem))
+                if (MainWindow::graphicsScene->items().contains(previousLineItem)) {
                     MainWindow::graphicsScene->removeItem(previousLineItem);
+                }
                 previousLineItem = nullptr;
             }
             previousLineItem = MainWindow::graphicsScene->addLine(line, QPen(Qt::DashLine));
+        }
+    } else {
+        // Assurez-vous de supprimer la ligne précédente si la touche Shift n'est pas pressée
+        if (previousLineItem) {
+            if (MainWindow::graphicsScene->items().contains(previousLineItem)) {
+                MainWindow::graphicsScene->removeItem(previousLineItem);
+            }
+            previousLineItem = nullptr;
         }
     }
 }

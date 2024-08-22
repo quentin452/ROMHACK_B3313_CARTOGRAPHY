@@ -6,10 +6,14 @@ class MouseFixGraphicScene : public QGraphicsScene {
     Q_OBJECT
 
   public:
-    explicit MouseFixGraphicScene(QObject *parent = nullptr) : QGraphicsScene(parent) {}
+    MouseFixGraphicScene(QObject *parent = nullptr);
 
   private:
-    bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
+    QTimer *updateTimer = nullptr;
+    QPointF lastMousePos;
+    QGraphicsLineItem *previousLineItem = nullptr;
+  private slots:
+    void updateLineItem();
 
   protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
