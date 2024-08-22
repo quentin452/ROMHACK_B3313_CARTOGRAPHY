@@ -64,6 +64,7 @@ class MainWindow : public QMainWindow {
     void toggleStarDisplay();
 
   private:
+    bool contextMenuOpened = false;
     void closeEvent(QCloseEvent *event) override;
     void textUpdate();
     bool isModified() const;

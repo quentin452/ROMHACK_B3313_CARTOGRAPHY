@@ -97,78 +97,98 @@ void MainWindow::textUpdate() {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-    if (event->key() == Qt::Key_Shift && !shiftPressed) {
+    if (event->key() == Qt::Key_Shift) {
         shiftPressed = true;
-        setNodesMovable(false); 
+        setNodesMovable(false);
     }
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
-    if (event->key() == Qt::Key_Shift && shiftPressed) {
+    if (event->key() == Qt::Key_Shift) {
         shiftPressed = false;
-        setNodesMovable(true); 
+        setNodesMovable(true);
         startNodeIndex = -1;
     }
 }
 
 void MainWindow::setNodesMovable(bool movable) {
     for (Node *node : nodes) {
-        node->setMovable(movable); 
+        node->setMovable(movable);
     }
 }
 void MainWindow::mousePressEvent(QMouseEvent *event) {
-    if (event->button() == Qt::RightButton) {
+    if (shiftPressed && event->button() == Qt::RightButton) {
+        startNodeIndex = -1;
         QPointF mousePos = graphicsView->mapToScene(event->pos());
         int nodeIndex;
         if (isMouseOverNode(mousePos, nodeIndex)) {
             rightClickedNodeIndex = nodeIndex;
+            contextMenuOpened = true;
             contextMenu->exec(QCursor::pos());
+            shiftPressed = false;
         }
     }
-    if (shiftPressed && event->button() == Qt::LeftButton) {
+
+    if (!contextMenuOpened && event->button() == Qt::LeftButton) {
         startPos = graphicsView->mapToScene(event->pos());
         int nodeIndex;
         if (isMouseOverNode(startPos, nodeIndex))
             startNodeIndex = nodeIndex;
     }
 #ifdef DEBUG
-    if (!shiftPressed && event->button() == Qt::RightButton) {
-        QPoint viewPos = event->pos();
-        QPointF scenePos = graphicsView->mapToScene(viewPos);
+    if (!contextMenuOpened && !shiftPressed && event->button() == Qt::RightButton) {
+        QPointF scenePos = graphicsView->mapToScene(event->pos());
+
+        // Vérifie si la position actuelle de la souris est au-dessus d'une node
+        int nodeIndex;
+        if (isMouseOverNode(scenePos, nodeIndex)) {
+            qDebug() << "Mouse is over an existing node, skipping node creation.";
+            return;
+        }
+
         if (scenePos.x() < 0 || scenePos.y() < 0) {
             qDebug() << "Invalid scene coordinates, skipping node creation.";
             return;
         }
+
         Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font());
-        QPointF nodePos = newNode->pos();
-        QRectF nodeRect = newNode->boundingRect();
         newNode->setModified(true);
         graphicsScene->addItem(newNode);
         nodes.append(newNode);
     }
 #endif
+    if (contextMenuOpened)
+        contextMenuOpened = false;
 }
 
 void MainWindow::removeConnections() {
     if (rightClickedNodeIndex != -1) {
         if (rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {
             Node *nodeToRemove = nodes[rightClickedNodeIndex];
-            QVector<int> indicesToRemove;
+            QVector<int> indicesToRemove, connectedNodes;
             for (int i = 0; i < connections.size(); ++i) {
                 QPair<int, int> conn = connections[i];
-                if (conn.first == rightClickedNodeIndex || conn.second == rightClickedNodeIndex)
+                if (conn.first == rightClickedNodeIndex || conn.second == rightClickedNodeIndex) {
                     indicesToRemove.push_back(i);
+                    int connectedNodeIndex = (conn.first == rightClickedNodeIndex) ? conn.second : conn.first;
+                    if (connectedNodeIndex >= 0 && connectedNodeIndex < nodes.size()) {
+                        connectedNodes.push_back(connectedNodeIndex);
+                    }
+                }
             }
             for (int i = indicesToRemove.size() - 1; i >= 0; --i) {
                 connections.removeAt(indicesToRemove[i]);
             }
-            for (int i : nodeToRemove->getConnections()) {
-                if (i >= 0 && i < nodes.size())
+            for (int i : connectedNodes) {
+                if (i >= 0 && i < nodes.size()) {
                     nodes[i]->removeConnection(rightClickedNodeIndex);
-                else
+                    nodes[i]->setModified(true);
+                } else {
                     qDebug() << "Invalid node index in removeConnections.";
+                }
             }
             nodeToRemove->connections.clear();
+            nodeToRemove->setModified(true);
             updateDisplay();
         } else {
             qDebug() << "Invalid node index in removeConnections.";
