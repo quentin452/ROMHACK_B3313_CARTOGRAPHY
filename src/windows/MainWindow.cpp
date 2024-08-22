@@ -94,8 +94,6 @@ MainWindow::~MainWindow() {
 }
 void MainWindow::openSettingsWindow() {
     settingsWindow->exec();
-    bool vsyncEnabled = settingsWindow->vsyncEnabled();
-    bool showFpsEnabled = settingsWindow->showFpsEnabled();
 }
 void MainWindow::textUpdate() {
     bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);

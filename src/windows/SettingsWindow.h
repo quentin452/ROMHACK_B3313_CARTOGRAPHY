@@ -7,14 +7,7 @@ class SettingsWindow : public QDialog {
     Q_OBJECT
   public:
     SettingsWindow(QWidget *parent = nullptr);
-    bool vsyncEnabled() const;
-    bool showFpsEnabled() const;
     bool isResizable() const;
-
-  private slots:
-    void onVsyncToggled(bool checked);
-    void onShowFpsToggled(bool checked);
-
   private:
     QCheckBox *vsyncCheckBox,*resizableCheckBox,*showFpsCheckBox;
 };
