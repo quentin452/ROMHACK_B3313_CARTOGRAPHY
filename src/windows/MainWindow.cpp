@@ -1,9 +1,4 @@
 #include "MainWindow.h"
-#ifdef DEBUG
-QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
-#else
-QString b33_13_mind_map_str = "stars_layout/b3313-V1.0.2/b3313-v1.0.2-Mind_map.json";
-#endif
 std::basic_string<wchar_t> MainWindow::global_detected_emulator;
 QLabel *MainWindow::emulatorText, *MainWindow::b3313Text = nullptr;
 QStringList MainWindow::tabNames;
@@ -309,7 +304,7 @@ void MainWindow::onTimerUpdate() {
 void MainWindow::updateDisplay() {
     if (showStarDisplay) {
         textUpdate();
-        QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
+        QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json"); // NEED OPTIMIZATIONS
         starDisplay.displayStars(jsonData);
     } else {
         QList<QGraphicsItem *> items = graphicsScene->items();

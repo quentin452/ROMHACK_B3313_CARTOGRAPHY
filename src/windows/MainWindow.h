@@ -72,10 +72,6 @@ class MainWindow : public QMainWindow {
     void textUpdate();
     bool isModified() const;
     void onTimerUpdate();
-    void updateScrollbarpos();
-    void loadJsonData(const QString &filename);
-    QJsonObject loadJsonData2(const QString &filePath);
-    void parseJsonData(const QJsonObject &jsonObj);
     void updateDisplay();
 
     QPointF startPos;
@@ -88,14 +84,19 @@ class MainWindow : public QMainWindow {
     Node *startArrowNode = nullptr; // Node where the arrow starts
     QGraphicsLineItem *currentArrow = nullptr;
     QMenu *contextMenu = nullptr;
-    int rightClickedNodeIndex = -1;
-    const int WIDTH = 1280;
-    const int HEIGHT = 720;
+    const int WIDTH = 1280, HEIGHT = 720;
     std::unique_ptr<MainWindowUpdateThread> thread;
     QWidget *star_display_centralWidget = nullptr;
     QStackedWidget *stackedWidget = nullptr;
     QWidget *centralWidgetZ = nullptr;
     QScrollArea *scrollArea_star_display = nullptr;
-    int stardisplayscrollPosition = 0;
+    int stardisplayscrollPosition = 0, rightClickedNodeIndex = -1;
+
+#ifdef DEBUG
+    QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
+#else
+    QString b33_13_mind_map_str = "stars_layout/b3313-V1.0.2/b3313-v1.0.2-Mind_map.json";
+#endif
 };
+
 #endif // MAIN_WINDOW_H
