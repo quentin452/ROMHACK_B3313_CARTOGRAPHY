@@ -1,6 +1,7 @@
 #include <QMainWindow>
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDebug>
 #include <QFile>
@@ -21,12 +22,14 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QMutex>
+#include <QOpenGLWidget>
 #include <QPainter>
 #include <QPair>
 #include <QPointF>
 #include <QPointer>
 #include <QPolygonF>
 #include <QPushButton>
+#include <QQuickWindow>
 #include <QRectF>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -40,4 +43,3 @@
 #include <QVector2D>
 #include <QVector>
 #include <QWidget>
-

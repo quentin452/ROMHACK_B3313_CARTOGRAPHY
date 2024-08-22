@@ -77,7 +77,6 @@ void StarDisplay::displayStars(const QJsonObject &jsonData) {
     MainWindow::tabWidget->show();
     MainWindow::emulatorText->hide();
     MainWindow::b3313Text->hide();
-    MainWindow::switchViewButton->show();
     std::string saveLocation = GetParallelLauncherSaveLocation();
     QJsonObject format = jsonData["format"].toObject();
     SaveParams params;

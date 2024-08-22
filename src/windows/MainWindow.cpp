@@ -14,7 +14,8 @@ QVector<QPair<int, int>> MainWindow::connections;
 QGraphicsScene *MainWindow::graphicsScene = nullptr;
 QJsonObject MainWindow::lastJsonData;
 
-MainWindow::MainWindow() {
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent), settingsWindow(nullptr) {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
     emulatorText = new QLabel("Emulator Status", this);
@@ -66,6 +67,16 @@ MainWindow::MainWindow() {
     star_display_mainLayout->insertWidget(5, switchViewButton);
     tabWidget->hide();
     qfont = this->font();
+    settingsWindow = new SettingsWindow(this);
+
+    /*settingsButton = new QPushButton("Settings", this);
+    star_display_mainLayout->addWidget(settingsButton);
+    connect(settingsButton, &QPushButton::clicked, this, &MainWindow::openSettingsWindow);*/
+    /*fpsLabel = new QLabel(this);
+    fpsLabel->setStyleSheet("color: white; background-color: rgba(0, 0, 0, 100);");
+    fpsLabel->setAlignment(Qt::AlignRight | Qt::AlignTop);
+    fpsLabel->setFixedWidth(100);                         // Fixer une largeur pour le label
+    fpsLabel->move(width() - fpsLabel->width() - 10, 10); // Positionner en haut à droite*/
 }
 
 MainWindow::~MainWindow() {
@@ -73,6 +84,12 @@ MainWindow::~MainWindow() {
         thread->stop();
         thread->wait();
     }
+    delete settingsWindow;
+}
+void MainWindow::openSettingsWindow() {
+    settingsWindow->exec();
+    bool vsyncEnabled = settingsWindow->vsyncEnabled();
+    bool showFpsEnabled = settingsWindow->showFpsEnabled();
 }
 void MainWindow::textUpdate() {
     bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
@@ -296,16 +313,23 @@ bool MainWindow::isModified() const {
     }
     return false;
 }
-
+void MainWindow::resizeEvent(QResizeEvent *event) {
+    QMainWindow::resizeEvent(event);
+    // fpsLabel->move(width() - fpsLabel->width() - 10, 10);
+}
 void MainWindow::onTimerUpdate() {
     updateDisplay();
 }
 
 void MainWindow::updateDisplay() {
+    /*if (settingsWindow->showFpsEnabled()) {
+        fpsLabel->setText(QString("FPS: %1").arg(fpsManager->fps(), 0, 'f', 2));
+    }*/
     if (showStarDisplay) {
         textUpdate();
         QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json"); // NEED OPTIMIZATIONS
         starDisplay.displayStars(jsonData);
+        switchViewButton->show();
     } else {
         QList<QGraphicsItem *> items = graphicsScene->items();
         for (QGraphicsItem *item : items) {

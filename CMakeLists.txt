@@ -9,7 +9,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Trouver les modules nécessaires de Qt
-find_package(Qt6 6.7 REQUIRED COMPONENTS Widgets Gui Core)
+find_package(Qt6 6.7 REQUIRED COMPONENTS Widgets Gui Core OpenGLWidgets Quick Qml)
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -28,16 +29,20 @@ add_executable(ROMHACK_B3313_CARTOGRAPHY ${SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${ALL_INCLUDE_DIR}
 )
-
+qt_add_resources(RESOURCES resources.qrc)
 # Lier Qt aux cibles
 target_link_libraries(ROMHACK_B3313_CARTOGRAPHY
     Qt6::Widgets
     Qt6::Gui
-    Qt6::Core
+    Qt6::Core 
+    Qt6::OpenGLWidgets
+    Qt6::Quick
+    Qt6::Qml
 )
 
 # Définir les options de compilation pour le mode Debug
 target_compile_definitions(ROMHACK_B3313_CARTOGRAPHY PRIVATE $<$<CONFIG:Debug>:DEBUG>)
+
 # Copier les ressources dans le répertoire de construction
 add_custom_command(TARGET ROMHACK_B3313_CARTOGRAPHY POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E remove_directory "$<TARGET_FILE_DIR:ROMHACK_B3313_CARTOGRAPHY>/resources"
@@ -46,6 +51,7 @@ add_custom_command(TARGET ROMHACK_B3313_CARTOGRAPHY POST_BUILD
   "$<TARGET_FILE_DIR:ROMHACK_B3313_CARTOGRAPHY>/resources"
   COMMENT "Updating resources in the build directory"
 )
+
 # Find windeployqt
 find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${Qt6_DIR}/../../../bin")
 
