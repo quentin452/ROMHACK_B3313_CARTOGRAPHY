@@ -8,10 +8,10 @@ SettingsWindow::SettingsWindow(QWidget *parent)
 
     vsyncCheckBox = new QCheckBox("Enable V-Sync", this);
     showFpsCheckBox = new QCheckBox("Show FPS", this);
-
+    resizableCheckBox = new QCheckBox("Resizable Window", this); // Nouveau QCheckBox
     layout->addWidget(vsyncCheckBox);
     layout->addWidget(showFpsCheckBox);
-
+    layout->addWidget(resizableCheckBox); // Ajouter au layout
     QPushButton *closeButton = new QPushButton("Close", this);
     connect(closeButton, &QPushButton::clicked, this, &QDialog::accept);
 
@@ -28,8 +28,11 @@ bool SettingsWindow::vsyncEnabled() const {
 bool SettingsWindow::showFpsEnabled() const {
     return showFpsCheckBox->isChecked();
 }
-
-void SettingsWindow::onVsyncToggled(bool checked) {return;
+bool SettingsWindow::isResizable() const { // Implémentation de la nouvelle méthode
+    return resizableCheckBox->isChecked();
+}
+void SettingsWindow::onVsyncToggled(bool checked) {
+    return;
     QOpenGLWidget *glWidget = findChild<QOpenGLWidget *>();
     if (glWidget) {
         QSurfaceFormat format = glWidget->format();
@@ -39,12 +42,13 @@ void SettingsWindow::onVsyncToggled(bool checked) {return;
     }
 }
 
-void SettingsWindow::onShowFpsToggled(bool checked) {return;
+void SettingsWindow::onShowFpsToggled(bool checked) {
+    return;
     if (MainWindow *mainWindow = qobject_cast<MainWindow *>(parent())) {
         if (checked) {
-          //  mainWindow->fpsLabel->show();
+            //  mainWindow->fpsLabel->show();
         } else {
-          //  mainWindow->fpsLabel->hide();
+            //  mainWindow->fpsLabel->hide();
         }
     }
 }

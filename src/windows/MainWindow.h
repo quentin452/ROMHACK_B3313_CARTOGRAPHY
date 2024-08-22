@@ -43,7 +43,8 @@ class MainWindow : public QMainWindow {
     static QTabWidget *tabWidget;
     static QFont qfont;
     static QVBoxLayout *star_display_mainLayout;
-    static QPushButton *switchViewButton;
+    static QPushButton *switchViewButton, *settingsButton;
+
     static QJsonObject lastJsonData;
 
     static bool shiftPressed;
@@ -51,7 +52,6 @@ class MainWindow : public QMainWindow {
     static QVector<Node *> nodes;
     static QVector<QPair<int, int>> connections;
     static QGraphicsScene *graphicsScene;
-    // QLabel *fpsLabel;
 
   protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -61,7 +61,6 @@ class MainWindow : public QMainWindow {
     void setNodesMovable(bool movable);
 
     void mousePressEvent(QMouseEvent *event) override;
-    void resizeEvent(QResizeEvent *event) override;
 
   private slots:
     void removeConnections();
@@ -77,6 +76,7 @@ class MainWindow : public QMainWindow {
     void onTimerUpdate();
     void updateDisplay();
     void renameSelectedNode();
+    void setWindowResizable(bool resizable);
     SettingsWindow *settingsWindow = nullptr;
     QPointF startPos;
     bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles
@@ -95,7 +95,6 @@ class MainWindow : public QMainWindow {
     QWidget *centralWidgetZ = nullptr;
     QScrollArea *scrollArea_star_display = nullptr;
     int stardisplayscrollPosition = 0, rightClickedNodeIndex = -1;
-    QPushButton *settingsButton = nullptr;
 #ifdef DEBUG
     QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
 #else

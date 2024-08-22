@@ -6,7 +6,8 @@ QGraphicsView *MainWindow::graphicsView = nullptr;
 QTabWidget *MainWindow::tabWidget = nullptr;
 QFont MainWindow::qfont;
 QVBoxLayout *MainWindow::star_display_mainLayout = nullptr;
-QPushButton *MainWindow::switchViewButton = nullptr;
+QPushButton *MainWindow::switchViewButton = nullptr, *MainWindow::settingsButton = nullptr;
+
 QVector<Node *> MainWindow::nodes;
 bool MainWindow::shiftPressed = false;
 int MainWindow::startNodeIndex = -1;
@@ -70,17 +71,20 @@ MainWindow::MainWindow(QWidget *parent)
     tabWidget->hide();
     qfont = this->font();
     settingsWindow = new SettingsWindow(this);
-
-    /*settingsButton = new QPushButton("Settings", this);
+    setWindowResizable(settingsWindow->isResizable());
+    settingsButton = new QPushButton("Settings", this);
     star_display_mainLayout->addWidget(settingsButton);
-    connect(settingsButton, &QPushButton::clicked, this, &MainWindow::openSettingsWindow);*/
-    /*fpsLabel = new QLabel(this);
-    fpsLabel->setStyleSheet("color: white; background-color: rgba(0, 0, 0, 100);");
-    fpsLabel->setAlignment(Qt::AlignRight | Qt::AlignTop);
-    fpsLabel->setFixedWidth(100);                         // Fixer une largeur pour le label
-    fpsLabel->move(width() - fpsLabel->width() - 10, 10); // Positionner en haut à droite*/
+    connect(settingsButton, &QPushButton::clicked, this, &MainWindow::openSettingsWindow);
 }
-
+void MainWindow::setWindowResizable(bool resizable) {
+    if (resizable) {
+        setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);              // Laisser la taille maximale non limitée
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding); // Permettre le redimensionnement
+    } else {
+        setMaximumSize(size());                                // Fixer la taille maximale à la taille actuelle
+        setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed); // Fixer la taille
+    }
+}
 MainWindow::~MainWindow() {
     if (thread) {
         thread->stop();
@@ -261,6 +265,7 @@ void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
     if (showStarDisplay) {
         textUpdate();
+        settingsButton->hide();
         switchViewButton->hide();
         QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
         if (tabWidget)
@@ -278,6 +283,7 @@ void MainWindow::toggleStarDisplay() {
         b3313Text->hide();
         emulatorText->hide();
     } else {
+        settingsButton->hide();
         QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
         if (tabWidget)
             tabWidget->hide();
@@ -296,14 +302,9 @@ void MainWindow::toggleStarDisplay() {
                 node->show();
         }
         QVBoxLayout *layout = star_display_mainLayout;
-        if (layout->indexOf(saveButton) != -1)
-            layout->removeWidget(saveButton);
-        layout->addWidget(saveButton);
-        if (layout->indexOf(switchViewButton) != -1)
-            layout->removeWidget(switchViewButton);
-        layout->addWidget(switchViewButton);
         saveButton->show();
         switchViewButton->show();
+        settingsButton->show();
         emulatorText->hide();
         b3313Text->hide();
     }
@@ -335,18 +336,13 @@ bool MainWindow::isModified() const {
     }
     return false;
 }
-void MainWindow::resizeEvent(QResizeEvent *event) {
-    QMainWindow::resizeEvent(event);
-    // fpsLabel->move(width() - fpsLabel->width() - 10, 10);
-}
+
 void MainWindow::onTimerUpdate() {
     updateDisplay();
 }
 
 void MainWindow::updateDisplay() {
-    /*if (settingsWindow->showFpsEnabled()) {
-        fpsLabel->setText(QString("FPS: %1").arg(fpsManager->fps(), 0, 'f', 2));
-    }*/
+    setWindowResizable(settingsWindow->isResizable());
     if (showStarDisplay) {
         textUpdate();
         QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json"); // NEED OPTIMIZATIONS

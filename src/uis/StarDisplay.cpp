@@ -3,7 +3,6 @@
 #include <memory>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
 
-
 void drawCourseStars(QPainter &painter, const QMap<QString, QMap<QString, QVector<StarData>>> &groupCourseMap, float startX, float starTextureHeight, float rectLeft, float rectTop, int &yOffset, int reservedHeight, const QImage &starCollectedTexture, const QImage &starMissingTexture) {
     float starSpacing = 64.0f;
     for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
@@ -72,11 +71,15 @@ void StarDisplay::displayStars(const QJsonObject &jsonData) {
         MainWindow::tabWidget->hide();
         MainWindow::emulatorText->show();
         MainWindow::b3313Text->show();
+        MainWindow::switchViewButton->show();
+        MainWindow::settingsButton->show();
         return;
     }
     MainWindow::tabWidget->show();
     MainWindow::emulatorText->hide();
     MainWindow::b3313Text->hide();
+    MainWindow::switchViewButton->show();
+    MainWindow::settingsButton->show();
     std::string saveLocation = GetParallelLauncherSaveLocation();
     QJsonObject format = jsonData["format"].toObject();
     SaveParams params;
@@ -155,5 +158,4 @@ void StarDisplay::displayStars(const QJsonObject &jsonData) {
             contentWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
         contentWidget->setMinimumHeight(totalHeight);
     }
-    MainWindow::switchViewButton->show();
 }
