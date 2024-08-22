@@ -9,56 +9,22 @@ QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint) {
     QPointF edgePoint;
     switch (node->shape) {
     case Circle: {
-        float radius = node->boundingRect().width() / 2; // Rayon du cercle
-
+        float radiusX = node->boundingRect().width() / 2;  // Rayon horizontal de l'ellipse
+        float radiusY = node->boundingRect().height() / 2; // Rayon vertical de l'ellipse
         // Définir les points de la ligne et la direction
         QPointF direction = line.p2() - nodeCenter;
         float length = std::sqrt(direction.x() * direction.x() + direction.y() * direction.y());
-
         if (length == 0) {
-            edgePoint = nodeCenter; // Si le point de destination est au centre du cercle
+            edgePoint = nodeCenter; // Si le point de destination est au centre de l'ellipse
         } else {
             // Normaliser la direction
             QPointF unitDirection = direction / length;
 
-            // Équation de la ligne en termes de paramètres t
-            // x = x0 + t * dx
-            // y = y0 + t * dy
-            // Substituer dans l'équation du cercle :
-            // (x0 + t * dx - xc)^2 + (y0 + t * dy - yc)^2 = r^2
-            // Développer pour obtenir une équation quadratique en t
+            // Calculer les points d'intersection avec l'ellipse
+            float t = std::sqrt((radiusX * radiusX * radiusY * radiusY) / (radiusY * radiusY * unitDirection.x() * unitDirection.x() + radiusX * radiusX * unitDirection.y() * unitDirection.y()));
+            edgePoint = nodeCenter + unitDirection * t;
 
-            float dx = direction.x();
-            float dy = direction.y();
-            float A = dx * dx + dy * dy;
-            float B = 2 * (dx * (nodeCenter.x() - line.p1().x()) + dy * (nodeCenter.y() - line.p1().y()));
-            float C = (line.p1().x() - nodeCenter.x()) * (line.p1().x() - nodeCenter.x()) + (line.p1().y() - nodeCenter.y()) * (line.p1().y() - nodeCenter.y()) - radius * radius;
-
-            // Résoudre l'équation quadratique At^2 + Bt + C = 0
-            float discriminant = B * B - 4 * A * C;
-            if (discriminant >= 0) {
-                float sqrtDisc = std::sqrt(discriminant);
-                float t1 = (-B - sqrtDisc) / (2 * A);
-                float t2 = (-B + sqrtDisc) / (2 * A);
-
-                // Calculer les points d'intersection
-                QPointF intersection1 = line.p1() + unitDirection * t1;
-                QPointF intersection2 = line.p1() + unitDirection * t2;
-
-                // Choisir le point d'intersection le plus proche de endPoint
-                float dist1 = QLineF(endPoint, intersection1).length();
-                float dist2 = QLineF(endPoint, intersection2).length();
-
-                if (dist1 < dist2) {
-                    edgePoint = intersection1;
-                } else {
-                    edgePoint = intersection2;
-                }
-
-                qDebug() << "Circle Edge Point:" << edgePoint;
-            } else {
-                qDebug() << "Error: No intersection found.";
-            }
+            qDebug() << "Ellipse Edge Point:" << edgePoint;
         }
         break;
     }
