@@ -78,11 +78,11 @@ MainWindow::MainWindow(QWidget *parent)
 }
 void MainWindow::setWindowResizable(bool resizable) {
     if (resizable) {
-        setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);              // Laisser la taille maximale non limitée
-        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding); // Permettre le redimensionnement
+        setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     } else {
-        setMaximumSize(size());                                // Fixer la taille maximale à la taille actuelle
-        setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed); // Fixer la taille
+        setFixedSize(WIDTH, HEIGHT);
+        setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     }
 }
 MainWindow::~MainWindow() {
