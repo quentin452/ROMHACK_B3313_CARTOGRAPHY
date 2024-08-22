@@ -17,6 +17,8 @@ bool MainWindow::shiftPressed = false;
 int MainWindow::startNodeIndex = -1;
 QVector<QPair<int, int>> MainWindow::connections;
 QGraphicsScene *MainWindow::graphicsScene = nullptr;
+QJsonObject MainWindow::lastJsonData;
+
 MainWindow::MainWindow() {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
@@ -47,10 +49,10 @@ MainWindow::MainWindow() {
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
     thread->start();
     QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
-    QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000); // Ajout d'une marge
+    QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000);
     graphicsScene->setSceneRect(adjustedSceneRect);
     star_display_mainLayout = layout;
-    loadJsonData(b33_13_mind_map_str);
+    JsonLoading::loadNodesJsonData(b33_13_mind_map_str);
     setFocusPolicy(Qt::StrongFocus);
     graphicsView->setFocusPolicy(Qt::StrongFocus);
     installEventFilter(this);
@@ -139,10 +141,8 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (!contextMenuOpened && !shiftPressed && event->button() == Qt::RightButton) {
         QPointF scenePos = graphicsView->mapToScene(event->pos());
 
-        // Vérifie si la position actuelle de la souris est au-dessus d'une node
         int nodeIndex;
         if (isMouseOverNode(scenePos, nodeIndex)) {
-            qDebug() << "Mouse is over an existing node, skipping node creation.";
             return;
         }
 
@@ -224,17 +224,6 @@ void MainWindow::saveNodes() {
     }
 }
 
-void MainWindow::printWidgetOrder() {
-    QVBoxLayout *layout = star_display_mainLayout;
-    qDebug() << "Current widget order in layout:";
-    for (int i = 0; i < layout->count(); ++i) {
-        QWidget *widget = layout->itemAt(i)->widget();
-        if (widget) {
-            qDebug() << "Widget:" << widget->objectName();
-        }
-    }
-}
-
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
     if (showStarDisplay) {
@@ -313,85 +302,14 @@ bool MainWindow::isModified() const {
     return false;
 }
 
-QJsonObject MainWindow::loadJsonData2(const QString &filePath) {
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Could not open file:" << filePath;
-        return QJsonObject(); // Return an empty QJsonObject on failure
-    }
-    QByteArray jsonData = file.readAll();
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData);
-    if (!jsonDoc.isObject()) {
-        qWarning() << "Invalid JSON format in file:" << filePath;
-        return QJsonObject(); // Return an empty QJsonObject on failure
-    }
-    return jsonDoc.object(); // Return the parsed QJsonObject
-}
-void MainWindow::loadJsonData(const QString &filename) {
-    QFile file(filename);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Failed to open file:" << filename;
-        return;
-    }
-    QByteArray data = file.readAll();
-    QJsonDocument doc(QJsonDocument::fromJson(data));
-    if (doc.isNull() || !doc.isObject()) { // Vérifiez si c'est un QJsonObject
-        qWarning() << "Failed to parse JSON or JSON is not an object.";
-        return;
-    }
-    QJsonObject jsonObject = doc.object();
-    lastJsonData = jsonObject; // Clear lastJsonData if not used
-    parseJsonData(jsonObject);
-}
-
-void MainWindow::parseJsonData(const QJsonObject &jsonObj) {
-    nodes.clear();
-    connections.clear();
-    graphicsScene->clear();
-    if (jsonObj.contains("nodes") && jsonObj["nodes"].isArray()) {
-        QJsonArray nodesArray = jsonObj["nodes"].toArray();
-        QHash<int, Node *> nodeIndexMap;
-        for (int i = 0; i < nodesArray.size(); ++i) {
-            QJsonObject nodeObj = nodesArray[i].toObject();
-            Node *node = Node::fromJson(nodeObj, QFont("Arial", 12, QFont::Bold));
-            graphicsScene->addItem(node);
-            nodes.append(node);
-            nodeIndexMap.insert(i, node);
-        }
-        if (jsonObj.contains("connections") && jsonObj["connections"].isObject()) {
-            QJsonObject connectionsObj = jsonObj["connections"].toObject();
-            if (connectionsObj.contains("connections") && connectionsObj["connections"].isArray()) {
-                QJsonArray connectionsArray = connectionsObj["connections"].toArray();
-                for (const QJsonValue &value : connectionsArray) {
-                    QJsonObject connectionObj = value.toObject();
-                    int startIndex = connectionObj["start"].toInt();
-                    int endIndex = connectionObj["end"].toInt();
-                    if (nodeIndexMap.contains(startIndex) && nodeIndexMap.contains(endIndex)) {
-                        Node *startNode = nodeIndexMap[startIndex];
-                        Node *endNode = nodeIndexMap[endIndex];
-                        if (startNode && endNode) {
-                            connections.push_back(QPair<int, int>(startIndex, endIndex));
-                            nodes[startIndex]->addConnection(endIndex);
-                            nodes[endIndex]->addConnection(startIndex);
-                        }
-                    } else {
-                        qWarning() << "Invalid node index in connection.";
-                    }
-                }
-            }
-        }
-    }
-}
-
 void MainWindow::onTimerUpdate() {
     updateDisplay();
 }
 
 void MainWindow::updateDisplay() {
-    isModified();
     if (showStarDisplay) {
         textUpdate();
-        QJsonObject jsonData = loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
+        QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
         starDisplay.displayStars(jsonData);
     } else {
         QList<QGraphicsItem *> items = graphicsScene->items();
@@ -431,8 +349,8 @@ void MainWindow::updateDisplay() {
                 qWarning() << "Connection has invalid node index:" << conn;
             }
         }
+        isModified();
     }
-    isModified();
 }
 
 bool MainWindow::isMouseOverNode(const QPointF &mousePos, int &nodeIndex) {

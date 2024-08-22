@@ -1,37 +1,9 @@
+#include "../utils/JsonLoading.h"
 #include "../windows/MainWindow.h"
 #include <memory>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
 
-QMap<QString, QMap<QString, QVector<StarData>>> readJsonData(const QJsonObject &jsonData, const std::vector<uint8_t> &saveData, const SaveParams &params, int slotIndex) {
-    QMap<QString, QMap<QString, QVector<StarData>>> groupCourseMap;
-    for (const auto &groupValue : jsonData["groups"].toArray()) {
-        QJsonObject group = groupValue.toObject();
-        if (!group.contains("name") || !group.contains("courses"))
-            continue;
-        QString groupName = group["name"].toString();
-        QMap<QString, QVector<StarData>> &courseStarsMap = groupCourseMap[groupName];
-        for (const auto &courseValue : group["courses"].toArray()) {
-            QJsonObject course = courseValue.toObject();
-            if (!course.contains("name") || !course.contains("data"))
-                continue;
-            QString courseName = course["name"].toString();
-            QVector<StarData> &courseStarList = courseStarsMap[courseName];
-            for (const auto &dataValue : course["data"].toArray()) {
-                QJsonObject data = dataValue.toObject();
-                int offset = data["offset"].toInt();
-                int mask = data["mask"].toInt();
-                int numStars = 1;
-                for (int bit = 0; bit < 32; ++bit) {
-                    if (mask & (1 << bit)) {
-                        bool star_collected = isStarCollected(saveData, offset, bit, slotIndex, params.slotSize);
-                        courseStarList.append({courseName, numStars, star_collected, offset, mask});
-                    }
-                }
-            }
-        }
-    }
-    return groupCourseMap;
-}
+
 void drawCourseStars(QPainter &painter, const QMap<QString, QMap<QString, QVector<StarData>>> &groupCourseMap, float startX, float starTextureHeight, float rectLeft, float rectTop, int &yOffset, int reservedHeight, const QImage &starCollectedTexture, const QImage &starMissingTexture) {
     float starSpacing = 64.0f;
     for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
@@ -100,12 +72,12 @@ void StarDisplay::displayStars(const QJsonObject &jsonData) {
         MainWindow::tabWidget->hide();
         MainWindow::emulatorText->show();
         MainWindow::b3313Text->show();
-        MainWindow::switchViewButton->show();
         return;
     }
     MainWindow::tabWidget->show();
     MainWindow::emulatorText->hide();
     MainWindow::b3313Text->hide();
+    MainWindow::switchViewButton->show();
     std::string saveLocation = GetParallelLauncherSaveLocation();
     QJsonObject format = jsonData["format"].toObject();
     SaveParams params;
@@ -160,8 +132,8 @@ void StarDisplay::displayStars(const QJsonObject &jsonData) {
             contentLayout = qobject_cast<QVBoxLayout *>(contentWidget->layout());
         }
         int yOffset = 0;
-        int reservedHeight = 50; // Ajustez ceci pour ajouter un espace en bas si nécessaire
-        QMap<QString, QMap<QString, QVector<StarData>>> groupCourseMap = readJsonData(jsonData, saveData, params, i);
+        int reservedHeight = 50;
+        QMap<QString, QMap<QString, QVector<StarData>>> groupCourseMap = JsonLoading::readStarDisplayJsonData(jsonData, saveData, params, i);
         for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
             const QMap<QString, QVector<StarData>> &courseStarsMap = groupIt.value();
             for (auto courseIt = courseStarsMap.cbegin(); courseIt != courseStarsMap.cend(); ++courseIt) {

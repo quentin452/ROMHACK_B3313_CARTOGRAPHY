@@ -24,6 +24,8 @@
 #include <memory>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
 
+#include "../utils/JsonLoading.h"
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -41,6 +43,7 @@ class MainWindow : public QMainWindow {
     static QFont qfont;
     static QVBoxLayout *star_display_mainLayout;
     static QPushButton *switchViewButton;
+    static QJsonObject lastJsonData;
 
     static bool shiftPressed;
     static int startNodeIndex;
@@ -74,10 +77,8 @@ class MainWindow : public QMainWindow {
     QJsonObject loadJsonData2(const QString &filePath);
     void parseJsonData(const QJsonObject &jsonObj);
     void updateDisplay();
-    void printWidgetOrder();
 
     QPointF startPos;
-    QJsonObject lastJsonData;
     bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles
     StarDisplay starDisplay;      // Instance de la classe StarDisplay
     QList<Node *> mind_map_nodes;

@@ -78,6 +78,7 @@ void Node::setModified(bool modified) {
 void Node::updateIsModified() {
     for (QGraphicsPixmapItem *starItem : starItems) {
         if (scene() && scene()->items().contains(starItem)) {
+            scene()->removeItem(starItem); 
             delete starItem;
         }
     }
