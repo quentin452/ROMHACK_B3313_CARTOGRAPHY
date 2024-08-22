@@ -9,7 +9,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Trouver les modules nécessaires de Qt
-find_package(Qt6 6.7 REQUIRED COMPONENTS Widgets Gui Core OpenGLWidgets Quick Qml)
+find_package(Qt6 6.7 REQUIRED COMPONENTS Widgets Gui Core OpenGLWidgets Quick Qml Test)  # Ajoutez Test ici
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -30,6 +30,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${ALL_INCLUDE_DIR}
 )
 qt_add_resources(RESOURCES resources.qrc)
+
 # Lier Qt aux cibles
 target_link_libraries(ROMHACK_B3313_CARTOGRAPHY
     Qt6::Widgets
@@ -38,6 +39,7 @@ target_link_libraries(ROMHACK_B3313_CARTOGRAPHY
     Qt6::OpenGLWidgets
     Qt6::Quick
     Qt6::Qml
+    Qt6::Test  # Ajoutez Qt6::Test ici
 )
 
 # Définir les options de compilation pour le mode Debug

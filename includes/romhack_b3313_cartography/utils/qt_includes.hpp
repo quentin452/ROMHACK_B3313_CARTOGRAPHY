@@ -4,6 +4,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDebug>
+#include <QDialog>
 #include <QFile>
 #include <QFont>
 #include <QGraphicsEllipseItem>
@@ -18,11 +19,13 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
+#include <QLineEdit>
 #include <QList>
 #include <QMenu>
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QMutex>
+#include <QObject>
 #include <QOpenGLWidget>
 #include <QPainter>
 #include <QPair>
@@ -37,6 +40,7 @@
 #include <QStackedWidget>
 #include <QString>
 #include <QStringList>
+#include <QTest>
 #include <QTextEdit>
 #include <QThread>
 #include <QTimer>

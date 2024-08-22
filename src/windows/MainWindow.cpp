@@ -29,16 +29,13 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(centralWidgetZ);
     saveButton = new QPushButton("Save", this);
     switchViewButton = new QPushButton("Switch View", this);
-    ADD_WIDGETS(layout, emulatorText, b3313Text, graphicsView, saveButton, switchViewButton);
+    addWidgets(*layout, emulatorText, b3313Text, graphicsView, saveButton, switchViewButton);
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveNodes);
     connect(switchViewButton, &QPushButton::clicked, this, &MainWindow::toggleStarDisplay);
     contextMenu = new QMenu(this);
-    QAction *renameNodeAction = new QAction("Rename Node", this);
-    connect(renameNodeAction, &QAction::triggered, this, &MainWindow::renameSelectedNode);
-    contextMenu->addAction(renameNodeAction);
-    QAction *removeConnectionsAction = new QAction("Remove Connections", this);
-    connect(removeConnectionsAction, &QAction::triggered, this, &MainWindow::removeConnections);
-    contextMenu->addAction(removeConnectionsAction);
+    ADD_ACTION(contextMenu, renameNodeAction, renameSelectedNode)
+    ADD_ACTION(contextMenu, removeConnectionsAction, removeConnections)
+    ADD_ACTION(contextMenu, changeShapeAction, changeNodeShape)
     HIDE_WIDGETS(emulatorText, b3313Text);
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
@@ -91,10 +88,8 @@ void MainWindow::openSettingsWindow() {
     settingsWindow->exec();
 }
 void MainWindow::textUpdate() {
-    bool emulatorRunning = isEmulatorDetected(parallelLauncher, global_detected_emulator);
-    bool romLoaded = isRomHackLoaded(global_detected_emulator);
-    UPDATE_LABEL(emulatorText, emulatorRunning, "Parallel launcher Emulator Running", "Parallel launcher Emulator Not Running");
-    UPDATE_LABEL(b3313Text, romLoaded, "B3313 V1.0.2 ROM Loaded", "B3313 V1.0.2 ROM Not Loaded");
+    UPDATE_LABEL(emulatorText, isEmulatorDetected(parallelLauncher, global_detected_emulator), "Parallel launcher Emulator Running", "Parallel launcher Emulator Not Running");
+    UPDATE_LABEL(b3313Text, isRomHackLoaded(global_detected_emulator), "B3313 V1.0.2 ROM Loaded", "B3313 V1.0.2 ROM Not Loaded");
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -145,7 +140,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
             return;
         }
 
-        Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font());
+        Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font(), NodeShapes::Square);
         newNode->setModified(true);
         graphicsScene->addItem(newNode);
         nodes.append(newNode);
@@ -177,26 +172,62 @@ void MainWindow::removeConnections() {
         qDebug() << "Invalid node index in removeConnections.";
     }
 }
-void MainWindow::renameSelectedNode() {
-    if (rightClickedNodeIndex != -1) {
-        if (rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {
-            Node *node = nodes[rightClickedNodeIndex];
-
-            // Ouvrir un QInputDialog pour entrer le nouveau nom
-            bool ok;
-            QString newName = QInputDialog::getText(this, tr("Rename Node"),
-                                                    tr("New name:"), QLineEdit::Normal,
-                                                    node->getName(), &ok);
-            if (ok && !newName.isEmpty()) {
-                node->setName(newName);
-                node->setModified(true); // Marquer le nœud comme modifié
-                updateDisplay();         // Mettre à jour l'affichage si nécessaire
-            }
-        } else {
-            qDebug() << "Invalid node index in renameSelectedNode.";
-        }
-    }
+void MainWindow::showDialog(const QString &labelText, QWidget *inputWidget, std::function<void()> onAccept) {
+    QDialog dialog(this);
+    dialog.setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    dialog.setMinimumSize(200, 120);
+    dialog.setMaximumSize(600, 120);
+    QVBoxLayout layout(&dialog);
+    QLabel label(labelText);
+    QPushButton okButton(tr("OK"));
+    QPushButton cancelButton(tr("Cancel"));
+    addWidgets(layout, &label, inputWidget, &okButton, &cancelButton);
+    connect(&okButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+    connect(&cancelButton, &QPushButton::clicked, &dialog, &QDialog::reject);
+    if (dialog.exec() == QDialog::Accepted)
+        onAccept();
 }
+
+void MainWindow::renameSelectedNode() {
+    if (rightClickedNodeIndex != -1 && rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {
+        Node *node = nodes[rightClickedNodeIndex];
+        QLineEdit *lineEdit = new QLineEdit(node->getName());
+        auto onAccept = [this, node, lineEdit]() {
+            QString newName = lineEdit->text();
+            if (!newName.isEmpty()) {
+                node->setName(newName);
+                node->setModified(true); // Mark the node as modified
+                updateDisplay();         // Update the display if necessary
+            }
+        };
+        showDialog(tr("New name:"), lineEdit, onAccept);
+    } else {
+        qDebug() << "Invalid node index in renameSelectedNode.";
+    }
+    simulateKeyPress(Qt::Key_Shift);
+    simulateKeyRelease(Qt::Key_Shift);
+}
+
+void MainWindow::changeNodeShape() {
+    if (rightClickedNodeIndex != -1 && rightClickedNodeIndex < nodes.size()) {
+        Node *node = nodes[rightClickedNodeIndex];
+        QComboBox *comboBox = new QComboBox();
+        comboBox->addItems({"Circle", "Square", "Triangle"});
+        auto onAccept = [this, node, comboBox]() {
+            QString selectedShape = comboBox->currentText();
+            if (!selectedShape.isEmpty()) {
+                NodeShapes newShape = stringToShape(selectedShape);
+                node->setShape(newShape);
+                node->setModified(true);
+                updateDisplay();
+            }
+        };
+        showDialog(tr("Shape:"), comboBox, onAccept);
+    }
+    simulateKeyPress(Qt::Key_Shift);
+    simulateKeyRelease(Qt::Key_Shift);
+}
+
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;
     for (const auto &nodePtr : nodes) {

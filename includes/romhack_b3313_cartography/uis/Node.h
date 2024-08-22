@@ -1,36 +1,41 @@
 #pragma once
 
+#include <romhack_b3313_cartography/utils/enums.h>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
 #include <vector>
 
 class Node : public QGraphicsEllipseItem {
   public:
-    Node(float x, float y, const QString &text, const QFont &font);
-    Node(const Node &) = delete;
-    Node &operator=(const Node &) = delete;
-    QJsonObject toJson() const;
-    static Node *fromJson(const QJsonObject &json, const QFont &defaultFont);
-    void setColor(const QColor &color);
-    void setModified(bool modified);
-    bool isModified() const { return modified; }
+    Node(float x, float y, const QString &text, const QFont &font, NodeShapes shape = Circle);
+
     void setMovable(bool movable);
+    void setName(const QString &name);
+    void setColor(const QColor &color);
+    void setShape(NodeShapes shape);
     void addConnection(int nodeIndex);
     void removeConnection(int nodeIndex);
-    const QVector<int> &getConnections() const { return connections; }
-    QVector<int> connections;
+    void setModified(bool modified);
+
+    QJsonObject toJson() const;
+    static Node *fromJson(const QJsonObject &json, const QFont &defaultFont);
     void updateIsModified();
-    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event);
+    bool isModified() const { return modified; }
     QString getName() const { return m_name; }
-    void setName(const QString &name);
+    QList<int> connections;
+
+  protected:
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
 
   private:
+    QString shapeToString(NodeShapes shape) const;
+
     QString label;
     QFont font;
     QColor color;
-    bool modified;
-
-    float radius;
-    QGraphicsTextItem *labelItem;
-    QVector<QGraphicsPixmapItem *> starItems;
     QString m_name;
+    NodeShapes shape;
+    bool modified;
+    QGraphicsTextItem *labelItem;
+    QList<QGraphicsPixmapItem *> starItems;
 };

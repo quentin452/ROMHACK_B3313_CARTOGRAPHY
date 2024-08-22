@@ -15,6 +15,7 @@
 #include <romhack_b3313_cartography/utils/defines.hpp>
 
 #include <romhack_b3313_cartography/utils/rom_utils.h>
+#include <romhack_b3313_cartography/utils/utilities.h>
 
 #include <romhack_b3313_cartography/uis/Node.h>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
@@ -59,13 +60,14 @@ class MainWindow : public QMainWindow {
     void mousePressEvent(QMouseEvent *event) override;
 
   private slots:
+    void changeNodeShape();
     void removeConnections();
     void saveNodes();
     void toggleStarDisplay();
     void openSettingsWindow();
 
   private:
-    bool contextMenuOpened = false;
+    void showDialog(const QString &labelText, QWidget *inputWidget, std::function<void()> onAccept);
     void closeEvent(QCloseEvent *event) override;
     void textUpdate();
     bool isModified() const;
@@ -78,7 +80,7 @@ class MainWindow : public QMainWindow {
     bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles
     StarDisplay starDisplay;      // Instance de la classe StarDisplay
     QList<Node *> mind_map_nodes;
-
+    bool contextMenuOpened = false;
     QPushButton *saveButton = nullptr;
     QTimer *updateTimer = nullptr, *refresh_rate_timer = nullptr;
     Node *startArrowNode = nullptr; // Node where the arrow starts

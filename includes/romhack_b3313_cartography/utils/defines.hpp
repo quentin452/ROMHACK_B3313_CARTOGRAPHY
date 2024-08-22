@@ -52,19 +52,12 @@
             qWarning() << #widget " is null!";                                    \
         }                                                                         \
     } while (0)
-#define ADD_WIDGETS(layout, ...)            \
-    do {                                    \
-        QWidget *widgets[] = {__VA_ARGS__}; \
-        for (QWidget * widget : widgets) {  \
-            layout->addWidget(widget);      \
-        }                                   \
-    } while (0)
 #define IS_VALID_INDEX(index, container) ((index) >= 0 && (index) < (container).size())
 #define ADD_IF_VALID_INDEX(index, container, list) \
     if (IS_VALID_INDEX(index, container)) {        \
         list.push_back(index);                     \
     }
-#define REMOVE_NODES_CONNECTIONS(nodeIndex, connections, indicesToRemove, connectedNodes)        \
+#define REMOVE_NODES_CONNECTIONS(nodeIndex, connections, indicesToRemove, connectedNodes)  \
     for (int i = 0; i < connections.size(); ++i) {                                         \
         QPair<int, int> conn = connections[i];                                             \
         if (conn.first == nodeIndex || conn.second == nodeIndex) {                         \
@@ -73,3 +66,7 @@
             ADD_IF_VALID_INDEX(connectedNodeIndex, nodes, connectedNodes);                 \
         }                                                                                  \
     }
+#define ADD_ACTION(contextMenu, actionName, method)                      \
+    QAction *actionName = new QAction(#actionName, this);                \
+    connect(actionName, &QAction::triggered, this, &MainWindow::method); \
+    contextMenu->addAction(actionName);
