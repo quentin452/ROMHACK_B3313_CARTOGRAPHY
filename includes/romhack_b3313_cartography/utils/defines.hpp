@@ -17,22 +17,24 @@
             }                                                      \
         }                                                          \
     } while (0)
-#define SHOW_WIDGETS(...)                   \
-    do {                                    \
-        QWidget *widgets[] = {__VA_ARGS__}; \
-        for (QWidget * widget : widgets) {  \
-            if (widget)                     \
-                widget->show();             \
-        }                                   \
+#define SHOW_WIDGETS(...)                       \
+    do {                                        \
+        QWidget *widgets[] = {__VA_ARGS__};     \
+        for (QWidget * widget : widgets) {      \
+            if (widget && !widget->isVisible()) \
+                widget->show();                 \
+        }                                       \
     } while (0)
-#define HIDE_WIDGETS(...)                   \
-    do {                                    \
-        QWidget *widgets[] = {__VA_ARGS__}; \
-        for (QWidget * widget : widgets) {  \
-            if (widget)                     \
-                widget->hide();             \
-        }                                   \
+
+#define HIDE_WIDGETS(...)                      \
+    do {                                       \
+        QWidget *widgets[] = {__VA_ARGS__};    \
+        for (QWidget * widget : widgets) {     \
+            if (widget && widget->isVisible()) \
+                widget->hide();                \
+        }                                      \
     } while (0)
+
 #define REMOVE_ALL_TABS(tabWidget)                          \
     do {                                                    \
         if (tabWidget) {                                    \

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <romhack_b3313_cartography/utils/TextureCache.h>
+#include <romhack_b3313_cartography/utils/Caches.h>
 #include <romhack_b3313_cartography/utils/enums.h>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
 #include <vector>

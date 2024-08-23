@@ -59,7 +59,7 @@ class MainWindow : public QMainWindow {
 
     static QJsonObject lastJsonData;
     static QStringList courseNames, associatedCourses;
-    static bool shiftPressed, showStarDisplay, force_toggle_star_display,jump_to_star_display_associated_line;
+    static bool shiftPressed, showStarDisplay, force_toggle_star_display, jump_to_star_display_associated_line;
 
     static int startNodeIndex;
     static QVector<Node *> nodes;
@@ -91,16 +91,14 @@ class MainWindow : public QMainWindow {
     void setWindowResizable(bool resizable);
     void displayStars(const QJsonObject &jsonData);
     void drawCourseStars(QPainter &painter,
-                                     const QMap<QString, QMap<QString, QVector<StarData>>> &groupCourseMap,
-                                     float startX, float starTextureHeight,
-                                     float rectLeft, float rectTop,
-                                     int &yOffset, int reservedHeight,
-                                     const QImage &starCollectedTexture,
-                                     const QImage &starMissingTexture,
-                                     const QStringList &associatedCourseNames,
-                                     const QImage &logoTexture,
-                                     QMap<QString, QRectF> &courseNameRects,
-                                     QMap<QString, QRectF> &logoRects);
+                         const QMap<QString, QMap<QString, QVector<StarData>>> &groupCourseMap,
+                         float startX, float starTextureHeight,
+                         float rectLeft, float rectTop,
+                         int &yOffset, int reservedHeight,
+                         const QImage &starCollectedTexture,
+                         const QImage &starMissingTexture,
+                         const QStringList &associatedCourseNames,
+                         QMap<QString, QRectF> &logoRects);
     void generateTabContent(const QString &tabName, const QPixmap &pixmap, QWidget *contentWidget, QVBoxLayout *contentLayout);
     QStringList getCourseNamesFromSlot0(const QJsonObject &jsonData);
 
@@ -119,7 +117,7 @@ class MainWindow : public QMainWindow {
     QWidget *star_display_centralWidget = nullptr;
     QStackedWidget *stackedWidget = nullptr;
     QWidget *centralWidgetZ = nullptr;
-    QScrollArea *scrollArea_star_display = nullptr;
+    QScrollArea *scrollArea;
     int stardisplayscrollPosition = 0, rightClickedNodeIndex = -1;
     QRectF groupTextRect;
     QMap<QString, QRectF> courseNameRects, logoRects;

@@ -8,3 +8,10 @@ class TextureCache {
   private:
     static QHash<QString, QPixmap> cache;
 };
+class ImageCache {
+  public:
+    static QImage getImage(const QString &path);
+
+  private:
+    static QHash<QString, QImage> cache;
+};

@@ -66,7 +66,7 @@ MainWindow::MainWindow(QWidget *parent)
         star_display_mainLayout->insertWidget(0, tabWidget);
     }
     star_display_mainLayout->insertWidget(5, switchViewButton);
-    tabWidget->hide();
+    HIDE_WIDGETS(tabWidget);
     qfont = this->font();
     settingsWindow = new SettingsWindow(this);
     setWindowResizable(settingsWindow->isResizable());
@@ -119,30 +119,43 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
 
 void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (showStarDisplay) {
-        QPointF pos = event->pos();
+        // Convertir la position globale en position relative au widget contenu
+        QPointF pos = scrollArea->widget()->mapFromGlobal(event->globalPosition().toPoint());
+        // Ajuster pour le défilement
+        QPointF adjustedPos = pos - scrollArea->widget()->pos() - scrollArea->widget()->mapToParent(QPoint(0, 0));
+        qDebug() << "Mouse click position (adjusted for scroll):" << adjustedPos;
         QString courseClicked;
-
+        QRectF clickedRect;
+        // Vérifier les rectangles des noms de cours avec les coordonnées ajustées
         for (auto it = courseNameRects.cbegin(); it != courseNameRects.cend(); ++it) {
-            qDebug() << "Checking courseNameRects" << it.key() << it.value();
-            if (it.value().contains(pos)) {
+            QRectF rect = it.value();
+            qDebug() << "Checking courseNameRects for course:" << it.key() << "with rect:" << rect;
+            if (rect.contains(adjustedPos)) {
                 courseClicked = it.key();
+                clickedRect = rect;
+                qDebug() << "Mouse is inside courseNameRect for course:" << courseClicked;
                 break;
             }
         }
-
         if (courseClicked.isEmpty()) {
             for (auto it = logoRects.cbegin(); it != logoRects.cend(); ++it) {
-                qDebug() << "Checking logoRects" << it.key() << it.value();
-                if (it.value().contains(pos)) {
+                QRectF rect = it.value();
+                qDebug() << "Checking logoRects for course:" << it.key() << "with rect:" << rect;
+                if (rect.contains(adjustedPos)) {
                     courseClicked = it.key();
+                    qDebug() << "Mouse is inside logoRect for course:" << courseClicked;
                     break;
                 }
             }
         }
-
-        if (!courseClicked.isEmpty()) { // THIS IS NEVER REACHED
-            qDebug() << "Course clicked:" << courseClicked;
-            for (Node *node : MainWindow::nodes) {
+        qDebug() << "Course clicked:" << courseClicked
+                 << "at rect: ("
+                 << clickedRect.x() << ", "
+                 << clickedRect.y() << ", "
+                 << clickedRect.width() << ", "
+                 << clickedRect.height() << ")";
+        if (!courseClicked.isEmpty()) {
+            for (Node *node : nodes) {
                 if (node->getAssociatedCourse() == courseClicked) {
                     toggleStarDisplay();
                     graphicsView->centerOn(node->pos());
@@ -153,7 +166,6 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     } else {
         QPointF mousePosScene = graphicsView->mapToScene(event->pos());
         qreal margin = 333.0;
-
         QRectF sceneRect = graphicsScene->sceneRect().adjusted(margin, margin, -margin, -margin);
         if (!sceneRect.contains(mousePosScene)) {
             return;
@@ -176,17 +188,13 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
 #ifdef DEBUG
         else if (!contextMenuOpened && !shiftPressed && event->button() == Qt::RightButton) {
             QPointF scenePos = graphicsView->mapToScene(event->pos());
-
             int nodeIndex;
-            if (isMouseOverNode(scenePos, nodeIndex)) {
+            if (isMouseOverNode(scenePos, nodeIndex))
                 return;
-            }
-
             if (scenePos.x() < 0 || scenePos.y() < 0) {
                 qDebug() << "Invalid scene coordinates, skipping node creation.";
                 return;
             }
-
             Node *newNode = new Node(scenePos.x(), scenePos.y(), "New Node", font(), NodeShapes::Square);
             newNode->setModified(true);
             graphicsScene->addItem(newNode);
@@ -287,7 +295,6 @@ void MainWindow::changeNodeColor() {
         colorDialog.setOption(QColorDialog::DontUseNativeDialog);
         colorDialog.setWindowTitle(tr("Select Color"));
         colorDialog.setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
-
         if (colorDialog.exec() == QColorDialog::Accepted) {
             QColor selectedColor = colorDialog.currentColor();
             if (selectedColor.isValid()) {
@@ -369,9 +376,6 @@ void MainWindow::toggleStarDisplay() {
         SHOW_WIDGETS(emulatorText, b3313Text);
         REPA(Node, nodes, hide());
         HIDE_WIDGETS(emulatorText, b3313Text); // Hide again for some condition
-        Node *associatedNode = findAssociatedNode();
-        if (associatedNode)
-            graphicsView->centerOn(associatedNode->pos());
     } else {
         HIDE_WIDGETS(settingsButton, tabWidget);
         REMOVE_ALL_TABS(tabWidget);
@@ -416,15 +420,13 @@ void MainWindow::updateDisplay() {
     setWindowResizable(settingsWindow->isResizable());
     if (force_toggle_star_display) {
         toggleStarDisplay();
-        // if (!showStarDisplay)
-        //      graphicsView->centerOn(node->pos());
         force_toggle_star_display = false;
     }
     if (showStarDisplay) {
         textUpdate();
         QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json"); // NEED OPTIMIZATIONS
         displayStars(jsonData);
-        switchViewButton->show();
+        SHOW_WIDGETS(switchViewButton);
     } else {
         REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsLineItem);
         REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPolygonItem);
@@ -464,7 +466,6 @@ void MainWindow::updateDisplay() {
                 graphicsScene->addItem(starIcon);
             }
         }
-
         isModified();
     }
 }
@@ -489,49 +490,38 @@ void MainWindow::drawCourseStars(QPainter &painter,
                                  const QImage &starCollectedTexture,
                                  const QImage &starMissingTexture,
                                  const QStringList &associatedCourseNames,
-                                 const QImage &logoTexture,
-                                 QMap<QString, QRectF> &courseNameRects,
                                  QMap<QString, QRectF> &logoRects) {
-
+    QImage logoTexture = ImageCache::getImage("resources/textures/associated_to_node.png");
+    QImage scaledLogoTexture = logoTexture.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     float starSpacing = 64.0f;
-    float logoHeight = static_cast<float>(logoTexture.height());
-    float logoWidth = static_cast<float>(logoTexture.width());
+    float logoHeight = static_cast<float>(scaledLogoTexture.height());
+    float logoWidth = static_cast<float>(scaledLogoTexture.width());
     float maxLineHeight = 30.0f;
-
+    float scrollOffsetY = scrollArea->widget()->pos().y();
     for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
         const QString &groupName = groupIt.key();
         const QMap<QString, QVector<StarData>> &courseStarsMap = groupIt.value();
-
         QFont groupFont = painter.font();
         groupFont.setBold(true);
         painter.setFont(groupFont);
-        QRectF groupTextRect(rectLeft + 10, rectTop + yOffset, 600, 30);
+        QRectF groupTextRect(rectLeft + 10, rectTop + yOffset - scrollOffsetY, 600, 30);
         painter.setPen(Qt::blue);
         painter.drawText(groupTextRect, groupName);
-
         yOffset += std::max(static_cast<int>(starTextureHeight), 30);
-
         for (auto it = courseStarsMap.cbegin(); it != courseStarsMap.cend(); ++it) {
             const QString &courseName = it.key();
             const QVector<StarData> &stars = it.value();
-
-            QRectF logoRect(rectLeft + 10, rectTop + yOffset, logoWidth, logoHeight);
-
+            QRectF logoRect(rectLeft + 10, rectTop + yOffset - scrollOffsetY, logoWidth, logoHeight);
             if (associatedCourseNames.contains(courseName)) {
-                painter.drawImage(logoRect, logoTexture);
+                painter.drawImage(logoRect, scaledLogoTexture);
                 logoRects[courseName] = logoRect;
             }
-
-            QRectF courseTextRect(logoRect.right() + 10, rectTop + yOffset, 600, 30);
+            QRectF courseTextRect(logoRect.right() + 10, rectTop + yOffset - scrollOffsetY, 600, 30);
             painter.setFont(painter.font());
             painter.setPen(Qt::white);
             painter.drawText(courseTextRect, courseName);
-            courseNameRects[courseName] = courseTextRect;
-
             float currentX = courseTextRect.right() + 10;
             float lineHeight = std::max(starTextureHeight, maxLineHeight);
-
-            // Calculate the rightmost x position for the rectangle
             float maxRightX = currentX;
             for (const auto &star : stars) {
                 for (int i = 0; i < star.numStars; ++i) {
@@ -542,24 +532,18 @@ void MainWindow::drawCourseStars(QPainter &painter,
                         starCollectedTexture.height());
                     const QImage &starTexture = star.collected ? starCollectedTexture : starMissingTexture;
                     painter.drawImage(starRect, starTexture);
-                    if (starRect.right() > maxRightX) {
+                    if (starRect.right() > maxRightX)
                         maxRightX = starRect.right();
-                    }
                 }
                 currentX += starSpacing * star.numStars;
             }
-
-            // Define the bounding rectangle
             QRectF boundingRect(
-                rectLeft, rectTop + yOffset,
-                maxRightX - rectLeft + 10, // Add padding
+                rectLeft, rectTop + yOffset - scrollOffsetY,
+                maxRightX - rectLeft + 10,
                 lineHeight);
-
-            // Draw the rectangle
+            courseNameRects[courseName] = boundingRect;
             painter.setPen(QPen(Qt::black, 2));
             painter.drawRect(boundingRect);
-
-            // Update yOffset
             yOffset += lineHeight;
         }
         yOffset += 10;
@@ -586,11 +570,8 @@ void MainWindow::generateTabContent(const QString &tabName, const QPixmap &pixma
 // Fonction principale pour afficher les étoiles
 void MainWindow::displayStars(const QJsonObject &jsonData) {
     if (!isRomHackLoaded(global_detected_emulator)) {
-        tabWidget->hide();
-        emulatorText->show();
-        b3313Text->show();
-        switchViewButton->show();
-        settingsButton->show();
+        HIDE_WIDGETS(tabWidget);
+        SHOW_WIDGETS(emulatorText, b3313Text, switchViewButton, settingsButton);
         return;
     }
     QStringList associatedCourseNames;
@@ -601,11 +582,8 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                 associatedCourseNames.append(associatedCourse);
         }
     }
-    tabWidget->show();
-    emulatorText->hide();
-    b3313Text->hide();
-    switchViewButton->show();
-    settingsButton->show();
+    SHOW_WIDGETS(tabWidget, switchViewButton, settingsButton);
+    HIDE_WIDGETS(emulatorText, b3313Text);
     std::string saveLocation = GetParallelLauncherSaveLocation();
     QJsonObject format = jsonData["format"].toObject();
     SaveParams params;
@@ -622,10 +600,8 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
     for (int i = 0; i < static_cast<int>(params.numSlots); ++i) {
         tabNames.append("Mario " + QString::number(i));
     }
-    QImage starCollectedTexture("resources/textures/star-collected.png");
-    QImage starMissingTexture("resources/textures/star-missing.png");
-    QImage logoTexture("resources/textures/associated_to_node.png");
-    QImage scaledLogoTexture = logoTexture.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QImage starCollectedTexture = ImageCache::getImage("resources/textures/star-collected.png");
+    QImage starMissingTexture = ImageCache::getImage("resources/textures/star-missing.png");
     if (starCollectedTexture.isNull() || starMissingTexture.isNull()) {
         qWarning() << "One or both star textures failed to load.";
         return;
@@ -633,9 +609,7 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
     float collectedHeight = static_cast<float>(starCollectedTexture.height());
     float missingHeight = static_cast<float>(starMissingTexture.height());
     float starTextureHeight = std::max(collectedHeight, missingHeight);
-
     int associatedCourseYPosition = -1; // Track the Y position of the associated course
-
     for (int i = 0; i < static_cast<int>(params.numSlots); ++i) {
         QString tabName = tabNames[i];
         QWidget *existingTab = nullptr;
@@ -645,7 +619,6 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                 break;
             }
         }
-        QScrollArea *scrollArea;
         QWidget *contentWidget;
         QVBoxLayout *contentLayout;
         bool isNewTab = !existingTab;
@@ -670,9 +643,8 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
             const QMap<QString, QVector<StarData>> &courseStarsMap = groupIt.value();
             for (auto courseIt = courseStarsMap.cbegin(); courseIt != courseStarsMap.cend(); ++courseIt) {
-                if (jump_to_star_display_associated_line && courseIt.key() == jump_to_which_line) {
+                if (jump_to_star_display_associated_line && courseIt.key() == jump_to_which_line)
                     associatedCourseYPosition = yOffset; // Set position of the associated course
-                }
                 yOffset += std::max(static_cast<int>(starTextureHeight), 30);
             }
             yOffset += 10;
@@ -683,14 +655,13 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         QPainter painter(&pixmap);
         painter.setRenderHint(QPainter::Antialiasing);
         yOffset = 0;
-        drawCourseStars(painter, groupCourseMap, 50 + 10, starTextureHeight, 50, 50, yOffset, reservedHeight, starCollectedTexture, starMissingTexture, associatedCourseNames, scaledLogoTexture, courseNameRects, logoRects);
+        drawCourseStars(painter, groupCourseMap, 50 + 10, starTextureHeight, 50, 50, yOffset, reservedHeight, starCollectedTexture, starMissingTexture, associatedCourseNames, logoRects);
         painter.end();
         if (isNewTab)
             generateTabContent(tabName, pixmap, contentWidget, contentLayout);
         else
             contentWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
         contentWidget->setMinimumHeight(totalHeight);
-
         // Scroll to the position of the associated course
         if (jump_to_star_display_associated_line && associatedCourseYPosition != -1) {
             scrollArea->verticalScrollBar()->setValue(associatedCourseYPosition);
