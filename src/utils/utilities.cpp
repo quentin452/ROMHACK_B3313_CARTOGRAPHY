@@ -12,3 +12,6 @@ void simulateKeyRelease(Qt::Key key) {
 bool isShiftPressed() {
     return QApplication::keyboardModifiers() & Qt::ShiftModifier;
 }
+bool isCtrlPressed() {
+    return QApplication::keyboardModifiers() & Qt::ControlModifier;
+}

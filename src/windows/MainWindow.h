@@ -55,10 +55,11 @@ class MainWindow : public QMainWindow {
     static QFont qfont;
     static QVBoxLayout *star_display_mainLayout;
     static QPushButton *switchViewButton, *settingsButton;
+    static QString jump_to_which_line;
 
     static QJsonObject lastJsonData;
     static QStringList courseNames, associatedCourses;
-    static bool shiftPressed, showStarDisplay, force_toggle_star_display;
+    static bool shiftPressed, showStarDisplay, force_toggle_star_display,jump_to_star_display_associated_line;
 
     static int startNodeIndex;
     static QVector<Node *> nodes;
@@ -120,7 +121,6 @@ class MainWindow : public QMainWindow {
     QWidget *centralWidgetZ = nullptr;
     QScrollArea *scrollArea_star_display = nullptr;
     int stardisplayscrollPosition = 0, rightClickedNodeIndex = -1;
-    QComboBox *courseComboBox;
     QRectF groupTextRect;
     QMap<QString, QRectF> courseNameRects, logoRects;
     Node *nodeUnderCursor = nullptr;

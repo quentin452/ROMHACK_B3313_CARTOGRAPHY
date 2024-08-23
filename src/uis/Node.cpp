@@ -60,15 +60,16 @@ void Node::setShape(NodeShapes newShape) {
     update(); // Schedule a redraw of the item
 }
 void Node::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-    if (!isShiftPressed() && event->button() == Qt::LeftButton) {
+    if (!isShiftPressed() && (QApplication::keyboardModifiers() & Qt::ControlModifier) && event->button() == Qt::LeftButton) {
         if (isStarAssociated()) {
+            MainWindow::jump_to_star_display_associated_line = true;
+            MainWindow::jump_to_which_line = getAssociatedCourse();
             MainWindow::force_toggle_star_display = true;
-            //if (MainWindow::showStarDisplay)
-            //    MainWindow::graphicsView->centerOn(this->pos());
         }
     }
     QGraphicsItem::mousePressEvent(event);
 }
+
 void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     painter->setPen(Qt::NoPen);
     painter->setBrush(color);
@@ -158,7 +159,9 @@ Node *Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
         node->setStarAssociated(json["star_associated"].toBool());
     }
     if (json.contains("associated_course")) {
-        node->setAssociatedCourse(json["associated_course"].toString());
+        QString associatedCourse = json["associated_course"].toString();
+        node->setAssociatedCourse(associatedCourse);
+        MainWindow::associatedCourses.append(associatedCourse);
     }
     return node;
 }

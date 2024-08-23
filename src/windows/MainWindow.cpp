@@ -9,12 +9,13 @@ QVBoxLayout *MainWindow::star_display_mainLayout = nullptr;
 QPushButton *MainWindow::switchViewButton = nullptr, *MainWindow::settingsButton = nullptr;
 
 QVector<Node *> MainWindow::nodes;
-bool MainWindow::shiftPressed = false, MainWindow::showStarDisplay = false, MainWindow::force_toggle_star_display = false;
+bool MainWindow::shiftPressed = false, MainWindow::showStarDisplay = false, MainWindow::force_toggle_star_display = false, MainWindow::jump_to_star_display_associated_line = false;
 int MainWindow::startNodeIndex = -1;
 QVector<QPair<int, int>> MainWindow::connections;
 QGraphicsScene *MainWindow::graphicsScene = nullptr;
 QJsonObject MainWindow::lastJsonData;
 QStringList MainWindow::courseNames, MainWindow::associatedCourses;
+QString MainWindow::jump_to_which_line;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       settingsWindow(nullptr) {
@@ -24,7 +25,6 @@ MainWindow::MainWindow(QWidget *parent)
     b3313Text = new QLabel("B3313 V1.0.2 Status", this);
     graphicsView = new QGraphicsView(this);
     graphicsScene = new MouseFixGraphicScene(this);
-    courseComboBox = new QComboBox(this);
     graphicsView->setScene(graphicsScene);
     centralWidgetZ = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(centralWidgetZ);
@@ -300,27 +300,35 @@ void MainWindow::changeNodeColor() {
 void MainWindow::associateStarToNode() {
     if (rightClickedNodeIndex != -1 && rightClickedNodeIndex < nodes.size()) {
         Node *node = nodes[rightClickedNodeIndex];
-        courseComboBox->clear();
-        courseComboBox->addItems(courseNames);
-        auto onAccept = [this, node]() {
+        QComboBox *courseComboBox = new QComboBox(this); // Utilisation de QComboBox directement
+        for (const QString &courseName : courseNames) {
+            if (!associatedCourses.contains(courseName)) {
+                courseComboBox->addItem(courseName);
+            }
+        }
+
+        auto onAccept = [this, node, courseComboBox] {
             QString selectedCourse = courseComboBox->currentText();
             QString oldCourse = node->getAssociatedCourse();
-            if (!oldCourse.isEmpty() && MainWindow::associatedCourses.contains(oldCourse))
-                MainWindow::associatedCourses.removeAll(oldCourse);
+            if (!oldCourse.isEmpty() && associatedCourses.contains(oldCourse)) {
+                associatedCourses.removeAll(oldCourse);
+            }
             node->setStarAssociated(true);
             node->setModified(true);
             node->setAssociatedCourse(selectedCourse);
-            if (!MainWindow::associatedCourses.contains(selectedCourse))
-                MainWindow::associatedCourses.append(selectedCourse);
+            if (!associatedCourses.contains(selectedCourse)) {
+                associatedCourses.append(selectedCourse);
+            }
             updateDisplay();
-            courseComboBox->clear();
+            delete courseComboBox; // Supprimer le combo box
         };
+
+        // Passer le QComboBox et la fonction lambda à showDialog
         showDialog(tr("Select Course to Associate"), courseComboBox, onAccept);
     } else {
         qDebug() << "Invalid node index in associateStarToNode.";
     }
 }
-
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;
     for (const auto &nodePtr : nodes) {
@@ -609,6 +617,9 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
     float collectedHeight = static_cast<float>(starCollectedTexture.height());
     float missingHeight = static_cast<float>(starMissingTexture.height());
     float starTextureHeight = std::max(collectedHeight, missingHeight);
+
+    int associatedCourseYPosition = -1; // Track the Y position of the associated course
+
     for (int i = 0; i < static_cast<int>(params.numSlots); ++i) {
         QString tabName = tabNames[i];
         QWidget *existingTab = nullptr;
@@ -643,6 +654,9 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
             const QMap<QString, QVector<StarData>> &courseStarsMap = groupIt.value();
             for (auto courseIt = courseStarsMap.cbegin(); courseIt != courseStarsMap.cend(); ++courseIt) {
+                if (jump_to_star_display_associated_line && courseIt.key() == jump_to_which_line) {
+                    associatedCourseYPosition = yOffset; // Set position of the associated course
+                }
                 yOffset += std::max(static_cast<int>(starTextureHeight), 30);
             }
             yOffset += 10;
@@ -660,6 +674,12 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         else
             contentWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
         contentWidget->setMinimumHeight(totalHeight);
+
+        // Scroll to the position of the associated course
+        if (jump_to_star_display_associated_line && associatedCourseYPosition != -1) {
+            scrollArea->verticalScrollBar()->setValue(associatedCourseYPosition);
+            jump_to_star_display_associated_line = false;
+        }
     }
 }
 QStringList MainWindow::getCourseNamesFromSlot0(const QJsonObject &jsonData) {
