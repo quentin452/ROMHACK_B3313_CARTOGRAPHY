@@ -18,8 +18,10 @@
 
 #include <romhack_b3313_cartography/uis/Node.h>
 
+#include "../threads/JsonLoaderThread.hpp"
+#include "../threads/MainWindowUpdateThread.hpp"
 #include "../uis/MouseFixGraphicScene.h"
-#include "MainWindowUpdateThread.hpp"
+
 #include <memory>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
 
@@ -122,6 +124,7 @@ class MainWindow : public QMainWindow {
     QRectF groupTextRect;
     QMap<QString, QRectF> courseNameRects, logoRects;
     Node *nodeUnderCursor = nullptr;
+    JsonLoaderThread *jsonLoaderThread = nullptr;
 #ifdef DEBUG
     QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
 #else

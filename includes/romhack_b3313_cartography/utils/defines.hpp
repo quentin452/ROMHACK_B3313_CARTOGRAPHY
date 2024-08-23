@@ -21,7 +21,7 @@
     do {                                        \
         QWidget *widgets[] = {__VA_ARGS__};     \
         for (QWidget * widget : widgets) {      \
-            if (widget && !widget->isVisible()) \
+            if (widget) \
                 widget->show();                 \
         }                                       \
     } while (0)
@@ -30,7 +30,7 @@
     do {                                       \
         QWidget *widgets[] = {__VA_ARGS__};    \
         for (QWidget * widget : widgets) {     \
-            if (widget && widget->isVisible()) \
+            if (widget) \
                 widget->hide();                \
         }                                      \
     } while (0)

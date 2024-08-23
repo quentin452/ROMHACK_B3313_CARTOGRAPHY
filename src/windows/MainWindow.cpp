@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+
 std::basic_string<wchar_t> MainWindow::global_detected_emulator;
 QLabel *MainWindow::emulatorText, *MainWindow::b3313Text = nullptr;
 QStringList MainWindow::tabNames;
@@ -32,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
     saveButton = new QPushButton("Save", this);
     switchViewButton = new QPushButton("Switch View", this);
     addWidgets(*layout, emulatorText, b3313Text, graphicsView, saveButton, switchViewButton);
+    HIDE_WIDGETS(emulatorText, b3313Text);
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveNodes);
     connect(switchViewButton, &QPushButton::clicked, this, &MainWindow::toggleStarDisplay);
     contextMenu = new QMenu(this);
@@ -40,7 +42,6 @@ MainWindow::MainWindow(QWidget *parent)
     ADD_ACTION(contextMenu, changeShapeAction, changeNodeShape)
     ADD_ACTION(contextMenu, changeColorAction, changeNodeColor)
     ADD_ACTION(contextMenu, associateStarAction, associateStarToNode)
-    HIDE_WIDGETS(emulatorText, b3313Text);
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
     thread->start();
@@ -73,8 +74,11 @@ MainWindow::MainWindow(QWidget *parent)
     settingsButton = new QPushButton("Settings", this);
     star_display_mainLayout->addWidget(settingsButton);
     connect(settingsButton, &QPushButton::clicked, this, &MainWindow::openSettingsWindow);
-    QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
+    QJsonObject jsonData = JsonLoading::loadJsonData2(GLOBAL_STAR_DISPLAY_JSON_STR);
     courseNames = getCourseNamesFromSlot0(jsonData);
+    jsonLoaderThread = new JsonLoaderThread(this);
+    connect(jsonLoaderThread, &JsonLoaderThread::jsonLoaded, this, &MainWindow::displayStars);
+    connect(jsonLoaderThread, &JsonLoaderThread::finished, jsonLoaderThread, &QObject::deleteLater);
 }
 void MainWindow::setWindowResizable(bool resizable) {
     if (resizable) {
@@ -89,6 +93,10 @@ MainWindow::~MainWindow() {
     if (thread) {
         thread->stop();
         thread->wait();
+    }
+    if (jsonLoaderThread) {
+        jsonLoaderThread->stop();
+        jsonLoaderThread->wait();
     }
     delete settingsWindow;
 }
@@ -424,8 +432,17 @@ void MainWindow::updateDisplay() {
     }
     if (showStarDisplay) {
         textUpdate();
-        QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json"); // NEED OPTIMIZATIONS
-        displayStars(jsonData);
+        QString starDisplayJsonStr;
+        {
+            QMutexLocker locker(&globalMutex);
+            starDisplayJsonStr = GLOBAL_STAR_DISPLAY_JSON_STR;
+        }
+        if (!jsonLoaderThread->isRunning()) {
+            jsonLoaderThread->start();
+        }
+        jsonLoaderThread->loadJson(starDisplayJsonStr);
+        // QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/B3313-V1.0.2-STARS_LAYOUT.json"); // NEED OPTIMIZATIONS
+        // displayStars(jsonData);
         SHOW_WIDGETS(switchViewButton);
     } else {
         REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsLineItem);
