@@ -300,13 +300,12 @@ void MainWindow::changeNodeColor() {
 void MainWindow::associateStarToNode() {
     if (rightClickedNodeIndex != -1 && rightClickedNodeIndex < nodes.size()) {
         Node *node = nodes[rightClickedNodeIndex];
-        QComboBox *courseComboBox = new QComboBox(this); // Utilisation de QComboBox directement
+        QComboBox *courseComboBox = new QComboBox(this);
         for (const QString &courseName : courseNames) {
             if (!associatedCourses.contains(courseName)) {
                 courseComboBox->addItem(courseName);
             }
         }
-
         auto onAccept = [this, node, courseComboBox] {
             QString selectedCourse = courseComboBox->currentText();
             QString oldCourse = node->getAssociatedCourse();
@@ -320,10 +319,8 @@ void MainWindow::associateStarToNode() {
                 associatedCourses.append(selectedCourse);
             }
             updateDisplay();
-            delete courseComboBox; // Supprimer le combo box
+            delete courseComboBox;
         };
-
-        // Passer le QComboBox et la fonction lambda à showDialog
         showDialog(tr("Select Course to Associate"), courseComboBox, onAccept);
     } else {
         qDebug() << "Invalid node index in associateStarToNode.";
