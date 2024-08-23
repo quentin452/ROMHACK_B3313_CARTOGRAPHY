@@ -21,6 +21,7 @@ struct StarData {
 class StarDisplay {
   public:
     void displayStars(const QJsonObject &jsonData);
+    QStringList getCourseNamesFromSlot0(const QJsonObject &jsonData);
 
   private:
     QRectF groupTextRect;

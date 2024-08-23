@@ -3,13 +3,13 @@
 #include <memory>
 #include <romhack_b3313_cartography/uis/StarDisplay.h>
 
-void drawCourseStars(QPainter &painter, const QMap<QString, QMap<QString, QVector<StarData>>> &groupCourseMap, float startX, float starTextureHeight, float rectLeft, float rectTop, int &yOffset, int reservedHeight, const QImage &starCollectedTexture, const QImage &starMissingTexture) {
+void drawCourseStars(QPainter &painter, const QMap<QString, QMap<QString, QVector<StarData>>> &groupCourseMap, float startX, float starTextureHeight, float rectLeft, float rectTop, int &yOffset, int reservedHeight, const QImage &starCollectedTexture, const QImage &starMissingTexture, const QStringList &associatedCourseNames, const QImage &logoTexture) {
     float starSpacing = 64.0f;
+    float logoHeight = static_cast<float>(logoTexture.height());
+    float logoWidth = static_cast<float>(logoTexture.width());
     for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
         const QString &groupName = groupIt.key();
         const QMap<QString, QVector<StarData>> &courseStarsMap = groupIt.value();
-
-        // Afficher le nom du groupe
         QFont groupFont = painter.font();
         groupFont.setBold(true);
         painter.setFont(groupFont);
@@ -17,8 +17,6 @@ void drawCourseStars(QPainter &painter, const QMap<QString, QMap<QString, QVecto
         painter.setPen(Qt::blue);
         painter.drawText(groupTextRect, groupName);
         yOffset += std::max(static_cast<int>(starTextureHeight), 30);
-
-        // Afficher les cours et les étoiles
         for (auto it = courseStarsMap.cbegin(); it != courseStarsMap.cend(); ++it) {
             const QString &courseName = it.key();
             const QVector<StarData> &stars = it.value();
@@ -27,6 +25,10 @@ void drawCourseStars(QPainter &painter, const QMap<QString, QMap<QString, QVecto
             painter.setFont(font);
             painter.setPen(Qt::white);
             painter.drawText(courseTextRect, courseName);
+            if (associatedCourseNames.contains(courseName)) {
+                QRectF logoRect(courseTextRect.right() + 10, courseTextRect.top(), logoWidth, logoHeight);
+                painter.drawImage(logoRect, logoTexture);
+            }
             float currentX = courseTextRect.right() + 10;
             for (const auto &star : stars) {
                 for (int i = 0; i < star.numStars; ++i) {
@@ -42,8 +44,6 @@ void drawCourseStars(QPainter &painter, const QMap<QString, QMap<QString, QVecto
             }
             yOffset += std::max(static_cast<int>(starTextureHeight), 30);
         }
-
-        // Ajouter un espace après chaque groupe
         yOffset += 10;
     }
 }
@@ -75,6 +75,15 @@ void StarDisplay::displayStars(const QJsonObject &jsonData) {
         MainWindow::settingsButton->show();
         return;
     }
+    QStringList associatedCourseNames;
+    for (Node *node : MainWindow::nodes) {
+        if (node->isStarAssociated()) {
+            QString associatedCourse = node->getAssociatedCourse();
+            if (!associatedCourse.isEmpty()) {
+                associatedCourseNames.append(associatedCourse);
+            }
+        }
+    }
     MainWindow::tabWidget->show();
     MainWindow::emulatorText->hide();
     MainWindow::b3313Text->hide();
@@ -98,6 +107,7 @@ void StarDisplay::displayStars(const QJsonObject &jsonData) {
     }
     QImage starCollectedTexture("resources/textures/star-collected.png");
     QImage starMissingTexture("resources/textures/star-missing.png");
+    QImage logoTexture("resources/textures/associated_to_node.png");
     if (starCollectedTexture.isNull() || starMissingTexture.isNull()) {
         qWarning() << "One or both star textures failed to load.";
         return;
@@ -149,13 +159,34 @@ void StarDisplay::displayStars(const QJsonObject &jsonData) {
         QPainter painter(&pixmap);
         painter.setRenderHint(QPainter::Antialiasing);
         yOffset = 0;
-        drawCourseStars(painter, groupCourseMap, 50 + 10, starTextureHeight, 50, 50, yOffset, reservedHeight, starCollectedTexture, starMissingTexture);
+        drawCourseStars(painter, groupCourseMap, 50 + 10, starTextureHeight, 50, 50, yOffset, reservedHeight, starCollectedTexture, starMissingTexture, associatedCourseNames, logoTexture);
         painter.end();
-
         if (isNewTab)
             generateTabContent(tabName, pixmap, contentWidget, contentLayout);
         else
             contentWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
         contentWidget->setMinimumHeight(totalHeight);
     }
+}
+QStringList StarDisplay::getCourseNamesFromSlot0(const QJsonObject &jsonData) {
+    QStringList courseNames;
+    if (!jsonData.contains("groups") || !jsonData["groups"].isArray()) {
+        qWarning() << "jsonData does not contain valid 'groups' array.";
+        return courseNames;
+    }
+    QJsonArray groupsArray = jsonData["groups"].toArray();
+    for (const auto &groupValue : groupsArray) {
+        QJsonObject group = groupValue.toObject();
+        if (!group.contains("courses") || !group["courses"].isArray()) 
+            continue;
+        QJsonArray coursesArray = group["courses"].toArray();
+        for (const auto &courseValue : coursesArray) {
+            QJsonObject course = courseValue.toObject();
+            if (course.contains("name")) {
+                QString courseName = course["name"].toString();
+                courseNames.append(courseName);
+            }
+        }
+    }
+    return courseNames;
 }

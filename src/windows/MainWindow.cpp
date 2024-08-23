@@ -9,20 +9,22 @@ QVBoxLayout *MainWindow::star_display_mainLayout = nullptr;
 QPushButton *MainWindow::switchViewButton = nullptr, *MainWindow::settingsButton = nullptr;
 
 QVector<Node *> MainWindow::nodes;
-bool MainWindow::shiftPressed = false;
+bool MainWindow::shiftPressed = false, MainWindow::showStarDisplay = false, MainWindow::force_toggle_star_display = false;
 int MainWindow::startNodeIndex = -1;
 QVector<QPair<int, int>> MainWindow::connections;
 QGraphicsScene *MainWindow::graphicsScene = nullptr;
 QJsonObject MainWindow::lastJsonData;
-
+QStringList MainWindow::courseNames, MainWindow::associatedCourses;
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent), settingsWindow(nullptr) {
+    : QMainWindow(parent),
+      settingsWindow(nullptr) {
     setWindowTitle("Mind Map Example");
     setFixedSize(WIDTH, HEIGHT);
     emulatorText = new QLabel("Emulator Status", this);
     b3313Text = new QLabel("B3313 V1.0.2 Status", this);
     graphicsView = new QGraphicsView(this);
     graphicsScene = new MouseFixGraphicScene(this);
+    courseComboBox = new QComboBox(this);
     graphicsView->setScene(graphicsScene);
     centralWidgetZ = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(centralWidgetZ);
@@ -37,6 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
     ADD_ACTION(contextMenu, removeConnectionsAction, removeConnections)
     ADD_ACTION(contextMenu, changeShapeAction, changeNodeShape)
     ADD_ACTION(contextMenu, changeColorAction, changeNodeColor)
+    ADD_ACTION(contextMenu, associateStarAction, associateStarToNode)
     HIDE_WIDGETS(emulatorText, b3313Text);
     thread = std::make_unique<MainWindowUpdateThread>(this);
     connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
@@ -70,6 +73,8 @@ MainWindow::MainWindow(QWidget *parent)
     settingsButton = new QPushButton("Settings", this);
     star_display_mainLayout->addWidget(settingsButton);
     connect(settingsButton, &QPushButton::clicked, this, &MainWindow::openSettingsWindow);
+    QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json");
+    courseNames = starDisplay.getCourseNamesFromSlot0(jsonData);
 }
 void MainWindow::setWindowResizable(bool resizable) {
     if (resizable) {
@@ -261,6 +266,30 @@ void MainWindow::changeNodeColor() {
     simulateKeyPress(Qt::Key_Shift);
     simulateKeyRelease(Qt::Key_Shift);
 }
+void MainWindow::associateStarToNode() {
+    if (rightClickedNodeIndex != -1 && rightClickedNodeIndex < nodes.size()) {
+        Node *node = nodes[rightClickedNodeIndex];
+        courseComboBox->clear();
+        courseComboBox->addItems(courseNames);
+        auto onAccept = [this, node]() {
+            QString selectedCourse = courseComboBox->currentText();
+            QString oldCourse = node->getAssociatedCourse();
+            if (!oldCourse.isEmpty() && MainWindow::associatedCourses.contains(oldCourse))
+                MainWindow::associatedCourses.removeAll(oldCourse);
+            node->setStarAssociated(true);
+            node->setModified(true);
+            node->setAssociatedCourse(selectedCourse);
+            if (!MainWindow::associatedCourses.contains(selectedCourse))
+                MainWindow::associatedCourses.append(selectedCourse);
+            updateDisplay();
+            courseComboBox->clear();
+        };
+        showDialog(tr("Select Course to Associate"), courseComboBox, onAccept);
+    } else {
+        qDebug() << "Invalid node index in associateStarToNode.";
+    }
+}
+
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;
     for (const auto &nodePtr : nodes) {
@@ -288,6 +317,14 @@ void MainWindow::saveNodes() {
         qWarning() << "Failed to open file for writing:" << file.errorString();
     }
 }
+Node *MainWindow::findAssociatedNode() {
+    for (Node *node : nodes) {
+        if (node->isStarAssociated()) {
+            return node;
+        }
+    }
+    return nullptr;
+}
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
     QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
@@ -297,6 +334,10 @@ void MainWindow::toggleStarDisplay() {
         SHOW_WIDGETS(emulatorText, b3313Text);
         REPA(Node, nodes, hide());
         HIDE_WIDGETS(emulatorText, b3313Text); // Hide again for some condition
+        Node *associatedNode = findAssociatedNode();
+        if (associatedNode) {
+            graphicsView->centerOn(associatedNode->pos());
+        }
     } else {
         HIDE_WIDGETS(settingsButton, tabWidget);
         REMOVE_ALL_TABS(tabWidget);
@@ -305,6 +346,7 @@ void MainWindow::toggleStarDisplay() {
         REPA(Node, nodes, show());
     }
 }
+
 void MainWindow::closeEvent(QCloseEvent *event) {
     if (isModified()) {
         auto resBtn = QMessageBox::question(this, "Mind Map Example",
@@ -338,6 +380,10 @@ void MainWindow::onTimerUpdate() {
 
 void MainWindow::updateDisplay() {
     setWindowResizable(settingsWindow->isResizable());
+    if (force_toggle_star_display) {
+        toggleStarDisplay();
+        force_toggle_star_display = false;
+    }
     if (showStarDisplay) {
         textUpdate();
         QJsonObject jsonData = JsonLoading::loadJsonData2("resources/stars_layout/b3313-V1.0.2/star_display_layout.json"); // NEED OPTIMIZATIONS
@@ -346,7 +392,7 @@ void MainWindow::updateDisplay() {
     } else {
         REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsLineItem);
         REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPolygonItem);
-
+        REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPixmapItem);
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
                 conn.second >= 0 && conn.second < nodes.size()) {
@@ -372,6 +418,13 @@ void MainWindow::updateDisplay() {
                 graphicsScene->addItem(arrowItem);
             } else {
                 qWarning() << "Connection has invalid node index:" << conn;
+            }
+        }
+        for (Node *node : nodes) {
+            if (node->isStarAssociated()) {
+                QGraphicsPixmapItem *starIcon = new QGraphicsPixmapItem(QPixmap("resources/textures/associated_to_node.png"));
+                starIcon->setPos(node->pos() + QPointF(node->boundingRect().width() / 2, -node->boundingRect().height() / 2));
+                graphicsScene->addItem(starIcon);
             }
         }
         isModified();

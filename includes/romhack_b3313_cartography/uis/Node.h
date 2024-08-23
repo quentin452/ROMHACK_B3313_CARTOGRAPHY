@@ -5,7 +5,6 @@
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
 #include <vector>
 
-
 class Node : public QGraphicsEllipseItem {
   public:
     Node(float x, float y, const QString &text, const QFont &font, NodeShapes shape = Circle);
@@ -17,6 +16,7 @@ class Node : public QGraphicsEllipseItem {
     void addConnection(int nodeIndex);
     void removeConnection(int nodeIndex);
     void setModified(bool modified);
+    void mousePressEvent(QGraphicsSceneMouseEvent *event);
 
     QJsonObject toJson() const;
     static Node *fromJson(const QJsonObject &json, const QFont &defaultFont);
@@ -27,7 +27,10 @@ class Node : public QGraphicsEllipseItem {
         return color;
     }
     void adjustNodeSize();
-
+    bool isStarAssociated() const { return starAssociated; }
+    void setStarAssociated(bool value) { starAssociated = value; }
+    void setAssociatedCourse(const QString &courseName) { associatedCourse = courseName; }
+    QString getAssociatedCourse() const { return associatedCourse; }
     QList<int> connections;
     NodeShapes shape;
     QGraphicsTextItem *labelItem;
@@ -37,6 +40,7 @@ class Node : public QGraphicsEllipseItem {
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
 
   private:
+    QString associatedCourse;
     QString shapeToString(NodeShapes shape) const;
 
     QString label;
@@ -45,4 +49,5 @@ class Node : public QGraphicsEllipseItem {
     QString m_name;
     bool modified;
     QList<QGraphicsPixmapItem *> starItems;
+    bool starAssociated;
 };

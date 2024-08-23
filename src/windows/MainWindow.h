@@ -47,8 +47,9 @@ class MainWindow : public QMainWindow {
     static QPushButton *switchViewButton, *settingsButton;
 
     static QJsonObject lastJsonData;
+    static QStringList courseNames,associatedCourses;
+    static bool shiftPressed, showStarDisplay, force_toggle_star_display;
 
-    static bool shiftPressed;
     static int startNodeIndex;
     static QVector<Node *> nodes;
     static QVector<QPair<int, int>> connections;
@@ -63,23 +64,24 @@ class MainWindow : public QMainWindow {
     void changeNodeShape();
     void removeConnections();
     void saveNodes();
-    void toggleStarDisplay();
     void openSettingsWindow();
 
   private:
+    void toggleStarDisplay();
+    void textUpdate();
     void showDialog(const QString &labelText, QWidget *inputWidget, std::function<void()> onAccept);
     void closeEvent(QCloseEvent *event) override;
-    void textUpdate();
     bool isModified() const;
     void onTimerUpdate();
     void updateDisplay();
     void renameSelectedNode();
     void changeNodeColor();
+    void associateStarToNode();
     void setWindowResizable(bool resizable);
+    Node *findAssociatedNode();
     SettingsWindow *settingsWindow = nullptr;
     QPointF startPos;
-    bool showStarDisplay = false; // Contrôle pour afficher l'affichage des étoiles
-    StarDisplay starDisplay;      // Instance de la classe StarDisplay
+    StarDisplay starDisplay; // Instance de la classe StarDisplay
     QList<Node *> mind_map_nodes;
     bool contextMenuOpened = false;
     QPushButton *saveButton = nullptr;
@@ -94,6 +96,7 @@ class MainWindow : public QMainWindow {
     QWidget *centralWidgetZ = nullptr;
     QScrollArea *scrollArea_star_display = nullptr;
     int stardisplayscrollPosition = 0, rightClickedNodeIndex = -1;
+    QComboBox *courseComboBox;
 #ifdef DEBUG
     QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
 #else

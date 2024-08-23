@@ -1,8 +1,10 @@
 #include <romhack_b3313_cartography/uis/Node.h>
 
+#include "../windows/MainWindow.h"
+
 Node::Node(float x, float y, const QString &text, const QFont &font, NodeShapes shape)
     : QGraphicsEllipseItem(-30, -30, 60, 60),
-      label(text), font(font), color(Qt::cyan), shape(shape), modified(false), labelItem(nullptr) {
+      label(text), font(font), color(Qt::cyan), shape(shape), modified(false), labelItem(nullptr), starAssociated(false) {
     setBrush(color);
     setPen(QPen(Qt::cyan));
     setFlag(ItemIsMovable);
@@ -57,7 +59,15 @@ void Node::setShape(NodeShapes newShape) {
     shape = newShape;
     update(); // Schedule a redraw of the item
 }
-
+void Node::mousePressEvent(QGraphicsSceneMouseEvent *event) {
+    if (event->button() == Qt::LeftButton) {
+        if (isStarAssociated()) {
+            MainWindow::force_toggle_star_display = true;
+            MainWindow::graphicsView->centerOn(this->pos());
+        }
+    }
+    QGraphicsItem::mousePressEvent(event);
+}
 void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {
     painter->setPen(Qt::NoPen);
     painter->setBrush(color);
@@ -80,6 +90,12 @@ void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWid
         break;
     }
     }
+
+    // Dessiner le nom de la course associée
+    if (!associatedCourse.isEmpty()) {
+        painter->setPen(Qt::black); // Définir la couleur du texte
+        painter->drawText(rect, Qt::AlignBottom | Qt::AlignHCenter, associatedCourse);
+    }
 }
 QString Node::shapeToString(NodeShapes shape) const {
     switch (shape) {
@@ -101,7 +117,8 @@ QJsonObject Node::toJson() const {
     json["font_size"] = font.pointSize();
     json["shape"] = shapeToString(shape);
     json["color"] = color.name();
-
+    json["star_associated"] = starAssociated;
+    json["associated_course"] = associatedCourse;
     QJsonArray connectionsArray;
     for (int conn : connections) {
         connectionsArray.append(conn);
@@ -117,22 +134,17 @@ Node *Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
     QFont font = defaultFont;
     int fontSize = json["font_size"].toInt(font.pointSize());
     font.setPointSize(fontSize);
-
-    NodeShapes shape = Circle; 
-
+    NodeShapes shape = Circle;
     if (json.contains("shape")) {
         QString shapeString = json["shape"].toString();
         shape = stringToShape(shapeString);
     }
-
     QColor color = Qt::cyan;
     if (json.contains("color")) {
         color = QColor(json["color"].toString());
     }
-
     Node *node = new Node(x, y, text, font, shape);
-    node->setColor(color); 
-
+    node->setColor(color);
     if (json.contains("connections") && json["connections"].isArray()) {
         QJsonArray connectionsArray = json["connections"].toArray();
         for (const QJsonValue &value : connectionsArray) {
@@ -140,6 +152,12 @@ Node *Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
                 node->addConnection(value.toInt());
             }
         }
+    }
+    if (json.contains("star_associated")) {
+        node->setStarAssociated(json["star_associated"].toBool());
+    }
+    if (json.contains("associated_course")) {
+        node->setAssociatedCourse(json["associated_course"].toString());
     }
     return node;
 }
