@@ -11,14 +11,12 @@
 #include <iomanip>
 #include <iostream>
 #include <locale>
-#include <nlohmann/json.hpp>
 #include <romhack_b3313_cartography/utils/defines.hpp>
 
 #include <romhack_b3313_cartography/utils/rom_utils.h>
 #include <romhack_b3313_cartography/utils/utilities.h>
 
 #include <romhack_b3313_cartography/uis/Node.h>
-#include <romhack_b3313_cartography/uis/StarDisplay.h>
 
 #include "../uis/MouseFixGraphicScene.h"
 #include "MainWindowUpdateThread.hpp"
@@ -27,6 +25,18 @@
 
 #include "../utils/JsonLoading.h"
 #include "SettingsWindow.h"
+struct StarData {
+    QString courseName;
+    int numStars;
+    bool collected = false;
+    int offset;
+    int mask;
+
+    StarData() : numStars(0), collected(false), offset(0), mask(0) {}
+
+    StarData(const QString &courseName, int numStars, bool collected, int offset, int mask)
+        : courseName(courseName), numStars(numStars), collected(collected), offset(offset), mask(mask) {}
+};
 class SettingsWindow; // Forward declaration
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -47,7 +57,7 @@ class MainWindow : public QMainWindow {
     static QPushButton *switchViewButton, *settingsButton;
 
     static QJsonObject lastJsonData;
-    static QStringList courseNames,associatedCourses;
+    static QStringList courseNames, associatedCourses;
     static bool shiftPressed, showStarDisplay, force_toggle_star_display;
 
     static int startNodeIndex;
@@ -78,10 +88,24 @@ class MainWindow : public QMainWindow {
     void changeNodeColor();
     void associateStarToNode();
     void setWindowResizable(bool resizable);
+    void displayStars(const QJsonObject &jsonData);
+    void drawCourseStars(QPainter &painter,
+                                     const QMap<QString, QMap<QString, QVector<StarData>>> &groupCourseMap,
+                                     float startX, float starTextureHeight,
+                                     float rectLeft, float rectTop,
+                                     int &yOffset, int reservedHeight,
+                                     const QImage &starCollectedTexture,
+                                     const QImage &starMissingTexture,
+                                     const QStringList &associatedCourseNames,
+                                     const QImage &logoTexture,
+                                     QMap<QString, QRectF> &courseNameRects,
+                                     QMap<QString, QRectF> &logoRects);
+    void generateTabContent(const QString &tabName, const QPixmap &pixmap, QWidget *contentWidget, QVBoxLayout *contentLayout);
+    QStringList getCourseNamesFromSlot0(const QJsonObject &jsonData);
+
     Node *findAssociatedNode();
     SettingsWindow *settingsWindow = nullptr;
     QPointF startPos;
-    StarDisplay starDisplay; // Instance de la classe StarDisplay
     QList<Node *> mind_map_nodes;
     bool contextMenuOpened = false;
     QPushButton *saveButton = nullptr;
@@ -97,6 +121,9 @@ class MainWindow : public QMainWindow {
     QScrollArea *scrollArea_star_display = nullptr;
     int stardisplayscrollPosition = 0, rightClickedNodeIndex = -1;
     QComboBox *courseComboBox;
+    QRectF groupTextRect;
+    QMap<QString, QRectF> courseNameRects, logoRects;
+    Node *nodeUnderCursor = nullptr;
 #ifdef DEBUG
     QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
 #else

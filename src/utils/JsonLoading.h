@@ -1,6 +1,7 @@
 #pragma once
 #include "../windows/MainWindow.h"
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
+struct StarData; // Forward declaration
 
 class JsonLoading {
   public:

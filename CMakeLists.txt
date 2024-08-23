@@ -17,7 +17,6 @@ set(CMAKE_AUTOUIC ON)
 
 # Ajouter les répertoires d'inclusion
 set(ALL_INCLUDE_DIR
-    "${CMAKE_SOURCE_DIR}/ThirdPartyLibs/nlohmann-json"
     "${CMAKE_SOURCE_DIR}/includes"
 )
 

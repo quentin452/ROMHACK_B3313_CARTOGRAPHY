@@ -60,10 +60,11 @@ void Node::setShape(NodeShapes newShape) {
     update(); // Schedule a redraw of the item
 }
 void Node::mousePressEvent(QGraphicsSceneMouseEvent *event) {
-    if (event->button() == Qt::LeftButton) {
+    if (!isShiftPressed() && event->button() == Qt::LeftButton) {
         if (isStarAssociated()) {
             MainWindow::force_toggle_star_display = true;
-            MainWindow::graphicsView->centerOn(this->pos());
+            //if (MainWindow::showStarDisplay)
+            //    MainWindow::graphicsView->centerOn(this->pos());
         }
     }
     QGraphicsItem::mousePressEvent(event);
