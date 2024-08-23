@@ -123,6 +123,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         QString courseClicked;
 
         for (auto it = courseNameRects.cbegin(); it != courseNameRects.cend(); ++it) {
+            qDebug() << "Checking courseNameRects" << it.key() << it.value();
             if (it.value().contains(pos)) {
                 courseClicked = it.key();
                 break;
@@ -131,6 +132,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
 
         if (courseClicked.isEmpty()) {
             for (auto it = logoRects.cbegin(); it != logoRects.cend(); ++it) {
+                qDebug() << "Checking logoRects" << it.key() << it.value();
                 if (it.value().contains(pos)) {
                     courseClicked = it.key();
                     break;
@@ -138,7 +140,8 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
             }
         }
 
-        if (!courseClicked.isEmpty()) {
+        if (!courseClicked.isEmpty()) { // THIS IS NEVER REACHED
+            qDebug() << "Course clicked:" << courseClicked;
             for (Node *node : MainWindow::nodes) {
                 if (node->getAssociatedCourse() == courseClicked) {
                     toggleStarDisplay();
@@ -302,22 +305,19 @@ void MainWindow::associateStarToNode() {
         Node *node = nodes[rightClickedNodeIndex];
         QComboBox *courseComboBox = new QComboBox(this);
         for (const QString &courseName : courseNames) {
-            if (!associatedCourses.contains(courseName)) {
+            if (!associatedCourses.contains(courseName))
                 courseComboBox->addItem(courseName);
-            }
         }
         auto onAccept = [this, node, courseComboBox] {
             QString selectedCourse = courseComboBox->currentText();
             QString oldCourse = node->getAssociatedCourse();
-            if (!oldCourse.isEmpty() && associatedCourses.contains(oldCourse)) {
+            if (!oldCourse.isEmpty() && associatedCourses.contains(oldCourse))
                 associatedCourses.removeAll(oldCourse);
-            }
             node->setStarAssociated(true);
             node->setModified(true);
             node->setAssociatedCourse(selectedCourse);
-            if (!associatedCourses.contains(selectedCourse)) {
+            if (!associatedCourses.contains(selectedCourse))
                 associatedCourses.append(selectedCourse);
-            }
             updateDisplay();
             delete courseComboBox;
         };
@@ -355,9 +355,8 @@ void MainWindow::saveNodes() {
 }
 Node *MainWindow::findAssociatedNode() {
     for (Node *node : nodes) {
-        if (node->isStarAssociated()) {
+        if (node->isStarAssociated())
             return node;
-        }
     }
     return nullptr;
 }
@@ -371,9 +370,8 @@ void MainWindow::toggleStarDisplay() {
         REPA(Node, nodes, hide());
         HIDE_WIDGETS(emulatorText, b3313Text); // Hide again for some condition
         Node *associatedNode = findAssociatedNode();
-        if (associatedNode) {
+        if (associatedNode)
             graphicsView->centerOn(associatedNode->pos());
-        }
     } else {
         HIDE_WIDGETS(settingsButton, tabWidget);
         REMOVE_ALL_TABS(tabWidget);
@@ -462,9 +460,11 @@ void MainWindow::updateDisplay() {
             if (node->isStarAssociated()) {
                 QGraphicsPixmapItem *starIcon = new QGraphicsPixmapItem(QPixmap("resources/textures/associated_to_node.png"));
                 starIcon->setPos(node->pos() + QPointF(node->boundingRect().width() / 2, -node->boundingRect().height() / 2));
+                starIcon->setScale(0.15);
                 graphicsScene->addItem(starIcon);
             }
         }
+
         isModified();
     }
 }
@@ -496,6 +496,7 @@ void MainWindow::drawCourseStars(QPainter &painter,
     float starSpacing = 64.0f;
     float logoHeight = static_cast<float>(logoTexture.height());
     float logoWidth = static_cast<float>(logoTexture.width());
+    float maxLineHeight = 30.0f;
 
     for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
         const QString &groupName = groupIt.key();
@@ -514,34 +515,52 @@ void MainWindow::drawCourseStars(QPainter &painter,
             const QString &courseName = it.key();
             const QVector<StarData> &stars = it.value();
 
-            QFont font = painter.font();
-            QRectF courseTextRect(rectLeft + 10, rectTop + yOffset, 600, 30);
-            painter.setFont(font);
-            painter.setPen(Qt::white);
-            painter.drawText(courseTextRect, courseName);
-            courseNameRects[courseName] = courseTextRect;
+            QRectF logoRect(rectLeft + 10, rectTop + yOffset, logoWidth, logoHeight);
 
             if (associatedCourseNames.contains(courseName)) {
-                QRectF logoRect(courseTextRect.right() + 10, courseTextRect.top(), logoWidth, logoHeight);
                 painter.drawImage(logoRect, logoTexture);
                 logoRects[courseName] = logoRect;
             }
 
+            QRectF courseTextRect(logoRect.right() + 10, rectTop + yOffset, 600, 30);
+            painter.setFont(painter.font());
+            painter.setPen(Qt::white);
+            painter.drawText(courseTextRect, courseName);
+            courseNameRects[courseName] = courseTextRect;
+
             float currentX = courseTextRect.right() + 10;
+            float lineHeight = std::max(starTextureHeight, maxLineHeight);
+
+            // Calculate the rightmost x position for the rectangle
+            float maxRightX = currentX;
             for (const auto &star : stars) {
                 for (int i = 0; i < star.numStars; ++i) {
                     QRectF starRect(
                         currentX + i * starSpacing,
-                        courseTextRect.top() + (30 - starTextureHeight) / 2,
+                        courseTextRect.top() + (lineHeight - starTextureHeight) / 2,
                         starCollectedTexture.width(),
                         starCollectedTexture.height());
                     const QImage &starTexture = star.collected ? starCollectedTexture : starMissingTexture;
                     painter.drawImage(starRect, starTexture);
+                    if (starRect.right() > maxRightX) {
+                        maxRightX = starRect.right();
+                    }
                 }
                 currentX += starSpacing * star.numStars;
             }
 
-            yOffset += std::max(static_cast<int>(starTextureHeight), 30);
+            // Define the bounding rectangle
+            QRectF boundingRect(
+                rectLeft, rectTop + yOffset,
+                maxRightX - rectLeft + 10, // Add padding
+                lineHeight);
+
+            // Draw the rectangle
+            painter.setPen(QPen(Qt::black, 2));
+            painter.drawRect(boundingRect);
+
+            // Update yOffset
+            yOffset += lineHeight;
         }
         yOffset += 10;
     }
@@ -578,9 +597,8 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
     for (Node *node : nodes) {
         if (node->isStarAssociated()) {
             QString associatedCourse = node->getAssociatedCourse();
-            if (!associatedCourse.isEmpty()) {
+            if (!associatedCourse.isEmpty())
                 associatedCourseNames.append(associatedCourse);
-            }
         }
     }
     tabWidget->show();
@@ -607,6 +625,7 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
     QImage starCollectedTexture("resources/textures/star-collected.png");
     QImage starMissingTexture("resources/textures/star-missing.png");
     QImage logoTexture("resources/textures/associated_to_node.png");
+    QImage scaledLogoTexture = logoTexture.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     if (starCollectedTexture.isNull() || starMissingTexture.isNull()) {
         qWarning() << "One or both star textures failed to load.";
         return;
@@ -664,7 +683,7 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
         QPainter painter(&pixmap);
         painter.setRenderHint(QPainter::Antialiasing);
         yOffset = 0;
-        drawCourseStars(painter, groupCourseMap, 50 + 10, starTextureHeight, 50, 50, yOffset, reservedHeight, starCollectedTexture, starMissingTexture, associatedCourseNames, logoTexture, courseNameRects, logoRects);
+        drawCourseStars(painter, groupCourseMap, 50 + 10, starTextureHeight, 50, 50, yOffset, reservedHeight, starCollectedTexture, starMissingTexture, associatedCourseNames, scaledLogoTexture, courseNameRects, logoRects);
         painter.end();
         if (isNewTab)
             generateTabContent(tabName, pixmap, contentWidget, contentLayout);
