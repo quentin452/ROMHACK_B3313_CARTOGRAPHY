@@ -113,8 +113,16 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         shiftPressed = true;
         REPA(Node, nodes, setMovable(false))
     }
-    if (event->key() == Qt::Key_S && event->modifiers() & Qt::ControlModifier)
+    if (event->key() == Qt::Key_S && event->modifiers() & Qt::ControlModifier) {
         saveNodes();
+    }
+    if (event->key() == Qt::Key_F11) {
+        if (isFullScreen()) {
+            showNormal();
+        } else {
+            showFullScreen();
+        }
+    }
 }
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
