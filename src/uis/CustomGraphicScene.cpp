@@ -182,8 +182,8 @@ void CustomGraphicScene::wheelEvent(QGraphicsSceneWheelEvent *event) {
         QGraphicsView *view = views().at(0);
         qreal scaleFactor = 1.2;
         qreal scaleAmount = (event->delta() > 0) ? scaleFactor : 1.0 / scaleFactor;
-        qreal minScale = 0.03 * view->width() / 800.0; 
-        qreal maxScale = 10.0 * view->width() / 800.0; 
+        qreal minScale = 0.03 * view->width() / 800.0;
+        qreal maxScale = 10.0 * view->width() / 800.0;
         qreal currentScale = view->transform().m11();
         qreal newScale = currentScale * scaleAmount;
         if (newScale < minScale) {

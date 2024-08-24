@@ -83,7 +83,8 @@ MainWindow::MainWindow(QWidget *parent)
     jsonLoaderThread->start();
     setupMinimap();
 }
-void MainWindow::setupMinimap() {return;
+void MainWindow::setupMinimap() {
+    return;
     // Initialiser la minimap view et scene
     miniMapScene = new QGraphicsScene(this);
     miniMapView = new MiniMapView(miniMapScene, this);
@@ -101,7 +102,8 @@ void MainWindow::setupMinimap() {return;
     connect(miniMapView, &MiniMapView::minimapClicked, this, &MainWindow::onMinimapClick);
     syncMinimapView();
 }
-void MainWindow::onMinimapClick(QMouseEvent *event) {return;
+void MainWindow::onMinimapClick(QMouseEvent *event) {
+    return;
     QPointF minimapClickPos = miniMapView->mapToScene(event->pos());
 
     // Calculer la position correspondante dans la scène principale
@@ -114,7 +116,8 @@ void MainWindow::onMinimapClick(QMouseEvent *event) {return;
     // Déplacer la vue principale vers la nouvelle position
     graphicsView->centerOn(mainScenePos);
 }
-void MainWindow::updateMinimap() {return;
+void MainWindow::updateMinimap() {
+    return;
     // Assurer que la minimap est mise à jour pour refléter la scène principale
     miniMapScene->clear(); // Effacer l'ancienne vue de la minimap
 
@@ -126,7 +129,8 @@ void MainWindow::updateMinimap() {return;
     // Ajouter l'aperçu à la scène de la minimap
     miniMapScene->addPixmap(minimapPixmap);
 }
-void MainWindow::syncMinimapView() {return;
+void MainWindow::syncMinimapView() {
+    return;
     // Synchroniser la vue principale avec la minimap
     QRectF mainViewRect = graphicsView->viewport()->rect();
     QRectF miniMapRect = miniMapView->viewport()->rect();
@@ -143,15 +147,10 @@ void MainWindow::setWindowResizable(bool resizable) {
     }
 }
 MainWindow::~MainWindow() {
-    if (main_window_thread) {
-        main_window_thread->stop();
-        main_window_thread->wait();
-    }
-    if (jsonLoaderThread) {
-        jsonLoaderThread->stop();
-        jsonLoaderThread->wait();
-    }
+    STOP_AND_WAIT_THREAD(main_window_thread);
+    STOP_AND_WAIT_THREAD(jsonLoaderThread);
 }
+
 void MainWindow::openSettingsWindow() {
     settingsWindow->exec();
 }
@@ -159,10 +158,12 @@ void MainWindow::textUpdate() {
     UPDATE_LABEL(emulatorText, isEmulatorDetected(parallelLauncher, global_detected_emulator), "Parallel launcher Emulator Running", "Parallel launcher Emulator Not Running");
     UPDATE_LABEL(b3313Text, isRomHackLoaded(global_detected_emulator), "B3313 V1.0.2 ROM Loaded", "B3313 V1.0.2 ROM Not Loaded");
 }
-
 void MainWindow::keyPressEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Shift) {
         shiftPressed = true;
+        REPA(Node, nodes, setMovable(false))
+    }
+    if (event->key() == Qt::Key_Control) {
         REPA(Node, nodes, setMovable(false))
     }
     if (event->key() == Qt::Key_S && event->modifiers() & Qt::ControlModifier)
@@ -183,6 +184,9 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
         shiftPressed = false;
         REPA(Node, nodes, setMovable(true))
         startNodeIndex = -1;
+    }
+    if (event->key() == Qt::Key_Control) {
+        REPA(Node, nodes, setMovable(true))
     }
 }
 
@@ -477,15 +481,15 @@ void MainWindow::updateDisplay() {
         toggleStarDisplay();
         force_toggle_star_display = false;
     }
+    REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsLineItem);
+    REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPolygonItem);
+    REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPixmapItem);
     if (showStarDisplay) {
         textUpdate();
         jsonLoaderThread->loadJson(GLOBAL_STAR_DISPLAY_JSON_STR);
         updateStarDisplay();
         SHOW_WIDGETS(switchViewButton);
     } else {
-        REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsLineItem);
-        REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPolygonItem);
-        REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPixmapItem);
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
                 conn.second >= 0 && conn.second < nodes.size()) {

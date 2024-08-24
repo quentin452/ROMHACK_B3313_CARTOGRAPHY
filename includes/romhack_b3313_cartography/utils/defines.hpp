@@ -17,22 +17,22 @@
             }                                                      \
         }                                                          \
     } while (0)
-#define SHOW_WIDGETS(...)                       \
-    do {                                        \
-        QWidget *widgets[] = {__VA_ARGS__};     \
-        for (QWidget * widget : widgets) {      \
-            if (widget) \
-                widget->show();                 \
-        }                                       \
+#define SHOW_WIDGETS(...)                   \
+    do {                                    \
+        QWidget *widgets[] = {__VA_ARGS__}; \
+        for (QWidget * widget : widgets) {  \
+            if (widget)                     \
+                widget->show();             \
+        }                                   \
     } while (0)
 
-#define HIDE_WIDGETS(...)                      \
-    do {                                       \
-        QWidget *widgets[] = {__VA_ARGS__};    \
-        for (QWidget * widget : widgets) {     \
-            if (widget) \
-                widget->hide();                \
-        }                                      \
+#define HIDE_WIDGETS(...)                   \
+    do {                                    \
+        QWidget *widgets[] = {__VA_ARGS__}; \
+        for (QWidget * widget : widgets) {  \
+            if (widget)                     \
+                widget->hide();             \
+        }                                   \
     } while (0)
 
 #define REMOVE_ALL_TABS(tabWidget)                          \
@@ -72,3 +72,8 @@
     QAction *actionName = new QAction(#actionName, this);                \
     connect(actionName, &QAction::triggered, this, &MainWindow::method); \
     contextMenu->addAction(actionName);
+#define STOP_AND_WAIT_THREAD(thread) \
+    if (thread) {                    \
+        thread->stop();              \
+        thread->wait();              \
+    }
