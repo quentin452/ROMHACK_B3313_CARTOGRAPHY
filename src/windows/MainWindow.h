@@ -24,23 +24,15 @@
 #include "../uis/CustomGraphicView.h"
 
 #include "../uis/MiniMapView.h"
+#include "../uis/StarModel.hpp"
+
 #include "../utils/JsonLoading.h"
+
 #include "SettingsWindow.h"
 #include <memory>
+#include <romhack_b3313_cartography/utils/StarData.h>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
 
-struct StarData {
-    QString courseName;
-    int numStars;
-    bool collected = false;
-    int offset;
-    int mask;
-
-    StarData() : numStars(0), collected(false), offset(0), mask(0) {}
-
-    StarData(const QString &courseName, int numStars, bool collected, int offset, int mask)
-        : courseName(courseName), numStars(numStars), collected(collected), offset(offset), mask(mask) {}
-};
 class SettingsWindow; // Forward declaration
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -123,14 +115,15 @@ class MainWindow : public QMainWindow {
     QRectF groupTextRect;
     Node *nodeUnderCursor = nullptr;
     JsonLoaderThread *jsonLoaderThread = nullptr;
-    QImage starCollectedTexture = ImageCache::getImage("resources/textures/star-collected.png");
-    QImage starMissingTexture = ImageCache::getImage("resources/textures/star-missing.png");
     QStringList associatedCourseNames;
     SaveParams star_diplay_params;
     std::vector<uint8_t> saveData;
     QJsonObject star_display_json_data;
     MiniMapView *miniMapView;
     QGraphicsScene *miniMapScene;
+    QVector<StarModel *> starModels;
+    QImage starCollectedTexture = ImageCache::getImage("resources/textures/star-collected.png");
+    QImage starMissingTexture = ImageCache::getImage("resources/textures/star-missing.png");
     // TODO UPDATE SAVE/load functionnalities for mind maps
 #ifdef DEBUG
     QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";

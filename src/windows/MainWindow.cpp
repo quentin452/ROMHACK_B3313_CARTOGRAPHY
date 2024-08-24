@@ -601,128 +601,73 @@ void MainWindow::updateStarDisplay() {
     HIDE_WIDGETS(emulatorText, b3313Text);
     if (tabNames.isEmpty() || starCollectedTexture.isNull() || starMissingTexture.isNull())
         return;
-    int associatedCourseYPosition = 0;
-    for (int i = 0; i < static_cast<int>(star_diplay_params.numSlots); ++i) {
+    QSet<QString> currentTabNames;
+    for (int i = 0; i < tabWidget->count(); ++i) {
+        currentTabNames.insert(tabWidget->tabText(i));
+    }
+    QVector<StarModel *> starModels; // List of StarModel
+    for (int i = 0; i < tabNames.size(); ++i) {
         QString tabName = tabNames[i];
-        QWidget *existingTab = nullptr;
-        for (int j = 0; j < tabWidget->count(); ++j) {
-            if (tabWidget->tabText(j) == tabName) {
-                existingTab = tabWidget->widget(j);
-                break;
-            }
-        }
-        QWidget *contentWidget;
-        QVBoxLayout *contentLayout;
-        bool isNewTab = !existingTab;
-        if (isNewTab) {
-            auto tabContent = std::make_unique<QWidget>();
-            auto layout = std::make_unique<QVBoxLayout>(tabContent.get());
-            contentWidget = new QWidget();
-            contentLayout = new QVBoxLayout(contentWidget);
-            contentWidget->setLayout(contentLayout);
-            scrollArea = new QScrollArea(tabWidget);
-            scrollArea->setWidgetResizable(true);
-            scrollArea->setWidget(contentWidget);
-            tabWidget->addTab(scrollArea, tabName);
+        QWidget *tabContainer = nullptr;
+        QTabWidget *groupTabWidget = nullptr;
+        if (i < tabWidget->count()) {
+            tabContainer = tabWidget->widget(i);
+            groupTabWidget = tabContainer->findChild<QTabWidget *>();
+            tabWidget->setTabText(i, tabName);
         } else {
-            scrollArea = qobject_cast<QScrollArea *>(existingTab);
-            contentWidget = scrollArea->widget();
-            contentLayout = qobject_cast<QVBoxLayout *>(contentWidget->layout());
+            tabContainer = new QWidget(tabWidget);
+            groupTabWidget = new QTabWidget(tabContainer);
+            QVBoxLayout *layout = new QVBoxLayout(tabContainer);
+            layout->addWidget(groupTabWidget);
+            tabContainer->setLayout(layout);
+            tabWidget->addTab(tabContainer, tabName);
         }
-        float collectedHeight = static_cast<float>(starCollectedTexture.height());
-        float missingHeight = static_cast<float>(starMissingTexture.height());
-        float starTextureHeight = std::max(collectedHeight, missingHeight);
-        int yOffset = 0, reservedHeight = 50;
         QMap<QString, QMap<QString, QVector<StarData>>> groupCourseMap = JsonLoading::readStarDisplayJsonData(star_display_json_data, saveData, star_diplay_params, i);
         for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
+            QString groupName = groupIt.key();
+            QWidget *groupWidget = nullptr;
+            QListView *existingListView = nullptr;
+            for (int j = 0; j < groupTabWidget->count(); ++j) {
+                if (groupTabWidget->tabText(j) == groupName) {
+                    groupWidget = groupTabWidget->widget(j);
+                    existingListView = groupWidget->findChild<QListView *>();
+                    break;
+                }
+            }
+            if (!groupWidget) {
+                groupWidget = new QWidget(groupTabWidget);
+                QVBoxLayout *groupLayout = new QVBoxLayout(groupWidget);
+                existingListView = new QListView(groupWidget);
+                groupLayout->addWidget(existingListView);
+                groupWidget->setLayout(groupLayout);
+                groupTabWidget->addTab(groupWidget, groupName);
+            }
+            StarModel *model = nullptr;
+            if (existingListView->model()) {
+                model = static_cast<StarModel *>(existingListView->model());
+            } else {
+                model = new StarModel(existingListView); // Make the QListView the parent
+                existingListView->setModel(model);
+                starModels.append(model); // Add to the list of StarModel
+            }
+            QVector<StarData> starData;
             const QMap<QString, QVector<StarData>> &courseStarsMap = groupIt.value();
             for (auto courseIt = courseStarsMap.cbegin(); courseIt != courseStarsMap.cend(); ++courseIt) {
-                if (jump_to_star_display_associated_line && courseIt.key() == jump_to_which_line)
-                    associatedCourseYPosition = yOffset;
-                yOffset += std::max(static_cast<int>(starTextureHeight), 30);
+                starData.append(courseIt.value());
             }
-            yOffset += 10;
+            model->setStarData(starData);
         }
-
-        int totalHeight = yOffset + reservedHeight;
-        QPixmap pixmap(graphicsView->width(), totalHeight);
-        pixmap.fill(Qt::transparent);
-        QPainter painter(&pixmap);
-        painter.setRenderHint(QPainter::Antialiasing);
-        yOffset = 0;
-        int rectLeft = 50, rectTop = 50;
-        QImage logoTexture = ImageCache::getImage("resources/textures/associated_to_node.png");
-        QImage scaledLogoTexture = logoTexture.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        float starSpacing = 64.0f;
-        float logoHeight = static_cast<float>(scaledLogoTexture.height());
-        float logoWidth = static_cast<float>(scaledLogoTexture.width());
-        float maxLineHeight = 30.0f;
-        float scrollOffsetY = scrollArea->widget()->pos().y();
-        for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
-            const QString &groupName = groupIt.key();
-            const QMap<QString, QVector<StarData>> &courseStarsMap = groupIt.value();
-            QFont groupFont = painter.font();
-            groupFont.setBold(true);
-            painter.setFont(groupFont);
-            QRectF groupTextRect(rectLeft + 10, rectTop + yOffset - scrollOffsetY, 600, 30);
-            painter.setPen(Qt::blue);
-            painter.drawText(groupTextRect, groupName);
-            yOffset += std::max(static_cast<int>(starTextureHeight), 30);
-            for (auto it = courseStarsMap.cbegin(); it != courseStarsMap.cend(); ++it) {
-                const QString &courseName = it.key();
-                const QVector<StarData> &stars = it.value();
-                QRectF logoRect(rectLeft + 10, rectTop + yOffset - scrollOffsetY, logoWidth, logoHeight);
-                if (associatedCourseNames.contains(courseName)) {
-                    painter.drawImage(logoRect, scaledLogoTexture);
-                    logoRects[courseName] = logoRect;
-                }
-                QRectF courseTextRect(logoRect.right() + 10, rectTop + yOffset - scrollOffsetY, 600, 30);
-                painter.setFont(painter.font());
-                painter.setPen(Qt::white);
-                painter.drawText(courseTextRect, courseName);
-                float currentX = courseTextRect.right() + 10;
-                float lineHeight = std::max(starTextureHeight, maxLineHeight);
-                float maxRightX = currentX;
-                for (const auto &star : stars) {
-                    for (int i = 0; i < star.numStars; ++i) {
-                        QRectF starRect(
-                            currentX + i * starSpacing,
-                            courseTextRect.top() + (lineHeight - starTextureHeight) / 2,
-                            starCollectedTexture.width(),
-                            starCollectedTexture.height());
-                        const QImage &starTexture = star.collected ? starCollectedTexture : starMissingTexture;
-                        painter.drawImage(starRect, starTexture);
-                        if (starRect.right() > maxRightX)
-                            maxRightX = starRect.right();
-                    }
-                    currentX += starSpacing * star.numStars;
-                }
-                QRectF boundingRect(
-                    rectLeft, rectTop + yOffset - scrollOffsetY,
-                    maxRightX - rectLeft + 10,
-                    lineHeight);
-                courseNameRects[courseName] = boundingRect;
-                painter.setPen(QPen(Qt::black, 2));
-                painter.drawRect(boundingRect);
-                yOffset += lineHeight;
-            }
-            yOffset += 10;
-        }
-        painter.end();
-
-        if (isNewTab)
-            generateTabContent(tabName, pixmap, contentWidget, contentLayout);
-        else
-            contentWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-
-        contentWidget->setMinimumHeight(totalHeight);
-
-        if (jump_to_star_display_associated_line && associatedCourseYPosition != -1) {
-            scrollArea->verticalScrollBar()->setValue(associatedCourseYPosition);
-            jump_to_star_display_associated_line = false;
+    }
+    for (int i = tabWidget->count() - 1; i >= 0; --i) {
+        QString tabName = tabWidget->tabText(i);
+        if (!tabNames.contains(tabName)) {
+            QWidget *tabContainer = tabWidget->widget(i);
+            tabWidget->removeTab(i);
+            delete tabContainer; // Ensure the widget is deleted
         }
     }
 }
+
 QStringList MainWindow::getCourseNamesFromSlot0(const QJsonObject &jsonData) {
     QStringList courseNames;
     if (!jsonData.contains("groups") || !jsonData["groups"].isArray()) {

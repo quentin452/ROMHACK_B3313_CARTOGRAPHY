@@ -23,6 +23,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QList>
+#include <QListView>
 #include <QMenu>
 #include <QMessageBox>
 #include <QMouseEvent>
@@ -42,6 +43,7 @@
 #include <QStackedWidget>
 #include <QString>
 #include <QStringList>
+#include <QTableView>
 #include <QTest>
 #include <QTextEdit>
 #include <QThread>
@@ -51,3 +53,4 @@
 #include <QVector>
 #include <QWidget>
 #include <QtConcurrent/QtConcurrent>
+#include <QStyledItemDelegate>
