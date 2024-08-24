@@ -25,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent)
     emulatorText = new QLabel("Emulator Status", this);
     b3313Text = new QLabel("B3313 V1.0.2 Status", this);
     graphicsView = new CustomGraphicView(this);
-    graphicsScene = new MouseFixGraphicScene(this);
+    graphicsScene = new CustomGraphicScene(this);
     graphicsView->setScene(graphicsScene);
     centralWidgetZ = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout(centralWidgetZ);
@@ -42,9 +42,9 @@ MainWindow::MainWindow(QWidget *parent)
     ADD_ACTION(contextMenu, changeShapeAction, changeNodeShape)
     ADD_ACTION(contextMenu, changeColorAction, changeNodeColor)
     ADD_ACTION(contextMenu, associateStarAction, associateStarToNode)
-    thread = std::make_unique<MainWindowUpdateThread>(this);
-    connect(thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
-    thread->start();
+    main_window_thread = std::make_unique<MainWindowUpdateThread>(this);
+    connect(main_window_thread.get(), &MainWindowUpdateThread::updateNeeded, this, &MainWindow::onTimerUpdate);
+    main_window_thread->start();
     QRectF sceneBoundingRect = graphicsScene->itemsBoundingRect();
     QRectF adjustedSceneRect = sceneBoundingRect.adjusted(0, 0, 50000, 50000);
     graphicsScene->setSceneRect(adjustedSceneRect);
@@ -77,8 +77,9 @@ MainWindow::MainWindow(QWidget *parent)
     QJsonObject jsonData = JsonLoading::loadJsonData2(GLOBAL_STAR_DISPLAY_JSON_STR);
     courseNames = getCourseNamesFromSlot0(jsonData);
     jsonLoaderThread = new JsonLoaderThread(this);
-    connect(jsonLoaderThread, &JsonLoaderThread::jsonLoaded, this, &MainWindow::displayStars);
+    connect(jsonLoaderThread, &JsonLoaderThread::jsonLoaded, this, &MainWindow::initializeStarDisplay);
     connect(jsonLoaderThread, &JsonLoaderThread::finished, jsonLoaderThread, &QObject::deleteLater);
+    jsonLoaderThread->start();
 }
 void MainWindow::setWindowResizable(bool resizable) {
     if (resizable) {
@@ -90,9 +91,9 @@ void MainWindow::setWindowResizable(bool resizable) {
     }
 }
 MainWindow::~MainWindow() {
-    if (thread) {
-        thread->stop();
-        thread->wait();
+    if (main_window_thread) {
+        main_window_thread->stop();
+        main_window_thread->wait();
     }
     if (jsonLoaderThread) {
         jsonLoaderThread->stop();
@@ -432,10 +433,8 @@ void MainWindow::updateDisplay() {
             QMutexLocker locker(&globalMutex);
             starDisplayJsonStr = GLOBAL_STAR_DISPLAY_JSON_STR;
         }
-        if (!jsonLoaderThread->isRunning()) {
-            jsonLoaderThread->start();
-        }
         jsonLoaderThread->loadJson(starDisplayJsonStr);
+        updateStarDisplay();
         SHOW_WIDGETS(switchViewButton);
     } else {
         REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsLineItem);
@@ -509,13 +508,9 @@ void MainWindow::generateTabContent(const QString &tabName, const QPixmap &pixma
     contentLayout->setSpacing(0);
 }
 
-void MainWindow::displayStars(const QJsonObject &jsonData) {
-    if (!isRomHackLoaded(global_detected_emulator)) {
-        HIDE_WIDGETS(tabWidget);
-        SHOW_WIDGETS(emulatorText, b3313Text, switchViewButton, settingsButton);
-        return;
-    }
-    QStringList associatedCourseNames;
+void MainWindow::initializeStarDisplay(const QJsonObject &jsonData) {
+    star_display_json_data = jsonData;
+    associatedCourseNames.clear();
     for (Node *node : nodes) {
         if (node->isStarAssociated()) {
             QString associatedCourse = node->getAssociatedCourse();
@@ -523,35 +518,40 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
                 associatedCourseNames.append(associatedCourse);
         }
     }
-    SHOW_WIDGETS(tabWidget, switchViewButton, settingsButton);
-    HIDE_WIDGETS(emulatorText, b3313Text);
+
     std::string saveLocation = GetParallelLauncherSaveLocation();
     QJsonObject format = jsonData["format"].toObject();
-    SaveParams params;
-    params.saveFormat = parseSaveFormat(format["save_type"].toString().toStdString());
-    params.slotsStart = format["slots_start"].toInt();
-    params.slotSize = format["slot_size"].toInt();
-    params.activeBit = format["active_bit"].toInt();
-    params.numSlots = format["num_slots"].toInt();
-    params.checksumOffset = format["checksum_offset"].toInt();
-    auto saveData = ReadSrmFile(saveLocation, params);
-    if (saveData.empty() || params.numSlots <= 0)
+    star_diplay_params.saveFormat = parseSaveFormat(format["save_type"].toString().toStdString());
+    star_diplay_params.slotsStart = format["slots_start"].toInt();
+    star_diplay_params.slotSize = format["slot_size"].toInt();
+    star_diplay_params.activeBit = format["active_bit"].toInt();
+    star_diplay_params.numSlots = format["num_slots"].toInt();
+    star_diplay_params.checksumOffset = format["checksum_offset"].toInt();
+
+    saveData = ReadSrmFile(saveLocation, star_diplay_params);
+    if (saveData.empty() || star_diplay_params.numSlots <= 0) {
+        qWarning() << "Save data is empty or numSlots is not valid.";
         return;
+    }
     tabNames.clear();
-    for (int i = 0; i < static_cast<int>(params.numSlots); ++i) {
+    for (int i = 0; i < static_cast<int>(star_diplay_params.numSlots); ++i) {
         tabNames.append("Mario " + QString::number(i));
     }
-    QImage starCollectedTexture = ImageCache::getImage("resources/textures/star-collected.png");
-    QImage starMissingTexture = ImageCache::getImage("resources/textures/star-missing.png");
-    if (starCollectedTexture.isNull() || starMissingTexture.isNull()) {
-        qWarning() << "One or both star textures failed to load.";
+
+}
+
+void MainWindow::updateStarDisplay() {
+    if (!isRomHackLoaded(global_detected_emulator)) {
+        HIDE_WIDGETS(tabWidget);
+        SHOW_WIDGETS(emulatorText, b3313Text, switchViewButton, settingsButton);
         return;
     }
-    float collectedHeight = static_cast<float>(starCollectedTexture.height());
-    float missingHeight = static_cast<float>(starMissingTexture.height());
-    float starTextureHeight = std::max(collectedHeight, missingHeight);
-    int associatedCourseYPosition = -1; // Track the Y position of the associated course
-    for (int i = 0; i < static_cast<int>(params.numSlots); ++i) {
+    SHOW_WIDGETS(tabWidget, switchViewButton, settingsButton);
+    HIDE_WIDGETS(emulatorText, b3313Text);
+    if (tabNames.isEmpty() || starCollectedTexture.isNull() || starMissingTexture.isNull()) 
+        return;
+    int associatedCourseYPosition = 0;
+    for (int i = 0; i < static_cast<int>(star_diplay_params.numSlots); ++i) {
         QString tabName = tabNames[i];
         QWidget *existingTab = nullptr;
         for (int j = 0; j < tabWidget->count(); ++j) {
@@ -578,18 +578,21 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
             contentWidget = scrollArea->widget();
             contentLayout = qobject_cast<QVBoxLayout *>(contentWidget->layout());
         }
-        int yOffset = 0;
-        int reservedHeight = 50;
-        QMap<QString, QMap<QString, QVector<StarData>>> groupCourseMap = JsonLoading::readStarDisplayJsonData(jsonData, saveData, params, i);
+        float collectedHeight = static_cast<float>(starCollectedTexture.height());
+        float missingHeight = static_cast<float>(starMissingTexture.height());
+        float starTextureHeight = std::max(collectedHeight, missingHeight);
+        int yOffset = 0, reservedHeight = 50;
+        QMap<QString, QMap<QString, QVector<StarData>>> groupCourseMap = JsonLoading::readStarDisplayJsonData(star_display_json_data, saveData, star_diplay_params, i);
         for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
             const QMap<QString, QVector<StarData>> &courseStarsMap = groupIt.value();
             for (auto courseIt = courseStarsMap.cbegin(); courseIt != courseStarsMap.cend(); ++courseIt) {
                 if (jump_to_star_display_associated_line && courseIt.key() == jump_to_which_line)
-                    associatedCourseYPosition = yOffset; // Set position of the associated course
+                    associatedCourseYPosition = yOffset;
                 yOffset += std::max(static_cast<int>(starTextureHeight), 30);
             }
             yOffset += 10;
         }
+
         int totalHeight = yOffset + reservedHeight;
         QPixmap pixmap(graphicsView->width(), totalHeight);
         pixmap.fill(Qt::transparent);
@@ -655,12 +658,14 @@ void MainWindow::displayStars(const QJsonObject &jsonData) {
             yOffset += 10;
         }
         painter.end();
+
         if (isNewTab)
             generateTabContent(tabName, pixmap, contentWidget, contentLayout);
         else
             contentWidget->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+
         contentWidget->setMinimumHeight(totalHeight);
-        // Scroll to the position of the associated course
+
         if (jump_to_star_display_associated_line && associatedCourseYPosition != -1) {
             scrollArea->verticalScrollBar()->setValue(associatedCourseYPosition);
             jump_to_star_display_associated_line = false;

@@ -11,6 +11,7 @@ class JsonLoaderThread : public QThread {
         QMutexLocker locker(&mutex);
         this->filePath = filePath;
         filePathChanged = true;
+        condition.wakeOne();
     }
 
     void stop() {

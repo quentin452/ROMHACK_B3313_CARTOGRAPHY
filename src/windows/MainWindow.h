@@ -20,7 +20,7 @@
 
 #include "../threads/JsonLoaderThread.hpp"
 #include "../threads/MainWindowUpdateThread.hpp"
-#include "../uis/MouseFixGraphicScene.h"
+#include "../uis/CustomGraphicScene.h"
 #include "../uis/CustomGraphicView.h"
 
 #include <memory>
@@ -92,8 +92,9 @@ class MainWindow : public QMainWindow {
     void changeNodeColor();
     void associateStarToNode();
     void setWindowResizable(bool resizable);
-    void displayStars(const QJsonObject &jsonData);
     void generateTabContent(const QString &tabName, const QPixmap &pixmap, QWidget *contentWidget, QVBoxLayout *contentLayout);
+    void initializeStarDisplay(const QJsonObject &jsonData);
+    void updateStarDisplay();
     QStringList getCourseNamesFromSlot0(const QJsonObject &jsonData);
 
     Node *findAssociatedNode();
@@ -107,7 +108,7 @@ class MainWindow : public QMainWindow {
     QGraphicsLineItem *currentArrow = nullptr;
     QMenu *contextMenu = nullptr;
     const int WIDTH = 1280, HEIGHT = 720;
-    std::unique_ptr<MainWindowUpdateThread> thread;
+    std::unique_ptr<MainWindowUpdateThread> main_window_thread;
     QWidget *star_display_centralWidget = nullptr;
     QStackedWidget *stackedWidget = nullptr;
     QWidget *centralWidgetZ = nullptr;
@@ -117,6 +118,12 @@ class MainWindow : public QMainWindow {
     QMap<QString, QRectF> courseNameRects, logoRects;
     Node *nodeUnderCursor = nullptr;
     JsonLoaderThread *jsonLoaderThread = nullptr;
+    QImage starCollectedTexture = ImageCache::getImage("resources/textures/star-collected.png");
+    QImage starMissingTexture = ImageCache::getImage("resources/textures/star-missing.png");
+    QStringList associatedCourseNames;
+    SaveParams star_diplay_params;
+    std::vector<uint8_t> saveData;
+    QJsonObject star_display_json_data;
 #ifdef DEBUG
     QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
 #else

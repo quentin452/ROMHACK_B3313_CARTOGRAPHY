@@ -2,11 +2,11 @@
 #include "../windows/MainWindow.h"
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
 
-class MouseFixGraphicScene : public QGraphicsScene {
+class CustomGraphicScene : public QGraphicsScene {
     Q_OBJECT
 
   public:
-    MouseFixGraphicScene(QObject *parent = nullptr);
+    CustomGraphicScene(QObject *parent = nullptr);
 
   private:
     QTimer *updateTimer = nullptr;

@@ -1,4 +1,4 @@
-#include "MouseFixGraphicScene.h"
+#include "CustomGraphicScene.h"
 
 QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint) {
     QPointF nodeCenter = node->pos();
@@ -75,7 +75,7 @@ QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint) {
 
     return edgePoint;
 }
-void MouseFixGraphicScene::updateLineItemComputations() {
+void CustomGraphicScene::updateLineItemComputations() {
     QPointF mousePosScene = lastMousePos;
     qreal margin = 333.0;
     QRectF sceneRect = MainWindow::graphicsScene->sceneRect().adjusted(margin, margin, -margin, -margin);
@@ -127,23 +127,23 @@ void MouseFixGraphicScene::updateLineItemComputations() {
     }
 }
 
-void MouseFixGraphicScene::onUpdateLineItem() {
+void CustomGraphicScene::onUpdateLineItem() {
     updateFuture = QtConcurrent::run([this]() {
         updateLineItemComputations();
     });
 }
 
-MouseFixGraphicScene::MouseFixGraphicScene(QObject *parent)
+CustomGraphicScene::CustomGraphicScene(QObject *parent)
     : QGraphicsScene(parent), updateTimer(new QTimer(this)) {
-    connect(updateTimer, &QTimer::timeout, this, &MouseFixGraphicScene::onUpdateLineItem);
+    connect(updateTimer, &QTimer::timeout, this, &CustomGraphicScene::onUpdateLineItem);
     updateTimer->start(100); // Update every 100 ms
 }
-void MouseFixGraphicScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
+void CustomGraphicScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
     lastMousePos = event->scenePos();
     QGraphicsScene::mouseMoveEvent(event);
 }
 
-void MouseFixGraphicScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
+void CustomGraphicScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
     if (MainWindow::shiftPressed && event->button() == Qt::LeftButton) {
         QPointF mousePos = event->scenePos();
         int endNodeIndex;
@@ -177,7 +177,7 @@ void MouseFixGraphicScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
     }
     QGraphicsScene::mouseReleaseEvent(event);
 }
-void MouseFixGraphicScene::wheelEvent(QGraphicsSceneWheelEvent *event) {
+void CustomGraphicScene::wheelEvent(QGraphicsSceneWheelEvent *event) {
     if (event->modifiers() & Qt::ShiftModifier) {
         QGraphicsView *view = views().at(0);
         qreal scaleFactor = 1.2;
