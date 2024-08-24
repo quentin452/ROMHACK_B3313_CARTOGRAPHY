@@ -64,6 +64,7 @@ void Node::mousePressEvent(QGraphicsSceneMouseEvent *event) {
         if (isStarAssociated()) {
             MainWindow::jump_to_star_display_associated_line = true;
             MainWindow::jump_to_which_line = getAssociatedCourse();
+            // MainWindow::graphicsView->centerOn(this->pos());
             MainWindow::force_toggle_star_display = true;
         }
     }

@@ -21,6 +21,7 @@ class MouseFixGraphicScene : public QGraphicsScene {
   protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+    void wheelEvent(QGraphicsSceneWheelEvent *event) override;
 };
 
 QPointF getNodeEdgePoint(const Node *node, const QPointF &endPoint);

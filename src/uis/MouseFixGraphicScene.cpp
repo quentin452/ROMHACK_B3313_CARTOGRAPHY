@@ -144,7 +144,6 @@ void MouseFixGraphicScene::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
 }
 
 void MouseFixGraphicScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
-    QGraphicsScene::mouseReleaseEvent(event);
     if (MainWindow::shiftPressed && event->button() == Qt::LeftButton) {
         QPointF mousePos = event->scenePos();
         int endNodeIndex;
@@ -175,5 +174,34 @@ void MouseFixGraphicScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
         if (MainWindow::graphicsScene->items().contains(previousLineItem))
             MainWindow::graphicsScene->removeItem(previousLineItem);
         previousLineItem = nullptr;
+    }
+    QGraphicsScene::mouseReleaseEvent(event);
+}
+void MouseFixGraphicScene::wheelEvent(QGraphicsSceneWheelEvent *event) {
+    if (event->modifiers() & Qt::ShiftModifier) {
+        QGraphicsView *view = views().at(0);
+        qreal scaleFactor = 1.2;
+        qreal scaleAmount = (event->delta() > 0) ? scaleFactor : 1.0 / scaleFactor;
+        qreal minScale = 0.01;
+        qreal maxScale = 10.0;
+        qreal currentScale = view->transform().m11();
+        qreal newScale = currentScale * scaleAmount;
+        if (newScale < minScale) {
+            scaleAmount = minScale / currentScale;
+            newScale = minScale;
+        } else if (newScale > maxScale) {
+            scaleAmount = maxScale / currentScale;
+            newScale = maxScale;
+        }
+        QPointF mousePosInScene = event->scenePos();
+        view->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
+        view->scale(scaleAmount, scaleAmount);
+        view->setTransformationAnchor(QGraphicsView::NoAnchor);
+        QPointF newMousePosInScene = view->mapToScene(view->mapFromScene(mousePosInScene));
+        QPointF delta = newMousePosInScene - mousePosInScene;
+        view->translate(delta.x(), delta.y());
+        event->accept();
+    } else {
+        QGraphicsScene::wheelEvent(event);
     }
 }
