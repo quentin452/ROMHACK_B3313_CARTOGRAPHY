@@ -205,3 +205,4 @@ void CustomGraphicScene::wheelEvent(QGraphicsSceneWheelEvent *event) {
         QGraphicsScene::wheelEvent(event);
     }
 }
+#include "CustomGraphicScene.moc"

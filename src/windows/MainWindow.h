@@ -23,6 +23,7 @@
 #include "../uis/CustomGraphicScene.h"
 #include "../uis/CustomGraphicView.h"
 
+#include "../uis/MiniMapView.h"
 #include "../utils/JsonLoading.h"
 #include "SettingsWindow.h"
 #include <memory>
@@ -97,6 +98,10 @@ class MainWindow : public QMainWindow {
     void generateTabContent(const QString &tabName, const QPixmap &pixmap, QWidget *contentWidget, QVBoxLayout *contentLayout);
     void initializeStarDisplay(const QJsonObject &jsonData);
     void updateStarDisplay();
+    void setupMinimap();
+    void updateMinimap();
+    void syncMinimapView();
+    void onMinimapClick(QMouseEvent *event);
     QStringList getCourseNamesFromSlot0(const QJsonObject &jsonData);
 
     Node *findAssociatedNode();
@@ -124,6 +129,8 @@ class MainWindow : public QMainWindow {
     SaveParams star_diplay_params;
     std::vector<uint8_t> saveData;
     QJsonObject star_display_json_data;
+    MiniMapView *miniMapView;
+    QGraphicsScene *miniMapScene;
     // TODO UPDATE SAVE/load functionnalities for mind maps
 #ifdef DEBUG
     QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
@@ -131,5 +138,4 @@ class MainWindow : public QMainWindow {
     QString b33_13_mind_map_str = "stars_layout/b3313-V1.0.2/b3313-v1.0.2-Mind_map.json";
 #endif
 };
-
 #endif // MAIN_WINDOW_H

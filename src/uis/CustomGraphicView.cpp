@@ -2,3 +2,4 @@
 
 CustomGraphicView::CustomGraphicView(QWidget *parent)
     : QGraphicsView(parent) {}
+#include "CustomGraphicView.moc"

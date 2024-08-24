@@ -81,6 +81,57 @@ MainWindow::MainWindow(QWidget *parent)
     connect(jsonLoaderThread, &JsonLoaderThread::jsonLoaded, this, &MainWindow::initializeStarDisplay);
     connect(jsonLoaderThread, &JsonLoaderThread::finished, jsonLoaderThread, &QObject::deleteLater);
     jsonLoaderThread->start();
+    setupMinimap();
+}
+void MainWindow::setupMinimap() {return;
+    // Initialiser la minimap view et scene
+    miniMapScene = new QGraphicsScene(this);
+    miniMapView = new MiniMapView(miniMapScene, this);
+
+    // Positionner la minimap en haut à droite de la fenêtre principale
+    miniMapView->setGeometry(QRect(width() - 200, 0, 200, 200)); // Ajuster la taille et la position selon les besoins
+
+    // Configurer la vue de la minimap
+    miniMapView->setRenderHint(QPainter::Antialiasing);
+    miniMapView->setRenderHint(QPainter::SmoothPixmapTransform);
+    miniMapView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    miniMapView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+    // Connecter le clic de la minimap à la fonction de téléportation
+    connect(miniMapView, &MiniMapView::minimapClicked, this, &MainWindow::onMinimapClick);
+    syncMinimapView();
+}
+void MainWindow::onMinimapClick(QMouseEvent *event) {return;
+    QPointF minimapClickPos = miniMapView->mapToScene(event->pos());
+
+    // Calculer la position correspondante dans la scène principale
+    QRectF sceneRect = miniMapScene->sceneRect();
+    QRectF viewRect = graphicsView->scene()->sceneRect();
+
+    // Convertir la position cliquée sur la minimap en position dans la scène principale
+    QPointF mainScenePos = viewRect.topLeft() + (minimapClickPos - sceneRect.topLeft()) / miniMapView->transform().m11();
+
+    // Déplacer la vue principale vers la nouvelle position
+    graphicsView->centerOn(mainScenePos);
+}
+void MainWindow::updateMinimap() {return;
+    // Assurer que la minimap est mise à jour pour refléter la scène principale
+    miniMapScene->clear(); // Effacer l'ancienne vue de la minimap
+
+    // Créer un aperçu de la scène principale
+    QPixmap minimapPixmap(graphicsView->scene()->sceneRect().size().toSize());
+    QPainter painter(&minimapPixmap);
+    graphicsView->scene()->render(&painter);
+
+    // Ajouter l'aperçu à la scène de la minimap
+    miniMapScene->addPixmap(minimapPixmap);
+}
+void MainWindow::syncMinimapView() {return;
+    // Synchroniser la vue principale avec la minimap
+    QRectF mainViewRect = graphicsView->viewport()->rect();
+    QRectF miniMapRect = miniMapView->viewport()->rect();
+    miniMapView->fitInView(graphicsView->scene()->sceneRect(), Qt::KeepAspectRatio);
+    miniMapView->ensureVisible(mainViewRect, 0, 0);
 }
 void MainWindow::setWindowResizable(bool resizable) {
     if (resizable) {
@@ -384,6 +435,8 @@ void MainWindow::toggleStarDisplay() {
         SHOW_WIDGETS(graphicsView, saveButton, switchViewButton, settingsButton);
         HIDE_WIDGETS(emulatorText, b3313Text);
         REPA(Node, nodes, show());
+        updateMinimap();
+        syncMinimapView();
     }
 }
 
@@ -468,8 +521,10 @@ void MainWindow::updateDisplay() {
                 graphicsScene->addItem(starIcon);
             }
         }
+        updateMinimap();
         isModified();
     }
+    syncMinimapView();
 }
 
 bool MainWindow::isMouseOverNode(const QPointF &mousePos, int &nodeIndex) {
