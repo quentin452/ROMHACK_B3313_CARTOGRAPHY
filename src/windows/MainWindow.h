@@ -21,6 +21,7 @@
 #include "../threads/JsonLoaderThread.hpp"
 #include "../threads/MainWindowUpdateThread.hpp"
 #include "../uis/MouseFixGraphicScene.h"
+#include "../uis/CustomGraphicView.h"
 
 #include <memory>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>

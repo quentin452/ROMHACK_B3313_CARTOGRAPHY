@@ -24,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent)
     setFixedSize(WIDTH, HEIGHT);
     emulatorText = new QLabel("Emulator Status", this);
     b3313Text = new QLabel("B3313 V1.0.2 Status", this);
-    graphicsView = new QGraphicsView(this);
+    graphicsView = new CustomGraphicView(this);
     graphicsScene = new MouseFixGraphicScene(this);
     graphicsView->setScene(graphicsScene);
     centralWidgetZ = new QWidget(this);
@@ -117,13 +117,20 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         saveNodes();
     }
     if (event->key() == Qt::Key_F11) {
+        QGraphicsView *view = findChild<QGraphicsView *>();
+        QPointF centerPos = view->mapToScene(view->viewport()->rect().center());
+
         if (isFullScreen()) {
             showNormal();
         } else {
             showFullScreen();
         }
+
+        // Restaurer la position centrale
+        view->centerOn(centerPos);
     }
 }
+
 
 void MainWindow::keyReleaseEvent(QKeyEvent *event) {
     if (event->key() == Qt::Key_Shift) {
