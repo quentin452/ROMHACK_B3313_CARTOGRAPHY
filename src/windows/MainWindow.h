@@ -23,11 +23,11 @@
 #include "../uis/CustomGraphicScene.h"
 #include "../uis/CustomGraphicView.h"
 
+#include "../utils/JsonLoading.h"
+#include "SettingsWindow.h"
 #include <memory>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
 
-#include "../utils/JsonLoading.h"
-#include "SettingsWindow.h"
 struct StarData {
     QString courseName;
     int numStars;
@@ -50,6 +50,7 @@ class MainWindow : public QMainWindow {
 
     static bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
 
+    static QScrollArea *scrollArea;
     static std::wstring global_detected_emulator;
     static QLabel *emulatorText, *b3313Text;
     static QStringList tabNames;
@@ -68,6 +69,7 @@ class MainWindow : public QMainWindow {
     static QVector<Node *> nodes;
     static QVector<QPair<int, int>> connections;
     static QGraphicsScene *graphicsScene;
+    static QMap<QString, QRectF> courseNameRects, logoRects;
 
   protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -112,10 +114,8 @@ class MainWindow : public QMainWindow {
     QWidget *star_display_centralWidget = nullptr;
     QStackedWidget *stackedWidget = nullptr;
     QWidget *centralWidgetZ = nullptr;
-    QScrollArea *scrollArea;
     int stardisplayscrollPosition = 0, rightClickedNodeIndex = -1;
     QRectF groupTextRect;
-    QMap<QString, QRectF> courseNameRects, logoRects;
     Node *nodeUnderCursor = nullptr;
     JsonLoaderThread *jsonLoaderThread = nullptr;
     QImage starCollectedTexture = ImageCache::getImage("resources/textures/star-collected.png");
@@ -124,6 +124,7 @@ class MainWindow : public QMainWindow {
     SaveParams star_diplay_params;
     std::vector<uint8_t> saveData;
     QJsonObject star_display_json_data;
+    // TODO UPDATE SAVE/load functionnalities for mind maps
 #ifdef DEBUG
     QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
 #else

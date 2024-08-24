@@ -8,7 +8,7 @@ QTabWidget *MainWindow::tabWidget = nullptr;
 QFont MainWindow::qfont;
 QVBoxLayout *MainWindow::star_display_mainLayout = nullptr;
 QPushButton *MainWindow::switchViewButton = nullptr, *MainWindow::settingsButton = nullptr;
-
+QMap<QString, QRectF> MainWindow::courseNameRects, MainWindow::logoRects;
 QVector<Node *> MainWindow::nodes;
 bool MainWindow::shiftPressed = false, MainWindow::showStarDisplay = false, MainWindow::force_toggle_star_display = false, MainWindow::jump_to_star_display_associated_line = false;
 int MainWindow::startNodeIndex = -1;
@@ -17,6 +17,7 @@ QGraphicsScene *MainWindow::graphicsScene = nullptr;
 QJsonObject MainWindow::lastJsonData;
 QStringList MainWindow::courseNames, MainWindow::associatedCourses;
 QString MainWindow::jump_to_which_line;
+QScrollArea *MainWindow::scrollArea = nullptr;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       settingsWindow(nullptr) {
@@ -136,7 +137,7 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
 
 void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (showStarDisplay) {
-        QPointF pos = scrollArea->widget()->mapFromGlobal(event->globalPosition().toPoint());
+        QPointF pos = event->pos();
         QPointF adjustedPos = pos - scrollArea->widget()->pos() - scrollArea->widget()->mapToParent(QPoint(0, 0));
         QString courseClicked;
         QRectF clickedRect;
@@ -160,7 +161,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
         if (!courseClicked.isEmpty()) { // THIS IS NEVER REACHED
             for (Node *node : nodes) {
                 if (node->getAssociatedCourse() == courseClicked) {
-                    toggleStarDisplay();
+                    force_toggle_star_display = true;
                     graphicsView->centerOn(node->pos());
                     break;
                 }
@@ -365,10 +366,7 @@ void MainWindow::saveNodes() {
     }
 }
 Node *MainWindow::findAssociatedNode() {
-    for (Node *node : nodes) {
-        if (node->isStarAssociated())
-            return node;
-    }
+    REPA(Node, nodes, isStarAssociated());
     return nullptr;
 }
 void MainWindow::toggleStarDisplay() {
@@ -428,12 +426,7 @@ void MainWindow::updateDisplay() {
     }
     if (showStarDisplay) {
         textUpdate();
-        QString starDisplayJsonStr;
-        {
-            QMutexLocker locker(&globalMutex);
-            starDisplayJsonStr = GLOBAL_STAR_DISPLAY_JSON_STR;
-        }
-        jsonLoaderThread->loadJson(starDisplayJsonStr);
+        jsonLoaderThread->loadJson(GLOBAL_STAR_DISPLAY_JSON_STR);
         updateStarDisplay();
         SHOW_WIDGETS(switchViewButton);
     } else {
@@ -537,7 +530,6 @@ void MainWindow::initializeStarDisplay(const QJsonObject &jsonData) {
     for (int i = 0; i < static_cast<int>(star_diplay_params.numSlots); ++i) {
         tabNames.append("Mario " + QString::number(i));
     }
-
 }
 
 void MainWindow::updateStarDisplay() {
@@ -548,7 +540,7 @@ void MainWindow::updateStarDisplay() {
     }
     SHOW_WIDGETS(tabWidget, switchViewButton, settingsButton);
     HIDE_WIDGETS(emulatorText, b3313Text);
-    if (tabNames.isEmpty() || starCollectedTexture.isNull() || starMissingTexture.isNull()) 
+    if (tabNames.isEmpty() || starCollectedTexture.isNull() || starMissingTexture.isNull())
         return;
     int associatedCourseYPosition = 0;
     for (int i = 0; i < static_cast<int>(star_diplay_params.numSlots); ++i) {

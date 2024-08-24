@@ -80,10 +80,7 @@ int main(int argc, char *argv[]) {
                 QString selectedFile = jsonDialog.textValue();
                 if (!selectedFile.isEmpty()) {
                     QString selectedFilePath = selectedFile.mid(selectedFile.indexOf(": ") + 2);
-                    {
-                        QMutexLocker locker(&globalMutex);
-                        GLOBAL_STAR_DISPLAY_JSON_STR = selectedFilePath;
-                    }
+                    GLOBAL_STAR_DISPLAY_JSON_STR = selectedFilePath;
                     MainWindow window;
                     window.show();
                     return app.exec();
