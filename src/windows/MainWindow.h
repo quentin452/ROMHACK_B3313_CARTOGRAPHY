@@ -93,15 +93,6 @@ class MainWindow : public QMainWindow {
     void associateStarToNode();
     void setWindowResizable(bool resizable);
     void displayStars(const QJsonObject &jsonData);
-    void drawCourseStars(QPainter &painter,
-                         const QMap<QString, QMap<QString, QVector<StarData>>> &groupCourseMap,
-                         float startX, float starTextureHeight,
-                         float rectLeft, float rectTop,
-                         int &yOffset, int reservedHeight,
-                         const QImage &starCollectedTexture,
-                         const QImage &starMissingTexture,
-                         const QStringList &associatedCourseNames,
-                         QMap<QString, QRectF> &logoRects);
     void generateTabContent(const QString &tabName, const QPixmap &pixmap, QWidget *contentWidget, QVBoxLayout *contentLayout);
     QStringList getCourseNamesFromSlot0(const QJsonObject &jsonData);
 
