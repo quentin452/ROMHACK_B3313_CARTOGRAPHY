@@ -24,7 +24,7 @@
 #include "../uis/CustomGraphicView.h"
 
 #include "../uis/MiniMapView.h"
-#include "../uis/StarModel.hpp"
+#include "../uis/StarModel.h"
 
 #include "../utils/JsonLoading.h"
 
@@ -42,6 +42,7 @@ class MainWindow : public QMainWindow {
     ~MainWindow();
 
     static bool isMouseOverNode(const QPointF &mousePos, int &nodeIndex);
+    static Node *findAssociatedNode(const QString &courseName);
 
     static QScrollArea *scrollArea;
     static std::wstring global_detected_emulator;
@@ -96,8 +97,6 @@ class MainWindow : public QMainWindow {
     void onMinimapClick(QMouseEvent *event);
     void highlightRow(QListView *view, const QModelIndex &index);
     QStringList getCourseNamesFromSlot0(const QJsonObject &jsonData);
-
-    Node *findAssociatedNode(const QString &courseName);
     SettingsWindow *settingsWindow = nullptr;
     QPointF startPos;
     QList<Node *> mind_map_nodes;

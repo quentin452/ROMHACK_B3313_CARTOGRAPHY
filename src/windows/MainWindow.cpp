@@ -579,6 +579,7 @@ void MainWindow::initializeStarDisplay(const QJsonObject &jsonData) {
         qWarning() << "Save data is empty or numSlots is not valid.";
         return;
     }
+    starModels.clear();
     tabNames.clear();
     for (int i = 0; i < static_cast<int>(star_diplay_params.numSlots); ++i) {
         tabNames.append("Mario " + QString::number(i));
@@ -599,7 +600,6 @@ void MainWindow::updateStarDisplay() {
     QImage logoTexture = ImageCache::getImage("resources/textures/associated_to_node.png");
     QImage scaledLogoTexture = logoTexture.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
-    QVector<StarModel *> starModels;
     for (int i = 0; i < tabNames.size(); ++i) {
         QString tabName = tabNames[i];
         QWidget *tabContainer = nullptr;
