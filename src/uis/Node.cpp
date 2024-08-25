@@ -1,7 +1,7 @@
 #include <romhack_b3313_cartography/uis/Node.h>
 
 #include "../windows/MainWindow.h"
-
+QList<QGraphicsPixmapItem *> Node::starItems;
 Node::Node(float x, float y, const QString &text, const QFont &font, NodeShapes shape)
     : QGraphicsEllipseItem(-30, -30, 60, 60),
       label(text), font(font), color(Qt::cyan), shape(shape), modified(false), labelItem(nullptr), starAssociated(false) {
@@ -34,18 +34,34 @@ void Node::setName(const QString &name) {
 }
 void Node::adjustNodeSize() {
     if (labelItem) {
-        QRectF textRect = labelItem->boundingRect();
-        float padding = 10.0, width = textRect.width() + padding, height = textRect.height() + padding;
+        QPointF currentPos = pos();
+        QRectF labelTextRect = labelItem->boundingRect();
+        QRectF associatedCourseTextRect;
+
+        if (!associatedCourse.isEmpty()) {
+            QGraphicsTextItem tempItem;
+            tempItem.setPlainText(associatedCourse);
+            tempItem.setFont(font);
+            associatedCourseTextRect = tempItem.boundingRect();
+        }
+
+        float padding = 10.0;
+        float width = qMax(labelTextRect.width(), associatedCourseTextRect.width()) + padding;
+        float height = labelTextRect.height() + associatedCourseTextRect.height() + padding;
+
         prepareGeometryChange();
+
         if (shape == Triangle) {
             float triangleHeight = height * sqrt(3) / 2;
             float triangleWidth = width * sqrt(3);
             setRect(-triangleWidth / 2, -triangleHeight / 2, triangleWidth, triangleHeight);
-            labelItem->setPos(-textRect.width() / 2, -textRect.height() / 2 + 5);
+            labelItem->setPos(-labelTextRect.width() / 2, -labelTextRect.height() / 2 + 5);
         } else {
             setRect(-width / 2, -height / 2, width, height);
-            labelItem->setPos(-textRect.width() / 2, -textRect.height() / 2);
+            labelItem->setPos(-labelTextRect.width() / 2, -labelTextRect.height() / 2);
         }
+
+        setPos(currentPos);
     }
 }
 
@@ -94,12 +110,12 @@ void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWid
     }
     }
 
-    // Dessiner le nom de la course associée
     if (!associatedCourse.isEmpty()) {
-        painter->setPen(Qt::black); // Définir la couleur du texte
+        painter->setPen(Qt::black);
         painter->drawText(rect, Qt::AlignBottom | Qt::AlignHCenter, associatedCourse);
     }
 }
+
 QString Node::shapeToString(NodeShapes shape) const {
     switch (shape) {
     case Circle:
@@ -164,6 +180,7 @@ Node *Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
         node->setAssociatedCourse(associatedCourse);
         MainWindow::associatedCourses.append(associatedCourse);
     }
+    node->adjustNodeSize();
     return node;
 }
 
@@ -182,24 +199,24 @@ void Node::setModified(bool modified) {
 }
 
 void Node::updateIsModified() {
-    for (QGraphicsPixmapItem *starItem : starItems) {
-        if (scene() && scene()->items().contains(starItem)) {
-            scene()->removeItem(starItem);
-            delete starItem;
-        }
-    }
-    starItems.clear();
     if (modified) {
+        for (QGraphicsPixmapItem *item : starItems) {
+            if (item && item->data(0).toString() == "StarItem") {
+                return;
+            }
+        }
         QPixmap starPixmap = TextureCache::getTexture("resources/textures/star-collected.png");
         if (starPixmap.isNull()) {
             qDebug() << "Failed to load star image.";
             return;
         }
+
         QGraphicsPixmapItem *starItem = new QGraphicsPixmapItem(starPixmap, this);
         if (starItem) {
             starItem->setScale(1.0 / 2.0);
             QPointF starPos = boundingRect().topRight() - QPointF(starPixmap.width() / 3.0, 0);
             starItem->setPos(starPos);
+            starItem->setData(0, "StarItem"); 
             starItems.append(starItem);
         } else {
             qDebug() << "Failed to create QGraphicsPixmapItem.";

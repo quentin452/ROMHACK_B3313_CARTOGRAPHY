@@ -476,6 +476,10 @@ void MainWindow::onTimerUpdate() {
 }
 
 void MainWindow::updateDisplay() {
+    if (!(QApplication::keyboardModifiers() & Qt::ShiftModifier)) {
+        shiftPressed = false;
+        REPA(Node, nodes, setMovable(true))
+    }
     setWindowResizable(settingsWindow->isResizable());
     if (force_toggle_star_display) {
         toggleStarDisplay();
@@ -483,7 +487,10 @@ void MainWindow::updateDisplay() {
     }
     REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsLineItem);
     REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPolygonItem);
-    REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPixmapItem);
+    //  REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPixmapItem);
+    REMOVE_ITEMS_OF_TYPE_WITH_VERIF(graphicsScene, QGraphicsPixmapItem, [](QGraphicsItem *item) {
+        return item->data(0).toString() != "StarItem";
+    });
     if (showStarDisplay) {
         textUpdate();
         jsonLoaderThread->loadJson(GLOBAL_STAR_DISPLAY_JSON_STR);

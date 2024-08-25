@@ -17,6 +17,19 @@
             }                                                      \
         }                                                          \
     } while (0)
+#define REMOVE_ITEMS_OF_TYPE_WITH_VERIF(container, type, condition) \
+    do {                                                            \
+        QList<QGraphicsItem *> items = container->items();          \
+        for (QGraphicsItem * item : items) {                        \
+            if (type *specificItem = dynamic_cast<type *>(item)) {  \
+                if (condition(specificItem)) {                      \
+                    container->removeItem(specificItem);            \
+                    delete specificItem;                            \
+                }                                                   \
+            }                                                       \
+        }                                                           \
+    } while (0)
+
 #define SHOW_WIDGETS(...)                   \
     do {                                    \
         QWidget *widgets[] = {__VA_ARGS__}; \

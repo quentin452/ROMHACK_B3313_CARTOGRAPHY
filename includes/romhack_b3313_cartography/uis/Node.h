@@ -7,6 +7,7 @@
 
 class Node : public QGraphicsEllipseItem {
   public:
+    static QList<QGraphicsPixmapItem *> starItems;
     Node(float x, float y, const QString &text, const QFont &font, NodeShapes shape = Circle);
 
     void setMovable(bool movable);
@@ -29,7 +30,10 @@ class Node : public QGraphicsEllipseItem {
     void adjustNodeSize();
     bool isStarAssociated() const { return starAssociated; }
     void setStarAssociated(bool value) { starAssociated = value; }
-    void setAssociatedCourse(const QString &courseName) { associatedCourse = courseName; }
+    void setAssociatedCourse(const QString &courseName) {
+        associatedCourse = courseName;
+        adjustNodeSize();
+    }
     QString getAssociatedCourse() const { return associatedCourse; }
     QList<int> connections;
     NodeShapes shape;
@@ -48,6 +52,5 @@ class Node : public QGraphicsEllipseItem {
     QColor color;
     QString m_name;
     bool modified;
-    QList<QGraphicsPixmapItem *> starItems;
     bool starAssociated;
 };
