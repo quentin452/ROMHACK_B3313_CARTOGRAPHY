@@ -537,9 +537,9 @@ void MainWindow::updateDisplay() {
             }
         }
         updateMinimap();
+        syncMinimapView();
         isModified();
     }
-    syncMinimapView();
 }
 
 bool MainWindow::isMouseOverNode(const QPointF &mousePos, int &nodeIndex) {
