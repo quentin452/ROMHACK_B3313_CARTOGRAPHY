@@ -594,7 +594,7 @@ void MainWindow::updateStarDisplay() {
     }
     SHOW_WIDGETS(tabWidget, switchViewButton, settingsButton);
     HIDE_WIDGETS(emulatorText, b3313Text);
-    if (tabNames.isEmpty() || starCollectedTexture.isNull() || starMissingTexture.isNull())
+    if (tabNames.isEmpty())
         return;
 
     QImage logoTexture = ImageCache::getImage("resources/textures/associated_to_node.png");

@@ -32,7 +32,7 @@
 #include <memory>
 #include <romhack_b3313_cartography/utils/StarData.h>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
-
+#include "../utils/Textures.h"
 class SettingsWindow; // Forward declaration
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -122,8 +122,6 @@ class MainWindow : public QMainWindow {
     MiniMapView *miniMapView;
     QGraphicsScene *miniMapScene;
     QVector<StarModel *> starModels;
-    QImage starCollectedTexture = ImageCache::getImage("resources/textures/star-collected.png");
-    QImage starMissingTexture = ImageCache::getImage("resources/textures/star-missing.png");
     // TODO UPDATE SAVE/load functionnalities for mind maps
 #ifdef DEBUG
     QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";

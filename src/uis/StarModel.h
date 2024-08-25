@@ -2,6 +2,7 @@
 #include <romhack_b3313_cartography/utils/Caches.h>
 #include <romhack_b3313_cartography/utils/StarData.h>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
+#include "../utils/Textures.h"
 
 class StarModel : public QAbstractListModel {
     Q_OBJECT
@@ -28,5 +29,4 @@ class StarModel : public QAbstractListModel {
   private:
     QImage scaledLogoTexture;
     QVector<StarData> starData;
-    QImage starCollectedTexture = ImageCache::getImage("resources/textures/star-collected.png"), starMissingTexture = ImageCache::getImage("resources/textures/star-missing.png");
 };

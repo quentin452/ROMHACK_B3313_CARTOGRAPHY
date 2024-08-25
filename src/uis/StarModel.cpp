@@ -8,7 +8,7 @@ QVariant StarModel::data(const QModelIndex &index, int role) const {
     if (role == Qt::DisplayRole) {
         return star.courseName;
     } else if (role == Qt::DecorationRole) {
-        return star.collected ? starCollectedTexture : starMissingTexture;
+        return star.collected ? Textures::starCollectedImage : Textures::starMissingImage;
     } else if (role == Qt::UserRole) {
         return QVariant::fromValue(scaledLogoTexture); // THIS IS NEVER REACHED
     }

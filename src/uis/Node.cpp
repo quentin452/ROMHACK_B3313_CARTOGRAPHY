@@ -232,10 +232,6 @@ void Node::updateIsModified() {
             }
         }
         QPixmap starPixmap = TextureCache::getTexture("resources/textures/star-collected.png");
-        if (starPixmap.isNull()) {
-            qDebug() << "Failed to load star image.";
-            return;
-        }
         QGraphicsPixmapItem *starItem = new QGraphicsPixmapItem(starPixmap, this);
         if (starItem) {
             starItem->setScale(1.0 / 2.0);
