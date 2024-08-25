@@ -194,32 +194,17 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (showStarDisplay) {
         QPointF pos = event->pos();
         QPointF adjustedPos = pos - scrollArea->widget()->pos() - scrollArea->widget()->mapToParent(QPoint(0, 0));
-        QString courseClicked;
-        QRectF clickedRect;
-        for (auto it = courseNameRects.cbegin(); it != courseNameRects.cend(); ++it) {
-            QRectF rect = it.value();
-            if (rect.contains(adjustedPos)) {
-                courseClicked = it.key();
-                clickedRect = rect;
+
+        for (int i = 0; i < tabWidget->count(); ++i) {
+            QWidget *tabContainer = tabWidget->widget(i);
+            if (tabContainer->geometry().contains(adjustedPos.toPoint())) {
+                QString courseName = tabWidget->tabText(i);
+                Node *associatedNode = findAssociatedNode(courseName);
+                if (associatedNode) {
+                    toggleStarDisplay();
+                    graphicsView->centerOn(associatedNode->pos());
+                }
                 break;
-            }
-        }
-        if (courseClicked.isEmpty()) {
-            for (auto it = logoRects.cbegin(); it != logoRects.cend(); ++it) {
-                QRectF rect = it.value();
-                if (rect.contains(adjustedPos)) {
-                    courseClicked = it.key();
-                    break;
-                }
-            }
-        }
-        if (!courseClicked.isEmpty()) { // THIS IS NEVER REACHED
-            for (Node *node : nodes) {
-                if (node->getAssociatedCourse() == courseClicked) {
-                    force_toggle_star_display = true;
-                    graphicsView->centerOn(node->pos());
-                    break;
-                }
             }
         }
     } else {
@@ -429,6 +414,15 @@ Node *MainWindow::findAssociatedNode() {
     REPA(Node, nodes, isStarAssociated());
     return nullptr;
 }
+Node *MainWindow::findAssociatedNode(const QString &courseName) {
+    for (Node *node : nodes) {
+        if (node->isStarAssociated() && node->getAssociatedCourse() == courseName) {
+            return node;
+        }
+    }
+    return nullptr;
+}
+
 void MainWindow::toggleStarDisplay() {
     showStarDisplay = !showStarDisplay;
     QTabWidget *tabWidget = findChild<QTabWidget *>("tabWidget");
@@ -669,8 +663,25 @@ void MainWindow::updateStarDisplay() {
             for (auto courseIt = courseStarsMap.cbegin(); courseIt != courseStarsMap.cend(); ++courseIt) {
                 starData.append(courseIt.value());
             }
-            model->setScaledLogoTexture(scaledLogoTexture); // Set the logo texture
             model->setStarData(starData);
+            for (const StarData &star : starData) {
+                if (groupCourseMap.contains(star.courseName)) {
+                    model->setScaledLogoTexture(scaledLogoTexture); // Set the logo texture
+                }
+
+                if (MainWindow::jump_to_star_display_associated_line && MainWindow::jump_to_which_line == star.courseName) {
+                    tabWidget->setCurrentWidget(tabContainer);
+                    groupTabWidget->setCurrentWidget(groupWidget);
+
+                    QModelIndex index = model->index(starData.indexOf(star), 0);
+                    if (index.isValid()) {
+                        existingListView->scrollTo(index);
+                        highlightRow(existingListView, index);
+                    }
+
+                    MainWindow::jump_to_star_display_associated_line = false;
+                }
+            }
         }
     }
 
@@ -683,13 +694,15 @@ void MainWindow::updateStarDisplay() {
         }
     }
 }
+void MainWindow::highlightRow(QListView *view, const QModelIndex &index) {
+    view->selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    view->setCurrentIndex(index);
+    view->scrollTo(index);
+}
 
 QStringList MainWindow::getCourseNamesFromSlot0(const QJsonObject &jsonData) {
     QStringList courseNames;
-    if (!jsonData.contains("groups") || !jsonData["groups"].isArray()) {
-        qWarning() << "jsonData does not contain valid 'groups' array.";
-        return courseNames;
-    }
+    CHECK_JSON_ARRAY(jsonData, "groups")
     QJsonArray groupsArray = jsonData["groups"].toArray();
     for (const auto &groupValue : groupsArray) {
         QJsonObject group = groupValue.toObject();

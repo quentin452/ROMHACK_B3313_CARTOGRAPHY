@@ -94,9 +94,11 @@ class MainWindow : public QMainWindow {
     void updateMinimap();
     void syncMinimapView();
     void onMinimapClick(QMouseEvent *event);
+    void highlightRow(QListView *view, const QModelIndex &index);
     QStringList getCourseNamesFromSlot0(const QJsonObject &jsonData);
 
     Node *findAssociatedNode();
+    Node *findAssociatedNode(const QString &courseName);
     SettingsWindow *settingsWindow = nullptr;
     QPointF startPos;
     QList<Node *> mind_map_nodes;

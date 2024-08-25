@@ -90,3 +90,8 @@
         thread->stop();              \
         thread->wait();              \
     }
+#define CHECK_JSON_ARRAY(obj, key)                                        \
+    if (!obj.contains(key) || !obj[key].isArray()) {                      \
+        qWarning() << "jsonData does not contain valid '" key "' array."; \
+        return courseNames;                                               \
+    }

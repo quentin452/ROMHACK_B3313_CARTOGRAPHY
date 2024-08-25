@@ -205,6 +205,13 @@ void Node::updateIsModified() {
     if (modified) {
         if (modifiedtwo)
             return;
+        for (QGraphicsItem *child : childItems()) {
+            if (child->data(0) == "StarItem") {
+                QPointF starPos = boundingRect().topRight() - QPointF(child->boundingRect().width() / 3.0, 0);
+                child->setPos(starPos);
+                return;
+            }
+        }
         QPixmap starPixmap = TextureCache::getTexture("resources/textures/star-collected.png");
         if (starPixmap.isNull()) {
             qDebug() << "Failed to load star image.";

@@ -12,4 +12,7 @@ struct StarData {
 
     StarData(const QString &courseName, int numStars, bool collected, int offset, int mask)
         : courseName(courseName), numStars(numStars), collected(collected), offset(offset), mask(mask) {}
+    bool operator==(const StarData &other) const {
+        return courseName == other.courseName; 
+    }
 };
