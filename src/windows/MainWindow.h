@@ -97,7 +97,6 @@ class MainWindow : public QMainWindow {
     void highlightRow(QListView *view, const QModelIndex &index);
     QStringList getCourseNamesFromSlot0(const QJsonObject &jsonData);
 
-    Node *findAssociatedNode();
     Node *findAssociatedNode(const QString &courseName);
     SettingsWindow *settingsWindow = nullptr;
     QPointF startPos;

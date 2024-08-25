@@ -7,6 +7,12 @@
             item->action;             \
         }                             \
     }
+#define REPA2(type, container, action) \
+    for (type * item : container) {   \
+        if (item) {                   \
+            action;                   \
+        }                             \
+    }
 #define REMOVE_ITEMS_OF_TYPE(container, type)                      \
     do {                                                           \
         QList<QGraphicsItem *> items = container->items();         \

@@ -410,16 +410,9 @@ void MainWindow::saveNodes() {
         qWarning() << "Failed to open file for writing:" << file.errorString();
     }
 }
-Node *MainWindow::findAssociatedNode() {
-    REPA(Node, nodes, isStarAssociated());
-    return nullptr;
-}
+
 Node *MainWindow::findAssociatedNode(const QString &courseName) {
-    for (Node *node : nodes) {
-        if (node->isStarAssociated() && node->getAssociatedCourse() == courseName) {
-            return node;
-        }
-    }
+    REPA2(Node, nodes, if (item->isStarAssociated() && item->getAssociatedCourse() == courseName) { return item; });
     return nullptr;
 }
 
