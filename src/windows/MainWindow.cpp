@@ -479,6 +479,7 @@ void MainWindow::updateDisplay() {
         updateStarDisplay();
         SHOW_WIDGETS(switchViewButton);
     } else {
+        QSet<QPair<int, int>> drawnConnections;
         for (const QPair<int, int> &conn : connections) {
             if (conn.first >= 0 && conn.first < nodes.size() &&
                 conn.second >= 0 && conn.second < nodes.size()) {
@@ -490,9 +491,6 @@ void MainWindow::updateDisplay() {
                 }
                 QPointF startEdgePoint = getNodeEdgePoint(startNode, endNode->pos());
                 QPointF endEdgePoint = getNodeEdgePoint(endNode, startNode->pos());
-                QGraphicsLineItem *lineItem = new QGraphicsLineItem(startEdgePoint.x(), startEdgePoint.y(), endEdgePoint.x(), endEdgePoint.y());
-                lineItem->setPen(QPen(Qt::black));
-                graphicsScene->addItem(lineItem);
                 QLineF line(startEdgePoint, endEdgePoint);
                 double angle = std::atan2(-line.dy(), line.dx());
                 QPointF arrowP1 = endEdgePoint - QPointF(std::sin(angle + M_PI / 3) * 10, std::cos(angle + M_PI / 3) * 10);
@@ -502,6 +500,13 @@ void MainWindow::updateDisplay() {
                 QGraphicsPolygonItem *arrowItem = new QGraphicsPolygonItem(arrowHead);
                 arrowItem->setBrush(Qt::black);
                 graphicsScene->addItem(arrowItem);
+                QPair<int, int> sortedConn = qMakePair(qMin(conn.first, conn.second), qMax(conn.first, conn.second));
+                if (drawnConnections.contains(sortedConn))
+                    continue;
+                drawnConnections.insert(sortedConn);
+                QGraphicsLineItem *lineItem = new QGraphicsLineItem(startEdgePoint.x(), startEdgePoint.y(), endEdgePoint.x(), endEdgePoint.y());
+                lineItem->setPen(QPen(Qt::black));
+                graphicsScene->addItem(lineItem);
             } else {
                 qWarning() << "Connection has invalid node index:" << conn;
             }

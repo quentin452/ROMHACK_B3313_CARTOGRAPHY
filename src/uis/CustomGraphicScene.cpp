@@ -151,27 +151,22 @@ void CustomGraphicScene::mouseReleaseEvent(QGraphicsSceneMouseEvent *event) {
         if (isNodeOver && endNodeIndex != MainWindow::startNodeIndex) {
             if (MainWindow::startNodeIndex >= 0 && MainWindow::startNodeIndex < MainWindow::nodes.size() &&
                 endNodeIndex >= 0 && endNodeIndex < MainWindow::nodes.size()) {
-                bool connectionExists = false;
-                for (const auto &connection : MainWindow::connections) {
-                    if ((connection.first == MainWindow::startNodeIndex && connection.second == endNodeIndex) ||
-                        (connection.first == endNodeIndex && connection.second == MainWindow::startNodeIndex)) {
-                        connectionExists = true;
-                        break;
-                    }
-                }
-                if (!connectionExists) {
+                Node *startNode = MainWindow::nodes[MainWindow::startNodeIndex];
+                Node *endNode = MainWindow::nodes[endNodeIndex];
+                if (!endNode->getArrowAtEnd()) {
                     MainWindow::connections.push_back(QPair<int, int>(MainWindow::startNodeIndex, endNodeIndex));
-                    MainWindow::nodes[MainWindow::startNodeIndex]->addConnection(endNodeIndex);
-                    MainWindow::nodes[endNodeIndex]->addConnection(MainWindow::startNodeIndex);
-                    MainWindow::nodes[MainWindow::startNodeIndex]->setModified(true);
-                    MainWindow::nodes[endNodeIndex]->setModified(true);
+                    startNode->addConnection(endNodeIndex);
+                    endNode->addConnection(MainWindow::startNodeIndex);
+                    startNode->setModified(true);
+                    endNode->setModified(true);
+                    endNode->setArrowAtEnd(true);
                 }
             }
             MainWindow::startNodeIndex = -1;
         }
     }
     if (previousLineItem) {
-        if (MainWindow::graphicsScene->items().contains(previousLineItem))
+        if (MainWindow::graphicsScene->items().contains(previousLineItem)) 
             MainWindow::graphicsScene->removeItem(previousLineItem);
         previousLineItem = nullptr;
     }

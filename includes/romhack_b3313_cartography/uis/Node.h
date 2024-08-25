@@ -34,6 +34,8 @@ class Node : public QGraphicsEllipseItem {
         adjustNodeSize();
     }
     QString getAssociatedCourse() const { return associatedCourse; }
+    bool getArrowAtEnd() const { return has_arrow_at_connection_end; }
+    void setArrowAtEnd(bool value) { has_arrow_at_connection_end = value; }
     QList<int> connections;
     NodeShapes shape;
     QGraphicsTextItem *labelItem;
@@ -50,5 +52,5 @@ class Node : public QGraphicsEllipseItem {
     QString label, m_name, associatedCourse;
     QFont font;
     QColor color;
-    bool modified = false, starAssociated = false, modifiedtwo = false;
+    bool modified = false, starAssociated = false, modifiedtwo = false, has_arrow_at_connection_end = false;
 };

@@ -153,6 +153,7 @@ QJsonObject Node::toJson() const {
     json["color"] = color.name();
     json["star_associated"] = starAssociated;
     json["associated_course"] = associatedCourse;
+    json["has_arrow_at_connection_end"] = has_arrow_at_connection_end;
     QJsonArray connectionsArray;
     for (int conn : connections) {
         connectionsArray.append(conn);
@@ -194,6 +195,9 @@ Node *Node::fromJson(const QJsonObject &json, const QFont &defaultFont) {
         QString associatedCourse = json["associated_course"].toString();
         node->setAssociatedCourse(associatedCourse);
         MainWindow::associatedCourses.append(associatedCourse);
+    }
+    if (json.contains("has_arrow_at_connection_end")) {
+        node->has_arrow_at_connection_end = json["has_arrow_at_connection_end"].toBool();
     }
     node->adjustNodeSize();
     return node;
