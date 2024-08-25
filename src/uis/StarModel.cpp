@@ -28,7 +28,7 @@ void StarModel::setScaledLogoTexture(const QImage &texture) {
 
 void StarModel::handleItemClicked(const QModelIndex &index) {
     if (index.isValid()) {
-        const StarData &star = starData[index.row()];                        
+        const StarData &star = starData[index.row()];
         Node *associatedNode = MainWindow::findAssociatedNode(star.courseName);
         if (associatedNode) {
             MainWindow::force_toggle_star_display = true;

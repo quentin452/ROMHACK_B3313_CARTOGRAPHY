@@ -28,11 +28,12 @@
 
 #include "../utils/JsonLoading.h"
 
+#include "../utils/Textures.h"
 #include "SettingsWindow.h"
 #include <memory>
 #include <romhack_b3313_cartography/utils/StarData.h>
 #include <romhack_b3313_cartography/utils/qt_includes.hpp>
-#include "../utils/Textures.h"
+
 class SettingsWindow; // Forward declaration
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -79,7 +80,6 @@ class MainWindow : public QMainWindow {
   private:
     void toggleStarDisplay();
     void textUpdate();
-    void showDialog(const QString &labelText, QWidget *inputWidget, std::function<void()> onAccept);
     void closeEvent(QCloseEvent *event) override;
     bool isModified() const;
     void onTimerUpdate();

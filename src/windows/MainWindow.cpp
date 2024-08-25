@@ -163,9 +163,8 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
         shiftPressed = true;
         REPA(Node, nodes, setMovable(false))
     }
-    if (event->key() == Qt::Key_Control) {
+    if (event->key() == Qt::Key_Control)
         REPA(Node, nodes, setMovable(false))
-    }
     if (event->key() == Qt::Key_S && event->modifiers() & Qt::ControlModifier)
         saveNodes();
     if (event->key() == Qt::Key_F11) {
@@ -185,9 +184,8 @@ void MainWindow::keyReleaseEvent(QKeyEvent *event) {
         REPA(Node, nodes, setMovable(true))
         startNodeIndex = -1;
     }
-    if (event->key() == Qt::Key_Control) {
+    if (event->key() == Qt::Key_Control)
         REPA(Node, nodes, setMovable(true))
-    }
 }
 
 void MainWindow::mousePressEvent(QMouseEvent *event) {
@@ -271,21 +269,6 @@ void MainWindow::removeConnections() {
         qDebug() << "Invalid node index in removeConnections.";
     }
 }
-void MainWindow::showDialog(const QString &labelText, QWidget *inputWidget, std::function<void()> onAccept) {
-    QDialog dialog(this);
-    dialog.setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    dialog.setMinimumSize(200, 120);
-    dialog.setMaximumSize(600, 120);
-    QVBoxLayout layout(&dialog);
-    QLabel label(labelText);
-    QPushButton okButton(tr("OK"));
-    QPushButton cancelButton(tr("Cancel"));
-    addWidgets(layout, &label, inputWidget, &okButton, &cancelButton);
-    connect(&okButton, &QPushButton::clicked, &dialog, &QDialog::accept);
-    connect(&cancelButton, &QPushButton::clicked, &dialog, &QDialog::reject);
-    if (dialog.exec() == QDialog::Accepted)
-        onAccept();
-}
 
 void MainWindow::renameSelectedNode() {
     if (rightClickedNodeIndex != -1 && rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {
@@ -303,7 +286,7 @@ void MainWindow::renameSelectedNode() {
                 updateDisplay();         // Update the display if necessary
             }
         };
-        showDialog(tr("New name:"), lineEdit, onAccept);
+        showDialog(this, tr("New name:"), lineEdit, onAccept);
     } else {
         qDebug() << "Invalid node index in renameSelectedNode.";
     }
@@ -323,7 +306,7 @@ void MainWindow::changeNodeShape() {
                 updateDisplay();
             }
         };
-        showDialog(tr("Shape:"), comboBox, onAccept);
+        showDialog(this, tr("Shape:"), comboBox, onAccept);
     }
 }
 void MainWindow::changeNodeColor() {
@@ -364,7 +347,7 @@ void MainWindow::associateStarToNode() {
             updateDisplay();
             delete courseComboBox;
         };
-        showDialog(tr("Select Course to Associate"), courseComboBox, onAccept);
+        showDialog(this, tr("Select Course to Associate"), courseComboBox, onAccept);
     } else {
         qDebug() << "Invalid node index in associateStarToNode.";
     }
@@ -654,21 +637,17 @@ void MainWindow::updateStarDisplay() {
             }
             model->setStarData(starData);
             for (const StarData &star : starData) {
-                if (groupCourseMap.contains(star.courseName)) {
+                if (groupCourseMap.contains(star.courseName))
                     model->setScaledLogoTexture(scaledLogoTexture); // Set the logo texture
-                }
-
-                if (MainWindow::jump_to_star_display_associated_line && MainWindow::jump_to_which_line == star.courseName) {
+                if (jump_to_star_display_associated_line && jump_to_which_line == star.courseName) {
                     tabWidget->setCurrentWidget(tabContainer);
                     groupTabWidget->setCurrentWidget(groupWidget);
-
                     QModelIndex index = model->index(starData.indexOf(star), 0);
                     if (index.isValid()) {
                         existingListView->scrollTo(index);
                         highlightRow(existingListView, index);
                     }
-
-                    MainWindow::jump_to_star_display_associated_line = false;
+                    jump_to_star_display_associated_line = false;
                 }
             }
         }

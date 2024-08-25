@@ -9,4 +9,5 @@ void addWidgets(Layout &layout, Widgets &&...widgets) {
 void simulateKeyPress(Qt::Key key);
 void simulateKeyRelease(Qt::Key key);
 bool isShiftPressed();
+void showDialog(QWidget *parent, const QString &labelText, QWidget *inputWidget, std::function<void()> onAccept);
 #endif // UTILITIES_H

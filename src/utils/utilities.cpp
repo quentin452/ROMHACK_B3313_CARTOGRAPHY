@@ -14,3 +14,18 @@ bool isShiftPressed() {
 bool isCtrlPressed() {
     return QApplication::keyboardModifiers() & Qt::ControlModifier;
 }
+void showDialog(QWidget *parent, const QString &labelText, QWidget *inputWidget, std::function<void()> onAccept) {
+    QDialog dialog(parent);
+    dialog.setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    dialog.setMinimumSize(200, 120);
+    dialog.setMaximumSize(600, 120);
+    QVBoxLayout layout(&dialog);
+    QLabel label(labelText);
+    QPushButton okButton(QObject::tr("OK"));
+    QPushButton cancelButton(QObject::tr("Cancel"));
+    addWidgets(layout, &label, inputWidget, &okButton, &cancelButton);
+    QObject::connect(&okButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+    QObject::connect(&cancelButton, &QPushButton::clicked, &dialog, &QDialog::reject);
+    if (dialog.exec() == QDialog::Accepted)
+        onAccept();
+}
