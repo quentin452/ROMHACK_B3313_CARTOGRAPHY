@@ -416,6 +416,11 @@ void MainWindow::saveNodes() {
     if (file.open(QIODevice::WriteOnly)) {
         file.write(jsonDoc.toJson(QJsonDocument::Indented)); // Pretty print JSON
         file.close();
+        REMOVE_ITEMS_OF_TYPE_WITH_VERIF(graphicsScene, QGraphicsPixmapItem, [](QGraphicsItem *item) {
+            return item->data(0).toString() == "StarItem";
+        });
+        Node::starItems.clear();
+
     } else {
         qWarning() << "Failed to open file for writing:" << file.errorString();
     }
@@ -487,7 +492,6 @@ void MainWindow::updateDisplay() {
     }
     REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsLineItem);
     REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPolygonItem);
-    //  REMOVE_ITEMS_OF_TYPE(graphicsScene, QGraphicsPixmapItem);
     REMOVE_ITEMS_OF_TYPE_WITH_VERIF(graphicsScene, QGraphicsPixmapItem, [](QGraphicsItem *item) {
         return item->data(0).toString() != "StarItem";
     });

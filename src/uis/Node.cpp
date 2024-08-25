@@ -196,28 +196,28 @@ void Node::removeConnection(int nodeIndex) {
 void Node::setModified(bool modified) {
     this->modified = modified;
     updateIsModified();
+    if (modified) {
+        modifiedtwo = false;
+    }
 }
 
 void Node::updateIsModified() {
     if (modified) {
-        for (QGraphicsPixmapItem *item : starItems) {
-            if (item && item->data(0).toString() == "StarItem") {
-                return;
-            }
-        }
+        if (modifiedtwo)
+            return;
         QPixmap starPixmap = TextureCache::getTexture("resources/textures/star-collected.png");
         if (starPixmap.isNull()) {
             qDebug() << "Failed to load star image.";
             return;
         }
-
         QGraphicsPixmapItem *starItem = new QGraphicsPixmapItem(starPixmap, this);
         if (starItem) {
             starItem->setScale(1.0 / 2.0);
             QPointF starPos = boundingRect().topRight() - QPointF(starPixmap.width() / 3.0, 0);
             starItem->setPos(starPos);
-            starItem->setData(0, "StarItem"); 
+            starItem->setData(0, "StarItem");
             starItems.append(starItem);
+            modifiedtwo = true;
         } else {
             qDebug() << "Failed to create QGraphicsPixmapItem.";
         }

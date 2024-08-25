@@ -44,13 +44,10 @@ class Node : public QGraphicsEllipseItem {
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
 
   private:
-    QString associatedCourse;
     QString shapeToString(NodeShapes shape) const;
 
-    QString label;
+    QString label, m_name, associatedCourse;
     QFont font;
     QColor color;
-    QString m_name;
-    bool modified;
-    bool starAssociated;
+    bool modified = false, starAssociated = false, modifiedtwo = false;
 };
