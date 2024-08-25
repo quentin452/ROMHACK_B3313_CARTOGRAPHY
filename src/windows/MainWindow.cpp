@@ -601,11 +601,11 @@ void MainWindow::updateStarDisplay() {
     HIDE_WIDGETS(emulatorText, b3313Text);
     if (tabNames.isEmpty() || starCollectedTexture.isNull() || starMissingTexture.isNull())
         return;
-    QSet<QString> currentTabNames;
-    for (int i = 0; i < tabWidget->count(); ++i) {
-        currentTabNames.insert(tabWidget->tabText(i));
-    }
-    QVector<StarModel *> starModels; // List of StarModel
+
+    QImage logoTexture = ImageCache::getImage("resources/textures/associated_to_node.png");
+    QImage scaledLogoTexture = logoTexture.scaled(60, 60, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+    QVector<StarModel *> starModels;
     for (int i = 0; i < tabNames.size(); ++i) {
         QString tabName = tabNames[i];
         QWidget *tabContainer = nullptr;
@@ -622,6 +622,7 @@ void MainWindow::updateStarDisplay() {
             tabContainer->setLayout(layout);
             tabWidget->addTab(tabContainer, tabName);
         }
+
         QMap<QString, QMap<QString, QVector<StarData>>> groupCourseMap = JsonLoading::readStarDisplayJsonData(star_display_json_data, saveData, star_diplay_params, i);
         for (auto groupIt = groupCourseMap.cbegin(); groupIt != groupCourseMap.cend(); ++groupIt) {
             QString groupName = groupIt.key();
@@ -642,6 +643,7 @@ void MainWindow::updateStarDisplay() {
                 groupWidget->setLayout(groupLayout);
                 groupTabWidget->addTab(groupWidget, groupName);
             }
+
             StarModel *model = nullptr;
             if (existingListView->model()) {
                 model = static_cast<StarModel *>(existingListView->model());
@@ -650,14 +652,17 @@ void MainWindow::updateStarDisplay() {
                 existingListView->setModel(model);
                 starModels.append(model); // Add to the list of StarModel
             }
+
             QVector<StarData> starData;
             const QMap<QString, QVector<StarData>> &courseStarsMap = groupIt.value();
             for (auto courseIt = courseStarsMap.cbegin(); courseIt != courseStarsMap.cend(); ++courseIt) {
                 starData.append(courseIt.value());
             }
+            model->setScaledLogoTexture(scaledLogoTexture); // Set the logo texture
             model->setStarData(starData);
         }
     }
+
     for (int i = tabWidget->count() - 1; i >= 0; --i) {
         QString tabName = tabWidget->tabText(i);
         if (!tabNames.contains(tabName)) {
