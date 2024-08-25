@@ -194,7 +194,6 @@ void MainWindow::mousePressEvent(QMouseEvent *event) {
     if (showStarDisplay) {
         QPointF pos = event->pos();
         QPointF adjustedPos = pos - scrollArea->widget()->pos() - scrollArea->widget()->mapToParent(QPoint(0, 0));
-
         for (int i = 0; i < tabWidget->count(); ++i) {
             QWidget *tabContainer = tabWidget->widget(i);
             if (tabContainer->geometry().contains(adjustedPos.toPoint())) {
@@ -308,8 +307,6 @@ void MainWindow::renameSelectedNode() {
     } else {
         qDebug() << "Invalid node index in renameSelectedNode.";
     }
-    simulateKeyPress(Qt::Key_Shift);
-    simulateKeyRelease(Qt::Key_Shift);
 }
 
 void MainWindow::changeNodeShape() {
@@ -328,8 +325,6 @@ void MainWindow::changeNodeShape() {
         };
         showDialog(tr("Shape:"), comboBox, onAccept);
     }
-    simulateKeyPress(Qt::Key_Shift);
-    simulateKeyRelease(Qt::Key_Shift);
 }
 void MainWindow::changeNodeColor() {
     if (rightClickedNodeIndex >= 0 && rightClickedNodeIndex < nodes.size()) {
@@ -347,8 +342,6 @@ void MainWindow::changeNodeColor() {
             }
         }
     }
-    simulateKeyPress(Qt::Key_Shift);
-    simulateKeyRelease(Qt::Key_Shift);
 }
 void MainWindow::associateStarToNode() {
     if (rightClickedNodeIndex != -1 && rightClickedNodeIndex < nodes.size()) {
@@ -375,8 +368,6 @@ void MainWindow::associateStarToNode() {
     } else {
         qDebug() << "Invalid node index in associateStarToNode.";
     }
-    simulateKeyPress(Qt::Key_Shift);
-    simulateKeyRelease(Qt::Key_Shift);
 }
 void MainWindow::saveNodes() {
     QJsonArray jsonArray;

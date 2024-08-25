@@ -73,18 +73,33 @@ void Node::setColor(const QColor &color) {
 
 void Node::setShape(NodeShapes newShape) {
     shape = newShape;
-    update(); // Schedule a redraw of the item
+    update();
 }
 void Node::mousePressEvent(QGraphicsSceneMouseEvent *event) {
     if (!isShiftPressed() && (QApplication::keyboardModifiers() & Qt::ControlModifier) && event->button() == Qt::LeftButton) {
         if (isStarAssociated()) {
             MainWindow::jump_to_star_display_associated_line = true;
             MainWindow::jump_to_which_line = getAssociatedCourse();
-            // MainWindow::graphicsView->centerOn(this->pos());
             MainWindow::force_toggle_star_display = true;
         }
     }
     QGraphicsItem::mousePressEvent(event);
+}
+void Node::mouseMoveEvent(QGraphicsSceneMouseEvent *event) {
+    // QPointF newPos = pos() + event->pos() - event->lastPos();
+    // if (!isOverlapping(newPos))
+    QGraphicsEllipseItem::mouseMoveEvent(event);
+}
+
+bool Node::isOverlapping(const QPointF &newPos) { // THIS IS DOESN4 TWORK
+    QRectF newRect = QRectF(newPos, rect().size());
+    QList<QGraphicsItem *> collidingItems = scene()->items(newRect);
+    for (QGraphicsItem *item : collidingItems) {
+        if (item != this && dynamic_cast<Node *>(item)) {
+            return true; // Overlapping detected
+        }
+    }
+    return false; // No overlapping
 }
 
 void Node::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) {

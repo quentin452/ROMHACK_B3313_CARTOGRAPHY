@@ -17,8 +17,7 @@ class Node : public QGraphicsEllipseItem {
     void addConnection(int nodeIndex);
     void removeConnection(int nodeIndex);
     void setModified(bool modified);
-    void mousePressEvent(QGraphicsSceneMouseEvent *event);
-
+    bool isOverlapping(const QPointF &newPos);
     QJsonObject toJson() const;
     static Node *fromJson(const QJsonObject &json, const QFont &defaultFont);
     void updateIsModified();
@@ -42,6 +41,8 @@ class Node : public QGraphicsEllipseItem {
   protected:
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
+    void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
 
   private:
     QString shapeToString(NodeShapes shape) const;
