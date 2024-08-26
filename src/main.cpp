@@ -136,6 +136,7 @@ QStringList getJsonFileOptions(const QStringList &officialFiles, const QStringLi
 }
 
 int main(int argc, char *argv[]) {
+    Textures::InitTexturesAndImage();
     QApplication app(argc, argv);
     MindMapDownloader downloader;
     QScreen *screen = QGuiApplication::primaryScreen();
