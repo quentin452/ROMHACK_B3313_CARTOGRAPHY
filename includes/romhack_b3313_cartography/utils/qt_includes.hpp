@@ -4,9 +4,12 @@
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
+#include <QDateTime>
 #include <QDebug>
 #include <QDialog>
+#include <QDir>
 #include <QFile>
+#include <QFileDialog>
 #include <QFont>
 #include <QFuture>
 #include <QGraphicsEllipseItem>
@@ -28,6 +31,9 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QMutex>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QObject>
 #include <QOpenGLWidget>
 #include <QPainter>
@@ -35,14 +41,18 @@
 #include <QPointF>
 #include <QPointer>
 #include <QPolygonF>
+#include <QProcess>
 #include <QPushButton>
 #include <QQuickWindow>
 #include <QRectF>
+#include <QScreen>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QStackedWidget>
+#include <QStandardPaths>
 #include <QString>
 #include <QStringList>
+#include <QStyledItemDelegate>
 #include <QTableView>
 #include <QTest>
 #include <QTextEdit>
@@ -53,4 +63,4 @@
 #include <QVector>
 #include <QWidget>
 #include <QtConcurrent/QtConcurrent>
-#include <QStyledItemDelegate>
+#include <QProgressBar>

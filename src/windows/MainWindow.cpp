@@ -52,7 +52,7 @@ MainWindow::MainWindow(QWidget *parent)
     QPointF sceneCenter = adjustedSceneRect.center();
     graphicsView->centerOn(sceneCenter);
     star_display_mainLayout = layout;
-    JsonLoading::loadNodesJsonData(b33_13_mind_map_str);
+    JsonLoading::loadNodesJsonData(GLOBAL_MIND_MAP_JSON_STR);
     setFocusPolicy(Qt::StrongFocus);
     graphicsView->setFocusPolicy(Qt::StrongFocus);
     installEventFilter(this);
@@ -371,7 +371,13 @@ void MainWindow::saveNodes() {
     mainJson["nodes"] = jsonArray;
     mainJson["connections"] = connectionsJson;
     QJsonDocument jsonDoc(mainJson);
-    QFile file(b33_13_mind_map_str);
+
+    QString savePath = GLOBAL_MIND_MAP_JSON_STR;
+    if (savePath.startsWith(OFFICIAL_MIND_MAP_LOCAL_DIR)) {
+        savePath = UNOFFICIAL_MIND_MAP_LOCAL_DIR + "/" + QFileInfo(GLOBAL_MIND_MAP_JSON_STR).fileName();
+    }
+
+    QFile file(savePath);
     if (file.open(QIODevice::WriteOnly)) {
         file.write(jsonDoc.toJson(QJsonDocument::Indented)); // Pretty print JSON
         file.close();
@@ -379,7 +385,6 @@ void MainWindow::saveNodes() {
             return item->data(0).toString() == "StarItem";
         });
         Node::starItems.clear();
-
     } else {
         qWarning() << "Failed to open file for writing:" << file.errorString();
     }

@@ -106,7 +106,6 @@ class MainWindow : public QMainWindow {
     Node *startArrowNode = nullptr; // Node where the arrow starts
     QGraphicsLineItem *currentArrow = nullptr;
     QMenu *contextMenu = nullptr;
-    const int WIDTH = 1280, HEIGHT = 720;
     std::unique_ptr<MainWindowUpdateThread> main_window_thread;
     QWidget *star_display_centralWidget = nullptr;
     QStackedWidget *stackedWidget = nullptr;
@@ -123,10 +122,10 @@ class MainWindow : public QMainWindow {
     QGraphicsScene *miniMapScene;
     QVector<StarModel *> starModels;
     // TODO UPDATE SAVE/load functionnalities for mind maps
-#ifdef DEBUG
+/*#ifdef DEBUG
     QString b33_13_mind_map_str = "b3313-v1.0.2-Mind_map.json";
 #else
     QString b33_13_mind_map_str = "stars_layout/b3313-V1.0.2/b3313-v1.0.2-Mind_map.json";
-#endif
+#endif*/
 };
 #endif // MAIN_WINDOW_H
