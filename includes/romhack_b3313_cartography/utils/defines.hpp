@@ -8,10 +8,10 @@
         }                             \
     }
 #define REPA2(type, container, action) \
-    for (type * item : container) {   \
-        if (item) {                   \
-            action;                   \
-        }                             \
+    for (type * item : container) {    \
+        if (item) {                    \
+            action;                    \
+        }                              \
     }
 #define REMOVE_ITEMS_OF_TYPE(container, type)                      \
     do {                                                           \
@@ -101,3 +101,10 @@
         qWarning() << "jsonData does not contain valid '" key "' array."; \
         return courseNames;                                               \
     }
+#define SHOW_MESSAGE(text)                      \
+    QMessageBox msgBox;                         \
+    msgBox.setIcon(QMessageBox::Information);   \
+    msgBox.setText(text);                       \
+    msgBox.setWindowTitle("Updater");           \
+    msgBox.setStandardButtons(QMessageBox::Ok); \
+    msgBox.exec()

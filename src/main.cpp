@@ -28,13 +28,38 @@ void saveLastCommitDate(const QString &commitDate) {
         out << commitDate;
     }
 }
-QString fetchLastCommitDateOnline() {
-    QProcess process;
-    process.setWorkingDirectory(OFFICIAL_MIND_MAP_LOCAL_DIR);
-    process.start("git log -1 --format=%cd");
-    process.waitForFinished();
-    QString commitDate = process.readAllStandardOutput().trimmed();
-    return commitDate;
+void fetchLastCommitDateOnline(std::function<void(const QString &)> callback) {
+    QUrl url("https://api.github.com/repos/quentin452/Mind-Map-Repo/commits?path=Mind-Maps&per_page=1");
+    QNetworkRequest request(url);
+    request.setRawHeader("User-Agent", "ROMHACK_B3313_CARTOGRAPHY/V0.1");
+
+    QNetworkAccessManager *manager = new QNetworkAccessManager();
+    QNetworkReply *reply = manager->get(request);
+
+    QObject::connect(reply, &QNetworkReply::finished, [reply, callback]() {
+        QByteArray data = reply->readAll();
+        QString commitDate;
+
+        if (reply->error() == QNetworkReply::NoError) {
+            QJsonDocument jsonDoc = QJsonDocument::fromJson(data);
+            if (!jsonDoc.isNull() && jsonDoc.isArray()) {
+                QJsonArray jsonArray = jsonDoc.array();
+                if (!jsonArray.isEmpty()) {
+                    QJsonObject commitObj = jsonArray.first().toObject();
+                    commitDate = commitObj["commit"].toObject()["committer"].toObject()["date"].toString();
+                } else {
+                    qWarning() << "No commits found.";
+                }
+            } else {
+                qWarning() << "Invalid JSON response.";
+            }
+        } else {
+            qWarning() << "Network error:" << reply->errorString();
+        }
+
+        callback(commitDate);
+        reply->deleteLater();
+    });
 }
 
 QStringList findJsonFilesRecursively(const QString &directoryPath) {
@@ -55,20 +80,21 @@ QStringList findJsonFilesRecursively(const QString &directoryPath) {
     }
     return jsonFiles;
 }
-
 void checkAndDownloadMindMaps(MindMapDownloader &downloader) {
-    QDir mindMapDir(OFFICIAL_MIND_MAP_LOCAL_DIR);
-    QStringList mindMapFiles = mindMapDir.entryList(QStringList() << "*.json", QDir::Files);
-    QString lastCommitDate = getLastCommitDate();
-    QString onlineCommitDate = fetchLastCommitDateOnline();
+    QString lastCommitDate = downloader.getLastCommitDate();
 
-    if (lastCommitDate.isEmpty() || onlineCommitDate > lastCommitDate) {
-        downloader.downloadMindMaps();
-        saveLastCommitDate(onlineCommitDate);
-        return;
-    }
-    if (mindMapFiles.isEmpty())
-        downloader.downloadMindMaps();
+    fetchLastCommitDateOnline([&downloader, lastCommitDate](const QString &onlineCommitDate) {
+        QDir mindMapDir(OFFICIAL_MIND_MAP_LOCAL_DIR);
+        QStringList mindMapFiles = mindMapDir.entryList(QStringList() << "*.json", QDir::Files);
+
+        if (lastCommitDate.isEmpty() || onlineCommitDate > lastCommitDate) {
+            downloader.downloadMindMaps();
+            downloader.saveLastCommitDate(onlineCommitDate);
+              SHOW_MESSAGE("Official Mind Maps got Updated");
+        } else if (mindMapFiles.isEmpty()) {
+            downloader.downloadMindMaps();
+              SHOW_MESSAGE("Official Mind Maps got Redownloaded because Official folder get emptied");
+        } });
 }
 
 void myMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg) {

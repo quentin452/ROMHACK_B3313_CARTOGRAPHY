@@ -30,6 +30,25 @@ class MindMapDownloader : public QObject {
         });
     }
 
+    QString getLastCommitDate() const {
+        QFile file(LAST_COMMIT_LOCAL_FILE);
+        if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+            return QString();
+
+        QTextStream in(&file);
+        return in.readLine().trimmed();
+    }
+
+    void saveLastCommitDate(const QString &commitDate) const {
+        QFile file(LAST_COMMIT_LOCAL_FILE);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream out(&file);
+            out << commitDate;
+        } else {
+            qWarning() << "Failed to open file for writing:" << file.errorString();
+        }
+    }
+
   private slots:
     void processInitialResponse(const QByteArray &data) {
         QJsonDocument jsonDoc = QJsonDocument::fromJson(data);
@@ -73,7 +92,7 @@ class MindMapDownloader : public QObject {
         QNetworkRequest request(qurl);
 
         QNetworkReply *downloadReply = manager->get(request);
-
+        clearDirectory(OFFICIAL_MIND_MAP_LOCAL_DIR);
         connect(downloadReply, &QNetworkReply::finished, this, [this, downloadReply, fileName, progressDialog, fileCount]() {
             QByteArray data = downloadReply->readAll();
 
@@ -107,6 +126,15 @@ class MindMapDownloader : public QObject {
         connect(downloadReply, &QNetworkReply::sslErrors, this, [this](const QList<QSslError> &errors) {
             qWarning() << "File download SSL errors:" << errors;
         });
+    }
+    void clearDirectory(const QString &path) {
+        QDir dir(path);
+        if (dir.exists()) {
+            dir.setFilter(QDir::Files);
+            foreach (QString file, dir.entryList()) {
+                dir.remove(file);
+            }
+        }
     }
 
   signals:
