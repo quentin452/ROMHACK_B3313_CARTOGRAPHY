@@ -108,3 +108,12 @@
     msgBox.setWindowTitle("Updater");           \
     msgBox.setStandardButtons(QMessageBox::Ok); \
     msgBox.exec()
+#define SHOW_ERROR_MESSAGE(title, text)                              \
+    QMessageBox errorMsg;                                            \
+    errorMsg.setIcon(QMessageBox::Warning);                          \
+    errorMsg.setWindowTitle(title);                                  \
+    errorMsg.setText(text);                                          \
+    errorMsg.setStandardButtons(QMessageBox::Yes | QMessageBox::No); \
+    errorMsg.setDefaultButton(QMessageBox::No);                      \
+    errorMsg.setToolTip(text);                                       \
+    errorMsg.exec();

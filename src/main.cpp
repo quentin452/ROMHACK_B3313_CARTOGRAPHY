@@ -120,79 +120,50 @@ bool isInternetAvailable() {
     return system("ping -c 1 google.com") == 0;
 }
 #endif
+
+void showErrorMessage(const QString &title, const QString &text){
+    SHOW_ERROR_MESSAGE(title, text)}
+
+QStringList getJsonFileOptions(const QStringList &officialFiles, const QStringList &unofficialFiles) {
+    QStringList options;
+    for (const QString &file : officialFiles) {
+        options << "Official: " + file;
+    }
+    for (const QString &file : unofficialFiles) {
+        options << "Unofficial: " + file;
+    }
+    return options;
+}
+
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     MindMapDownloader downloader;
     QScreen *screen = QGuiApplication::primaryScreen();
     QRect screenGeometry = screen->geometry();
-    int screenWidth = screenGeometry.width();
-    int screenHeight = screenGeometry.height();
-    WIDTH = screenWidth / 1.35;
-    HEIGHT = screenHeight / 1.35;
+    WIDTH = screenGeometry.width() / 1.35;
+    HEIGHT = screenGeometry.height() / 1.35;
 
     defaultMessageHandler = qInstallMessageHandler(myMessageHandler);
     createNecessaryDirs();
 
     if (!isInternetAvailable()) {
-        QMessageBox errorMsg;
-        errorMsg.setIcon(QMessageBox::Warning);
-        errorMsg.setWindowTitle("No Internet Connection");
-        errorMsg.setText("Attention you are not connected to internet, the software cannot download mind maps from internet. Do you want to continue?");
-        errorMsg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        errorMsg.setDefaultButton(QMessageBox::No);
-        errorMsg.setToolTip("Attention you are not connected to internet, the software cannot download mind maps from internet. Do you want to continue?");
-        if (errorMsg.exec() == QMessageBox::No)
-            return 0;
+        showErrorMessage("No Internet Connection", "Attention you are not connected to internet, the software cannot download mind maps from internet. Do you want to continue?");
+        return 0;
     }
     checkAndDownloadMindMaps(downloader);
 
-    QStringList backends = {"d3d11", "opengl", "vulkan"};
-    QInputDialog backendDialog;
-    backendDialog.setOptions(QInputDialog::UseListViewForComboBoxItems);
-    backendDialog.setWindowTitle("Choose Rendering API Backend");
-    backendDialog.setLabelText("Backend:");
-    backendDialog.setComboBoxItems(backends);
-    backendDialog.setMinimumSize(300, 200);
-    backendDialog.setMaximumSize(300, 200);
-
-    if (backendDialog.exec() != QDialog::Accepted || backendDialog.textValue().isEmpty())
+    QString backend = QInputDialog::getItem(nullptr, "Choose Rendering API Backend", "Backend:", {"d3d11", "opengl", "vulkan"}, 0, false);
+    if (backend.isEmpty())
         return 0;
-
-    QString backend = backendDialog.textValue();
     qputenv("QSG_RHI_BACKEND", backend.toUtf8());
 
-    QStringList officialJsonFiles = findJsonFilesRecursively(OFFICIAL_STARS_LAYOUT_LOCAL_DIR);
-    QStringList unofficialJsonFiles = findJsonFilesRecursively(UNOFFICIAL_STARS_LAYOUT_LOCAL_DIR);
-    QStringList jsonFileOptions;
-    for (const QString &file : officialJsonFiles) {
-        jsonFileOptions << "Official: " + file;
-    }
-    for (const QString &file : unofficialJsonFiles) {
-        jsonFileOptions << "Unofficial: " + file;
-    }
-    QInputDialog jsonDialog;
-    jsonDialog.setOptions(QInputDialog::UseListViewForComboBoxItems);
-    jsonDialog.setWindowTitle("Choose Star Layout");
-    jsonDialog.setLabelText("Select the Star Layout JSON file:");
-    jsonDialog.setComboBoxItems(jsonFileOptions);
-    jsonDialog.setMinimumSize(WIDTH, HEIGHT);
-    jsonDialog.setMaximumSize(WIDTH, HEIGHT);
-
-    if (jsonDialog.exec() != QDialog::Accepted || jsonDialog.textValue().isEmpty())
+    QStringList jsonFileOptions = getJsonFileOptions(findJsonFilesRecursively(OFFICIAL_STARS_LAYOUT_LOCAL_DIR), findJsonFilesRecursively(UNOFFICIAL_STARS_LAYOUT_LOCAL_DIR));
+    QString selectedStarLayoutFile = QInputDialog::getItem(nullptr, "Choose Star Layout", "Select the Star Layout JSON file:", jsonFileOptions, 0, false);
+    if (selectedStarLayoutFile.isEmpty())
         return 0;
-
-    QString selectedStarLayoutFile = jsonDialog.textValue();
     GLOBAL_STAR_DISPLAY_JSON_STR = selectedStarLayoutFile.mid(selectedStarLayoutFile.indexOf(": ") + 2);
 
-    QStringList officialmindMapJsonFiles = findJsonFilesRecursively(OFFICIAL_MIND_MAP_LOCAL_DIR);
-    QStringList unofficialmindMapJsonFiles = findJsonFilesRecursively(UNOFFICIAL_MIND_MAP_LOCAL_DIR);
-    QStringList jsonFileOptions2;
-    for (const QString &file : officialmindMapJsonFiles) {
-        jsonFileOptions2 << "Official: " + file;
-    }
-    for (const QString &file : unofficialmindMapJsonFiles) {
-        jsonFileOptions2 << "Unofficial: " + file;
-    }
+    QStringList jsonFileOptions2 = getJsonFileOptions(findJsonFilesRecursively(OFFICIAL_MIND_MAP_LOCAL_DIR), findJsonFilesRecursively(UNOFFICIAL_MIND_MAP_LOCAL_DIR));
     QInputDialog mindMapDialog;
     mindMapDialog.setOptions(QInputDialog::UseListViewForComboBoxItems);
     mindMapDialog.setWindowTitle("Choose Mind Map");
@@ -204,7 +175,7 @@ int main(int argc, char *argv[]) {
     QPushButton *newMindMapButton = new QPushButton("Create New Mind Map", &mindMapDialog);
     mindMapDialog.layout()->addWidget(newMindMapButton);
     QObject::connect(newMindMapButton, &QPushButton::clicked, [&]() {
-        bool ok;
+                bool ok;
         QString newMindMapName = QInputDialog::getText(nullptr, "Create New Mind Map", "Enter the name of the new mind map:", QLineEdit::Normal, "", &ok);
         if (ok && !newMindMapName.isEmpty()) {
             QString newMindMapFile = UNOFFICIAL_MIND_MAP_LOCAL_DIR + "/" + newMindMapName + ".json";
@@ -219,8 +190,7 @@ int main(int argc, char *argv[]) {
                     mindMapDialog.setComboBoxItems(jsonFileOptions2);
                 }
             }
-        }
-    });
+        } });
 
     if (mindMapDialog.exec() != QDialog::Accepted || mindMapDialog.textValue().isEmpty())
         return 0;
