@@ -152,14 +152,15 @@ int main(int argc, char *argv[]) {
     }
     checkAndDownloadMindMaps(downloader);
 
-    QString backend = QInputDialog::getItem(nullptr, "Choose Rendering API Backend", "Backend:", {"d3d11", "opengl", "vulkan"}, 0, false);
-    if (backend.isEmpty())
+    bool ok;
+    QString backend = QInputDialog::getItem(nullptr, "Choose Rendering API Backend", "Backend:", {"d3d11", "opengl", "vulkan"}, 0, false, &ok);
+    if (!ok || backend.isEmpty())
         return 0;
     qputenv("QSG_RHI_BACKEND", backend.toUtf8());
 
     QStringList jsonFileOptions = getJsonFileOptions(findJsonFilesRecursively(OFFICIAL_STARS_LAYOUT_LOCAL_DIR), findJsonFilesRecursively(UNOFFICIAL_STARS_LAYOUT_LOCAL_DIR));
-    QString selectedStarLayoutFile = QInputDialog::getItem(nullptr, "Choose Star Layout", "Select the Star Layout JSON file:", jsonFileOptions, 0, false);
-    if (selectedStarLayoutFile.isEmpty())
+    QString selectedStarLayoutFile = QInputDialog::getItem(nullptr, "Choose Star Layout", "Select the Star Layout JSON file:", jsonFileOptions, 0, false, &ok);
+    if (!ok || selectedStarLayoutFile.isEmpty())
         return 0;
     GLOBAL_STAR_DISPLAY_JSON_STR = selectedStarLayoutFile.mid(selectedStarLayoutFile.indexOf(": ") + 2);
 
@@ -175,7 +176,7 @@ int main(int argc, char *argv[]) {
     QPushButton *newMindMapButton = new QPushButton("Create New Mind Map", &mindMapDialog);
     mindMapDialog.layout()->addWidget(newMindMapButton);
     QObject::connect(newMindMapButton, &QPushButton::clicked, [&]() {
-                bool ok;
+        bool ok;
         QString newMindMapName = QInputDialog::getText(nullptr, "Create New Mind Map", "Enter the name of the new mind map:", QLineEdit::Normal, "", &ok);
         if (ok && !newMindMapName.isEmpty()) {
             QString newMindMapFile = UNOFFICIAL_MIND_MAP_LOCAL_DIR + "/" + newMindMapName + ".json";
